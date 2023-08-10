@@ -1,0 +1,26 @@
+.navIcon {
+    display: flex;
+    flex-direction: column;
+    gap: .2rem;
+    align-items: center;
+    justify-content: center;
+}
+
+.navIcon>img {
+    height: 2rem;
+}
+
+.navIcon>img.active {
+    filter: brightness(0) saturate(100%) invert(29%) sepia(76%) saturate(3590%) hue-rotate(234deg) brightness(120%) contrast(101%);
+}
+
+.navIcon>h3 {
+    font-size: .7rem;
+    font-weight: 100;
+    letter-spacing: .025rem;
+    color: rgb(139, 139, 139);
+}
+
+.navIcon>h3.active {
+    color: #5656ff;
+}

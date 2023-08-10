@@ -1,0 +1,16 @@
+.Dashboard {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 100%;
+}
+
+.dashPage {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    padding-top: 8rem;
+    padding-bottom: 6rem;
+}

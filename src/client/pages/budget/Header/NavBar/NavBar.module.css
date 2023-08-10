@@ -1,0 +1,39 @@
+.NavBar {
+    display: flex;
+    position: relative;
+    justify-content: center;
+    background-color: rgb(60, 60, 173);
+    width: 90%;
+    gap: .1rem;
+    padding: .1rem;
+    border-radius: .4rem;
+}
+
+.NavBar>div {
+    color: white;
+    position: relative;
+    font-size: .9rem;
+    flex: 1;
+    text-align: center;
+    border-radius: .35rem;
+    padding-top: .5rem;
+    padding-bottom: .5rem;
+    transform: translateZ(1000px);
+    transform-style: preserve-3d;
+    z-index: 2;
+}
+
+.selector {
+    height: .8rem;
+    width: 33%;
+    text-align: center;
+    border-radius: .35rem;
+    padding-top: .5rem;
+    padding-bottom: .57rem;
+    background-color: rgb(86, 86, 255);
+    position: absolute;
+    left: .1rem;
+    top: .1rem;
+    z-index: 1;
+    transition: translate .3s;
+}

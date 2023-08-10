@@ -1,0 +1,41 @@
+.BudgetItem {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgb(221, 221, 221);
+    height: 2.3rem;
+}
+
+.title {
+    display: flex;
+    gap: .4rem;
+    align-items: center;
+}
+
+.title>img {
+    height: 1.5rem;
+    margin-bottom: .2rem;
+    filter: brightness(0) saturate(100%) invert(32%) sepia(41%) saturate(6301%) hue-rotate(233deg) brightness(102%) contrast(101%);
+}
+
+.title>h2 {
+    font-size: 1rem;
+    font-weight: 200;
+    color: rgb(51, 51, 51);
+}
+
+.amount {
+    display: flex;
+    font-family: 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
+    align-items: baseline;
+}
+
+.amount>strong {
+    font-family: Arial, Helvetica, sans-serif;
+    font-weight: 200;
+    color: rgb(51, 51, 51);
+}
+
+.amount>p {
+    color: rgb(51, 51, 51);
+}
