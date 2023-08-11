@@ -1,0 +1,9 @@
+.BudgetInfo {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgb(236, 236, 236, .3);
+    z-index: 5;
+}

@@ -3,6 +3,7 @@ import Header from "./Header/Header";
 import BudgetSection from "./BudgetSection/BudgetSection";
 import axios from "axios";
 import { useState, useEffect } from "react";
+import BudgetInfo from "./BudgetInfo/BudgetInfo";
 
 const Budget = () => {
 	const [budget, setBudget] = useState<[]>();
@@ -20,6 +21,7 @@ const Budget = () => {
 
 	return (
 		<main className={styles.Dashboard}>
+			<BudgetInfo />
 			<Header />
 			<section className={styles.dashPage}>
 				{budget ? (
