@@ -26,9 +26,9 @@ const BudgetSection = ({
 		setAddItem((prev) => {
 			return true;
 		});
-		setFormattedNumber(prev => {
-			return ""
-		})
+		setFormattedNumber((prev) => {
+			return "";
+		});
 	};
 
 	const formatNumber = (e: React.FormEvent<HTMLInputElement>) => {
