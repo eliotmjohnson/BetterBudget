@@ -3,11 +3,12 @@ import Header from "./Header/Header";
 import BudgetSection from "./BudgetSection/BudgetSection";
 import axios from "axios";
 import { useState, useEffect } from "react";
-import BudgetInfo from "./BudgetInfo/BudgetInfo";
+import { useSelector } from "react-redux";
 
 const Budget = () => {
 	const [budget, setBudget] = useState<[]>();
 	const [refresh, setRefresh] = useState(false);
+	const budgetState = useSelector((state: any) => state.budget)
 
 	useEffect(() => {
 		const getBudgets = async () => {
@@ -20,8 +21,10 @@ const Budget = () => {
 	}, [refresh]);
 
 	return (
-		<main className={styles.Dashboard}>
-			<BudgetInfo />
+		<main
+			className={styles.Dashboard}
+			style={{ translate: budgetState.budgetInfo ? "-100% 0" : "0 0" }}
+		>
 			<Header />
 			<section className={styles.dashPage}>
 				{budget ? (

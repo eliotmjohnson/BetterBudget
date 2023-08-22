@@ -7,15 +7,19 @@ import {
 	Outlet,
 	ScrollRestoration,
 } from "react-router-dom";
+import { Provider } from "react-redux";
+import store from "./state/store";
 import NavBar from "./components/NavBar/NavBar";
 import Budget from "./pages/budget/Budget";
 import Transactions from "./pages/transactions/Transactions";
+import BudgetInfo from "./pages/budget/BudgetInfo/BudgetInfo";
 
 const router = createBrowserRouter([
 	{
 		path: "/",
 		element: (
 			<>
+				<BudgetInfo />
 				<Outlet />
 				<NavBar />
 				<ScrollRestoration
@@ -40,6 +44,8 @@ const router = createBrowserRouter([
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
 	<React.StrictMode>
-		<RouterProvider router={router} />
+		<Provider store={store}>
+			<RouterProvider router={router} />
+		</Provider>
 	</React.StrictMode>
 );

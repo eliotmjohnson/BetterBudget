@@ -4,6 +4,7 @@
     left: 0;
     height: 100%;
     width: 100%;
+    transition: translate .3s;
 }
 
 .dashPage {

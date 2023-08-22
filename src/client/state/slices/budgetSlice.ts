@@ -1,14 +1,17 @@
 import { createSlice } from "@reduxjs/toolkit";
 
 const initialState = {
-	budgetData: []
+	budgetData: [],
+	budgetInfo: false,
 };
 
 const budgetSlice = createSlice({
 	name: "budget",
 	initialState: initialState,
 	reducers: {
-		
+		setBudgetInfo: (state, action) => {
+			state.budgetInfo = !state.budgetInfo;
+		},
 	},
 });
 
