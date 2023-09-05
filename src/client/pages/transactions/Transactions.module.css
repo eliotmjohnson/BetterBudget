@@ -5,3 +5,12 @@
     height: 100vh;
     width: 100vw;
 }
+
+.test {
+    position: absolute;
+    cursor: grab;
+    height: 4rem;
+    width: 4rem;
+    background-color: black;
+    transition: scale .5s, box-shadow .5s;
+}
