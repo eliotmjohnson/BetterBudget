@@ -1,0 +1,11 @@
+node_modules
+.next
+.data
+.env
+.env.*
+*.tsbuildinfo
+next-env.d.ts
+drizzle/meta
+docs/design
+public
+src/app/icon.png

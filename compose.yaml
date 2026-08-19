@@ -1,0 +1,37 @@
+services:
+    postgres:
+        image: postgres:17-alpine
+        environment:
+            POSTGRES_DB: better_budget
+            POSTGRES_USER: better_budget
+            POSTGRES_PASSWORD: better_budget
+        ports:
+            - '5432:5432'
+        volumes:
+            - better_budget_postgres:/var/lib/postgresql/data
+        healthcheck:
+            test: ['CMD-SHELL', 'pg_isready -U better_budget -d better_budget']
+            interval: 5s
+            timeout: 3s
+            retries: 12
+
+    app:
+        profiles: ['full']
+        build: .
+        ports:
+            - '3000:3000'
+        environment:
+            DATABASE_KIND: postgres
+            DATABASE_URL: postgres://better_budget:better_budget@postgres:5432/better_budget
+            DATABASE_SSL: disable
+            MIGRATIONS_PRESTART: 'true'
+            AUTH_BYPASS: 'true'
+            ALLOW_INSECURE_LOCAL_AUTH: 'true'
+            BETTER_AUTH_SECRET: better-budget-compose-auth-secret-32-characters
+            BETTER_AUTH_URL: http://localhost:3000
+        depends_on:
+            postgres:
+                condition: service_healthy
+
+volumes:
+    better_budget_postgres:
