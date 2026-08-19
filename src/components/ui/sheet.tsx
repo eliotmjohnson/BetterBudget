@@ -6,6 +6,7 @@ import {
     useEffect,
     useRef,
     type PointerEvent as ReactPointerEvent,
+    type RefObject,
     type ReactNode
 } from 'react';
 
@@ -22,12 +23,28 @@ export function Sheet({
     onOpenChange,
     onExitComplete,
     title,
+    variant = 'standard',
+    layer = 'base',
+    footer,
+    headerAction,
+    headerActionVisibility = 'all',
+    showHandle = true,
+    restoreFocusRef,
+    interactionDisabled = false,
     children
 }: {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     onExitComplete?: () => void;
     title: string;
+    variant?: 'standard' | 'full-screen-mobile';
+    layer?: 'base' | 'nested';
+    footer?: ReactNode;
+    headerAction?: ReactNode;
+    headerActionVisibility?: 'all' | 'mobile';
+    showHandle?: boolean;
+    restoreFocusRef?: RefObject<HTMLElement | null>;
+    interactionDisabled?: boolean;
     children: ReactNode;
 }) {
     const contentRef = useRef<HTMLDivElement>(null);
@@ -115,6 +132,7 @@ export function Sheet({
     };
     const startDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
         if (
+            interactionDisabled ||
             event.button !== 0 ||
             window.matchMedia('(min-width: 760px)').matches ||
             (event.target as Element).closest('button')
@@ -157,14 +175,40 @@ export function Sheet({
 
         content.style.setProperty('--sheet-drag-y', `${visualDistance}px`);
     };
+    const changeOpen = (nextOpen: boolean) => {
+        if (!nextOpen && interactionDisabled) return;
+        onOpenChange(nextOpen);
+    };
 
     return (
-        <Dialog.Root open={open} onOpenChange={onOpenChange}>
+        <Dialog.Root open={open} onOpenChange={changeOpen}>
             <Dialog.Portal>
-                <Dialog.Overlay ref={overlayRef} className='sheet-overlay' />
+                <Dialog.Overlay
+                    ref={overlayRef}
+                    className='sheet-overlay'
+                    data-layer={layer}
+                />
                 <Dialog.Content
                     ref={contentRef}
                     className='sheet-content'
+                    data-has-footer={footer ? 'true' : 'false'}
+                    data-interaction-disabled={
+                        interactionDisabled ? 'true' : 'false'
+                    }
+                    data-layer={layer}
+                    data-variant={variant}
+                    inert={interactionDisabled}
+                    onEscapeKeyDown={(event) => {
+                        if (interactionDisabled) event.preventDefault();
+                    }}
+                    onCloseAutoFocus={(event) => {
+                        if (!restoreFocusRef?.current) return;
+                        event.preventDefault();
+                        restoreFocusRef.current.focus();
+                    }}
+                    onPointerDownOutside={(event) => {
+                        if (interactionDisabled) event.preventDefault();
+                    }}
                     onAnimationEnd={(event) => {
                         if (
                             event.target === event.currentTarget &&
@@ -189,20 +233,41 @@ export function Sheet({
                         onPointerUp={(event) => finishDrag(event)}
                         onPointerCancel={(event) => finishDrag(event, true)}
                     >
-                        <div className='sheet-handle' aria-hidden='true' />
+                        {showHandle ? (
+                            <div className='sheet-handle' aria-hidden='true' />
+                        ) : null}
                         <div className='sheet-header'>
                             <Dialog.Title className='sheet-title'>
                                 {title}
                             </Dialog.Title>
-                            <Dialog.Close
-                                className='icon-button'
-                                aria-label='Close'
-                            >
-                                <X size={22} strokeWidth={2} />
-                            </Dialog.Close>
+                            {headerAction ? (
+                                <div
+                                    className='sheet-header-action'
+                                    data-visibility={headerActionVisibility}
+                                >
+                                    {headerAction}
+                                </div>
+                            ) : null}
+                            {!headerAction ||
+                            headerActionVisibility === 'mobile' ? (
+                                <Dialog.Close
+                                    className='icon-button'
+                                    aria-label='Close'
+                                    data-visibility={
+                                        headerAction
+                                            ? 'desktop-with-mobile-action'
+                                            : 'all'
+                                    }
+                                >
+                                    <X size={22} strokeWidth={2} />
+                                </Dialog.Close>
+                            ) : null}
                         </div>
                     </div>
                     <div className='sheet-body'>{children}</div>
+                    {footer ? (
+                        <div className='sheet-footer'>{footer}</div>
+                    ) : null}
                 </Dialog.Content>
             </Dialog.Portal>
         </Dialog.Root>

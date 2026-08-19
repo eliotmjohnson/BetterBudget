@@ -146,8 +146,17 @@ export function useBudgetMutation(
 
             return { previous };
         },
-        onSuccess: (result) =>
-            queryClient.setQueryData(snapshotKey(monthKey), result.snapshot),
+        onSuccess: (result, input) => {
+            queryClient.setQueryData(snapshotKey(monthKey), result.snapshot);
+
+            if (input.type === 'toggleCarryover')
+                void queryClient.invalidateQueries({
+                    predicate: (query) =>
+                        query.queryKey[0] === 'budget-snapshot' &&
+                        typeof query.queryKey[1] === 'string' &&
+                        query.queryKey[1] > input.monthKey
+                });
+        },
         onError: (error, _input, context) => {
             if (error instanceof MutationRequestError && error.result?.snapshot)
                 queryClient.setQueryData(

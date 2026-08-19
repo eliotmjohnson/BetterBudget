@@ -1,6 +1,12 @@
 'use client';
 
-import { ChevronRight, Palette, Plus, Trash2 } from 'lucide-react';
+import {
+    ChevronRight,
+    CircleDollarSign,
+    Palette,
+    Plus,
+    Trash2
+} from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import {
     useEffect,
@@ -783,14 +789,16 @@ export function IncomeView({
                     <p className='eyebrow'>{snapshot.label}</p>
                     <h1 className='screen-heading'>Income</h1>
                 </div>
-                <button
-                    className='primary-button compact-action'
-                    type='button'
-                    onClick={() => setAdding(true)}
-                >
-                    <Plus size={19} />
-                    Add source
-                </button>
+                {snapshot.incomePlans.length > 0 ? (
+                    <button
+                        className='primary-button compact-action'
+                        type='button'
+                        onClick={() => setAdding(true)}
+                    >
+                        <Plus size={19} />
+                        Add source
+                    </button>
+                ) : null}
             </div>
             <div className='summary-card income-summary'>
                 <span className='summary-label'>Received</span>
@@ -817,49 +825,71 @@ export function IncomeView({
                 </div>
             </div>
             <h2 className='section-title'>Income sources</h2>
-            <div className='income-list'>
-                {snapshot.incomePlans.map((plan) => {
-                    const rowProgress =
-                        BigInt(plan.expectedCents) > 0n
-                            ? Math.min(
-                                  100,
-                                  Number(
-                                      (BigInt(plan.receivedCents) * 100n) /
-                                          BigInt(plan.expectedCents)
+            {snapshot.incomePlans.length === 0 ? (
+                <div className='income-empty-state'>
+                    <div className='income-empty-state-icon' aria-hidden='true'>
+                        <CircleDollarSign size={26} />
+                    </div>
+                    <h3>No income sources for {snapshot.label} yet</h3>
+                    <p>
+                        Add a paycheck or another expected source to plan this
+                        month&apos;s income. Record each payment when it
+                        arrives.
+                    </p>
+                    <button
+                        className='primary-button'
+                        type='button'
+                        onClick={() => setAdding(true)}
+                    >
+                        <Plus size={18} />
+                        Add income source
+                    </button>
+                </div>
+            ) : (
+                <div className='income-list'>
+                    {snapshot.incomePlans.map((plan) => {
+                        const rowProgress =
+                            BigInt(plan.expectedCents) > 0n
+                                ? Math.min(
+                                      100,
+                                      Number(
+                                          (BigInt(plan.receivedCents) * 100n) /
+                                              BigInt(plan.expectedCents)
+                                      )
                                   )
-                              )
-                            : 0;
+                                : 0;
 
-                    return (
-                        <button
-                            className='income-row income-row-button'
-                            type='button'
-                            key={plan.id}
-                            onClick={(event) =>
-                                openIncomeSource(plan, event.currentTarget)
-                            }
-                        >
-                            <div className='income-row-top'>
-                                <CategoryIcon
-                                    icon={plan.icon}
-                                    tone={plan.tone}
-                                />
-                                <div className='activity-copy'>
-                                    <strong>{plan.name}</strong>
-                                    <span>
-                                        Expected {money(plan.expectedCents)}
-                                    </span>
+                        return (
+                            <button
+                                className='income-row income-row-button'
+                                type='button'
+                                key={plan.id}
+                                onClick={(event) =>
+                                    openIncomeSource(plan, event.currentTarget)
+                                }
+                            >
+                                <div className='income-row-top'>
+                                    <CategoryIcon
+                                        icon={plan.icon}
+                                        tone={plan.tone}
+                                    />
+                                    <div className='activity-copy'>
+                                        <strong>{plan.name}</strong>
+                                        <span>
+                                            Expected {money(plan.expectedCents)}
+                                        </span>
+                                    </div>
+                                    <strong>{money(plan.receivedCents)}</strong>
+                                    <ChevronRight size={19} />
                                 </div>
-                                <strong>{money(plan.receivedCents)}</strong>
-                                <ChevronRight size={19} />
-                            </div>
-                            <div className='income-progress'>
-                                <div style={{ width: `${rowProgress}%` }} />
-                            </div>
-                        </button>
-                    );
-                })}
-            </div>
+                                <div className='income-progress'>
+                                    <div style={{ width: `${rowProgress}%` }} />
+                                </div>
+                            </button>
+                        );
+                    })}
+                </div>
+            )}
             <AddIncomeSource
                 open={adding}
                 onOpenChange={setAdding}

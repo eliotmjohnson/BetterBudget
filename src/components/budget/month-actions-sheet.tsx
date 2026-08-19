@@ -129,19 +129,21 @@ export function MonthActionsSheet({
                 </div>
             ) : (
                 <div className='settings-list'>
-                    <button
-                        className='settings-row'
-                        type='button'
-                        disabled={mutationPending}
-                        onClick={() => setConfirm('copy')}
-                    >
-                        <Copy size={20} color='var(--blue)' />
-                        <span>
-                            <strong>Copy previous budget</strong>
-                            <small>For an empty month</small>
-                        </span>
-                        <span>›</span>
-                    </button>
+                    {snapshot.canCopyPreviousMonth ? (
+                        <button
+                            className='settings-row'
+                            type='button'
+                            disabled={mutationPending}
+                            onClick={() => setConfirm('copy')}
+                        >
+                            <Copy size={20} color='var(--blue)' />
+                            <span>
+                                <strong>Copy previous budget</strong>
+                                <small>For an empty month</small>
+                            </span>
+                            <span>›</span>
+                        </button>
+                    ) : null}
                     <button
                         className='settings-row'
                         type='button'

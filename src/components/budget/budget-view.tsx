@@ -11,7 +11,6 @@ import {
 import { useSearchParams } from 'next/navigation';
 import {
     useEffect,
-    useLayoutEffect,
     useMemo,
     useRef,
     useState,
@@ -71,11 +70,9 @@ const transactionMoney = (entry: ActivityEntry, amountCents: string) =>
 const isTransactionActivityEntry = (
     entry: ActivityEntry
 ): entry is TransactionActivityEntry => entry.type !== 'income';
-const remainingProgress = (item: BudgetItemView) => {
-    const remaining = BigInt(item.availableCents);
-
+const remainingAvailableProgress = (remaining: bigint, spent: bigint) => {
     if (remaining <= 0n) return 0;
-    const startingAvailable = remaining + BigInt(item.spentCents);
+    const startingAvailable = remaining + spent;
 
     if (startingAvailable <= 0n) return 100;
     const basisPoints =
@@ -334,9 +331,24 @@ function EditItemForm({
                     variant='carryover'
                 />
             </div>
-            {BigInt(item.carryInCents) !== 0n ? (
+            {BigInt(item.carryInCents) !== 0n || item.carryoverEnabled ? (
                 <div className='carryover-callout'>
-                    Carried over: {money(item.carryInCents)}
+                    <div className='carryover-callout-row'>
+                        <span>
+                            Carried over from{' '}
+                            {monthLabel(shiftMonth(snapshot.monthKey, -1))}
+                        </span>
+                        <strong>{money(item.carryInCents)}</strong>
+                    </div>
+                    {item.carryoverEnabled ? (
+                        <div className='carryover-callout-row'>
+                            <span>
+                                Will carry over to{' '}
+                                {monthLabel(shiftMonth(snapshot.monthKey, 1))}
+                            </span>
+                            <strong>{money(item.availableCents)}</strong>
+                        </div>
+                    ) : null}
                 </div>
             ) : null}
             <div className='navigation-detail-activity'>
@@ -657,8 +669,11 @@ function BudgetCategorySection({
                         role='list'
                     >
                         {orderedItems.map((item) => {
-                            const fill = remainingProgress(item);
                             const available = BigInt(item.availableCents);
+                            const fill = remainingAvailableProgress(
+                                available,
+                                BigInt(item.spentCents)
+                            );
                             const overBudget = available < 0n;
                             const pendingItem =
                                 item.definitionId.startsWith('optimistic-');
@@ -795,7 +810,6 @@ export function BudgetView({
         () => searchParams.get('item')
     );
     const budgetLayoutRef = useRef<HTMLElement>(null);
-    const summaryArcProgressRef = useRef<SVGPathElement>(null);
     const itemTriggerRef = useRef<HTMLElement | null>(null);
     const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
     const [transactionOpen, setTransactionOpen] = useState(false);
@@ -843,8 +857,11 @@ export function BudgetView({
         window.history.replaceState(itemHistoryState(), '', itemUrl());
         notifyItemHistoryChange();
     }, [requestedItemDefinitionId, selectedItem]);
-    const planned = Number(BigInt(snapshot.summary.plannedCents));
-    const spent = Number(BigInt(snapshot.summary.spentCents));
+    const summaryAvailable = snapshot.categories.reduce(
+        (total, category) => total + BigInt(category.availableCents),
+        0n
+    );
+    const summarySpent = BigInt(snapshot.summary.spentCents);
     const leftToBudgetCents = BigInt(snapshot.summary.leftToBudgetCents);
     const isOverBudget = leftToBudgetCents < 0n;
     const budgetBalanceLabel = isOverBudget ? 'Over budget' : 'Left to budget';
@@ -862,53 +879,10 @@ export function BudgetView({
             50 - Math.max(0, budgetBalance.length - 9) * 3
         )}px`
     } as CSSProperties;
-    const progress =
-        planned > 0 ? Math.min(100, Math.round((spent / planned) * 100)) : 0;
+    const progress = remainingAvailableProgress(summaryAvailable, summarySpent);
     const summaryArcProgressAngle = Math.PI + (Math.PI * progress) / 100;
     const summaryArcProgressEndX = 116 + 98 * Math.cos(summaryArcProgressAngle);
     const summaryArcProgressEndY = 108 + 98 * Math.sin(summaryArcProgressAngle);
-
-    useLayoutEffect(() => {
-        const path = summaryArcProgressRef.current;
-
-        if (!path) return;
-        const updateProgressLength = () => {
-            const matrix = path.getScreenCTM();
-
-            if (!matrix) return;
-            const pathLength = path.getTotalLength();
-            const sampleCount = 64;
-            const firstPoint = path.getPointAtLength(0);
-            let previousX = matrix.a * firstPoint.x + matrix.c * firstPoint.y;
-            let previousY = matrix.b * firstPoint.x + matrix.d * firstPoint.y;
-            let renderedLength = 0;
-
-            for (let index = 1; index <= sampleCount; index += 1) {
-                const point = path.getPointAtLength(
-                    (pathLength * index) / sampleCount
-                );
-                const x = matrix.a * point.x + matrix.c * point.y;
-                const y = matrix.b * point.x + matrix.d * point.y;
-
-                renderedLength += Math.hypot(x - previousX, y - previousY);
-                previousX = x;
-                previousY = y;
-            }
-            path.style.setProperty(
-                '--summary-arc-progress-length',
-                `${renderedLength}px`
-            );
-        };
-
-        updateProgressLength();
-        const resizeObserver = new ResizeObserver(updateProgressLength);
-
-        if (path.ownerSVGElement) {
-            resizeObserver.observe(path.ownerSVGElement);
-        }
-
-        return () => resizeObserver.disconnect();
-    }, [progress]);
     const {
         containerRef: categoryContainerRef,
         getKeyboardProps: getCategoryKeyboardProps,
@@ -1077,7 +1051,6 @@ export function BudgetView({
                             />
                             {progress > 0 ? (
                                 <path
-                                    ref={summaryArcProgressRef}
                                     className='summary-arc-progress'
                                     d={`M18 108 A98 98 0 0 1 ${summaryArcProgressEndX} ${summaryArcProgressEndY}`}
                                     fill='none'

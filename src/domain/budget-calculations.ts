@@ -10,18 +10,14 @@ export function leftToBudget(
 export function availableBalance({
     plannedCents,
     netSpendingCents,
-    priorAvailableCents = '0',
-    carryoverEnabled
+    carryInCents = '0'
 }: {
     plannedCents: Cents | string;
     netSpendingCents: Cents | string;
-    priorAvailableCents?: Cents | string;
-    carryoverEnabled: boolean;
+    carryInCents?: Cents | string;
 }): Cents {
     return cents(
-        BigInt(plannedCents) -
-            BigInt(netSpendingCents) +
-            (carryoverEnabled ? BigInt(priorAvailableCents) : 0n)
+        BigInt(plannedCents) - BigInt(netSpendingCents) + BigInt(carryInCents)
     );
 }
 
@@ -35,4 +31,32 @@ export function splitsMatchTotal(
             0n
         ) === BigInt(totalCents)
     );
+}
+
+export function projectedAvailableAfterTransactionDraft({
+    availableCents,
+    currentAllocationCents = '0',
+    currentKind,
+    draftAllocationCents = '0',
+    draftKind
+}: {
+    availableCents: Cents | string;
+    currentAllocationCents?: Cents | string;
+    currentKind?: 'expense' | 'refund';
+    draftAllocationCents?: Cents | string;
+    draftKind: 'expense' | 'refund';
+}): Cents {
+    let projected = BigInt(availableCents);
+
+    if (currentKind)
+        projected +=
+            currentKind === 'expense'
+                ? BigInt(currentAllocationCents)
+                : -BigInt(currentAllocationCents);
+    projected +=
+        draftKind === 'expense'
+            ? -BigInt(draftAllocationCents)
+            : BigInt(draftAllocationCents);
+
+    return cents(projected);
 }

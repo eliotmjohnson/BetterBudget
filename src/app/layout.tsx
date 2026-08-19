@@ -1,13 +1,13 @@
 import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
 import { Providers } from '@/components/providers';
+import { APP_DESCRIPTION, APP_NAME } from '@/domain/app-info';
 import './globals.css';
 
 export const metadata: Metadata = {
-    title: { default: 'Better Budget', template: '%s · Better Budget' },
-    description:
-        'A calm, shared household budget that keeps every dollar clear.',
-    applicationName: 'Better Budget',
+    title: { default: APP_NAME, template: `%s · ${APP_NAME}` },
+    description: APP_DESCRIPTION,
+    applicationName: APP_NAME,
     manifest: '/manifest.webmanifest',
     icons: {
         icon: [
@@ -33,7 +33,7 @@ export const metadata: Metadata = {
     appleWebApp: {
         capable: true,
         statusBarStyle: 'default',
-        title: 'Better Budget'
+        title: APP_NAME
     }
 };
 

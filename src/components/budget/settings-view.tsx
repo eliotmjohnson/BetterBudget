@@ -11,6 +11,12 @@ import {
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Sheet } from '@/components/ui/sheet';
+import {
+    APP_BUILD_LABEL,
+    APP_DESCRIPTION,
+    APP_NAME,
+    APP_VERSION
+} from '@/domain/app-info';
 import { authClient } from '@/lib/auth-client';
 
 export function SettingsView({
@@ -151,9 +157,16 @@ export function SettingsView({
                     </div>
                 </>
             ) : null}
-            <p className='app-version'>
-                Better Budget v0.1 · Local-first development build
-            </p>
+            <footer
+                className='app-version'
+                aria-label='Application information'
+            >
+                <strong>
+                    {APP_NAME} v{APP_VERSION}
+                </strong>
+                <span>{APP_DESCRIPTION}</span>
+                <small>{APP_BUILD_LABEL}</small>
+            </footer>
             <Sheet
                 open={passwordOpen}
                 onOpenChange={setPasswordOpen}

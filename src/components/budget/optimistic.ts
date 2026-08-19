@@ -60,20 +60,9 @@ export function optimisticSnapshot(
                 );
 
                 if (!item) continue;
-                const oldCarry = BigInt(item.carryInCents);
 
                 item.carryoverEnabled = input.enabled;
                 item.version += 1;
-                item.availableCents = cents(
-                    BigInt(item.availableCents) +
-                        (input.enabled ? oldCarry : -oldCarry)
-                );
-                category.availableCents = cents(
-                    category.items.reduce(
-                        (total, row) => total + BigInt(row.availableCents),
-                        0n
-                    )
-                );
                 break;
             }
             break;

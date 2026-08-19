@@ -7,9 +7,11 @@ RUN npm ci
 
 FROM base AS builder
 WORKDIR /app
+ARG APP_BUILD_SHA
 COPY --from=dependencies /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV APP_BUILD_SHA=$APP_BUILD_SHA
 RUN npm run build
 
 FROM base AS owner-bootstrap

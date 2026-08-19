@@ -10,20 +10,26 @@ Version 1 implements the complete local product foundation:
 
 - Separate budgets and notes for each calendar month.
 - Immediate previous/next month navigation.
-- Copying the immediately previous month into an empty target month.
+- Copying the immediately previous month into an empty target month when the
+  source has active budget structure or an expected-income plan, with clear
+  feedback when there is nothing to copy. The month-actions list omits copy
+  when either side is ineligible.
 - Untouched months begin without category or line-item structure and show setup actions to copy the previous budget or start with a new category.
 - Clearing planned amounts without deleting transactions, income receipts, structure, or carryover settings.
 - Resetting a selected month to a fresh empty budget without changing household definitions or any other month.
 - Categories and budget items with add, rename, reorder, archive, and unused-definition deletion flows. Category names, icons, colors, and deletion are managed from the Budget page; budget-item deletion is revealed with a left swipe. Holding a category header or item row for 350 ms starts reordering without visible drag grips. The interaction uses a transition-free lifted preview, a target-following faded placeholder, interruptible transform-based list reflow, accessible keyboard controls, and gently accelerated edge auto-scroll. Moving more than 8 px before activation cancels the hold so normal scrolling and item swipe-to-delete remain reliable. React and the backend receive the final order once on drop, and progress-bar entrance animations do not replay during sorting.
 - Available amounts are shown by default on the Budget page, with a stable-width animated switch to Planned amounts. Each line-item progress bar starts full when its available balance is untouched and shrinks in proportion as net spending consumes that balance. A negative balance switches to a coral striped warning bar.
 - Budget-item details use a URL-backed iOS-style navigation push on mobile, including browser history and an app-controlled left-edge swipe-to-go-back. The Budget back control and editable item title stay in the fixed detail header while only the detail body scrolls. The underlying swipe remains disabled while an add/edit transaction sheet is visible or exiting. Across every route, cancelable touches beginning in the leftmost 24 px are claimed immediately before Safari can turn them into history gestures; interactive controls retain normal taps and are claimed after rightward drag motion, including diagonals whose vertical movement is up to four times their horizontal movement. Desktop retains the centered detail modal. A floating blue plus button at the bottom right opens the transaction sheet with the current budget item already selected.
-- Planned amount editing and per-month carryover settings.
+- Planned amount editing and forward-looking per-month carryover settings. A
+  month's switch sends its ending balance to the immediately following month;
+  it does not change that month's inbound balance.
 - Cents-first currency inputs that always display a formatted value such as `$200.57`; typing digits shifts them through the decimal places without requiring a decimal point.
 - Expected-income sources with editable names, icons, and colors plus per-source received-transaction history,
   soft deletion of individual receipts, and safe source deletion after its
   receipts are cleared. Income-source details use the same URL-backed mobile
   navigation push, Back behavior, left-edge swipe dismissal, and desktop modal
-  fallback as budget-item details.
+  fallback as budget-item details. Empty months show a guided state that opens
+  the existing add-source flow.
 - Expenses and refunds with merchant, date, note, allocation, exact split support, editing, soft deletion, and Undo.
 - Transaction search with a non-refocusing clear control, immediately applied type pills, and a full draft-before-apply filter sheet for transaction type, budget item, and split status. Applied filters receive a distinct icon/count treatment and an outside Clear action directly after the inline pills.
 - Optimistic updates, idempotent mutation retries, conflict detection, rollback isolation, and offline feedback.
@@ -190,6 +196,7 @@ The example values are in `.env.example`.
 | `BETTER_AUTH_URL`           | `http://localhost:3000`     | Public application origin used by Better Auth. Must match the origin being used.                   |
 | `AUTH_BYPASS`               | `true` locally              | Bypasses login in non-production development. Must be `false` in production.                       |
 | `ALLOW_INSECURE_LOCAL_AUTH` | `false`                     | Additional local-container guard for auth bypass. Never enable in production.                      |
+| `APP_BUILD_SHA`             | unset                       | Public build-time Git revision shown in Settings; the production workflow supplies `github.sha`.   |
 | `BOOTSTRAP_OWNER_EMAIL`     | `family@betterbudget.local` | Email used by the one-time shared-owner bootstrap command.                                         |
 | `BOOTSTRAP_OWNER_PASSWORD`  | local placeholder           | Password used only when the bootstrap creates a new owner; minimum 10 characters.                  |
 | `BETTER_BUDGET_BOOTSTRAP`   | command-managed             | Limits the signup exception to the one-time owner command.                                         |
@@ -458,6 +465,10 @@ reset RDS.
 Each deployment keeps a commit-tagged ECR image for rollback. Configure an ECR
 lifecycle policy if needed to retain only a suitable number of older images.
 
+The production image also embeds that commit SHA as public build metadata. The
+Settings page reads the app version and description from `package.json` and
+shows the first seven commit characters beside its production-build label.
+
 ## Eager persistence model
 
 The application is intentionally optimistic for safe, fully validated operations. A normal write follows this sequence:
@@ -525,15 +536,23 @@ Financial correctness is shared between optimistic client patches and authoritat
 - A month key has the validated `YYYY-MM` form.
 - `Left to budget = expected income - planned amounts`.
 - Received income is tracked separately from expected income and does not change left-to-budget math.
-- `Available = planned - net spending + prior available` when carryover is enabled.
+- `Available = planned - net spending + carry in`. Carry in is the immediately
+  previous month's ending available balance only when that previous month's
+  carryover switch was enabled and the item exists in both adjacent months.
 - Refunds/credits reduce net spending.
 - Positive and negative balances both carry forward.
+- A month's carryover switch controls whether its ending available balance
+  flows into the next month. Toggling it does not change the selected month's
+  inbound balance or overwrite any future month's switch.
 - Carryover is derived chronologically from history. Correcting an older transaction or plan changes later affected months.
 - Every transaction has at least one allocation. An unsplit transaction has one allocation, and split allocation cents must exactly equal the transaction total.
 - Cross-month moves are server-confirmed and require matching valid destination allocations.
 - Categories/items are household definitions; category participation, item plans, planned amounts, and carryover choices are month-specific.
-- Copy is limited to the immediately preceding month and an empty target.
-- Copy includes structure, order, plans, expected income, and carryover settings, but never transactions or received-income receipts.
+- Copy is limited to the immediately preceding month, requires active budget
+  structure or an expected-income plan in the source, and requires an empty
+  target. Archived definitions and soft-deleted transactions do not make an
+  otherwise empty target ineligible.
+- Copy includes structure, order, plans, expected income, and carryover settings, so the new month's outbound switch inherits the source month's choice. It never copies transactions or received-income receipts.
 - Clearing a plan preserves activity, structure, income receipts, and carryover settings.
 - Resetting a budget permanently removes the selected month's structure, plans, transactions, income activity, and note while preserving household definitions and every other month.
 - Archive keeps history. Hard deletion is only allowed for unused definitions.

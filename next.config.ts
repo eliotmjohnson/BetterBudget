@@ -1,5 +1,6 @@
 import type { NextConfig } from 'next';
 import { networkInterfaces } from 'node:os';
+import packageMetadata from './package.json';
 
 const privateLanDevOrigins = Object.values(networkInterfaces())
     .flatMap((addresses) => addresses ?? [])
@@ -47,6 +48,11 @@ const nextConfig: NextConfig = {
     output: 'standalone',
     reactStrictMode: true,
     poweredByHeader: false,
+    env: {
+        NEXT_PUBLIC_APP_VERSION: packageMetadata.version,
+        NEXT_PUBLIC_APP_DESCRIPTION: packageMetadata.description,
+        NEXT_PUBLIC_APP_BUILD_SHA: process.env.APP_BUILD_SHA?.trim() ?? ''
+    },
     allowedDevOrigins: ['127.0.0.1', ...privateLanDevOrigins],
     serverExternalPackages: ['@electric-sql/pglite', 'pg'],
     async headers() {

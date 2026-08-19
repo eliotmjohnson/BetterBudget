@@ -9,7 +9,11 @@ export interface BudgetItemView {
     plannedCents: Cents;
     spentCents: Cents;
     availableCents: Cents;
+
+    /** Balance received from the immediately previous calendar month. */
     carryInCents: Cents;
+
+    /** Whether this month's ending balance flows into the next month. */
     carryoverEnabled: boolean;
     version: number;
 }
@@ -62,6 +66,7 @@ export interface MonthSnapshot {
     monthId: string;
     monthKey: MonthKey;
     label: string;
+    canCopyPreviousMonth: boolean;
     version: number;
     note: string | null;
     summary: {

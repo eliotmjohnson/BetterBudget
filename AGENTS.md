@@ -20,17 +20,24 @@ The implemented product supports:
 
 - A separate budget for each calendar month.
 - Previous/next month navigation and month notes.
-- Copying the immediately preceding month's plan into an empty target month.
+- Copying the immediately preceding month's plan into an empty target month
+  when the source contains active budget structure or an expected-income plan,
+  with clear feedback when there is nothing to copy. The month-actions list
+  omits copy when either side is ineligible.
 - Keeping untouched months free of category and item structure, with Budget-page actions to copy the previous month or start with a new category.
 - Clearing a month's planned amounts without deleting activity or structure.
 - Resetting a selected month to a fresh empty budget without changing household definitions or other months.
 - Household-level category and budget-item definitions with per-month category participation and item plans.
 - Adding, editing, reordering, archiving, and conditionally deleting categories and items. Category name, icon, and color editing lives directly on the Budget page. A 350 ms long-press on a Budget-page category header or item row starts reordering, with a lifted pointer-following preview, an in-list placeholder, and animated neighboring rows. There are no visible drag grips on the Budget page.
-- Planned amount editing and per-month carryover settings.
+- Planned amount editing and forward-looking per-month carryover settings. A
+  month's switch sends its ending balance to the immediately following month;
+  it does not change that month's inbound balance.
 - Cents-first currency inputs that always display a formatted value such as `$200.57`; typing digits shifts them through the decimal places without requiring a decimal point.
 - Expense and refund transactions, including exact splits across budget items.
 - Adding transactions globally or from a line-item detail with that item preselected, editing transactions, soft deleting, and undoing transaction deletion.
 - Expected-income sources with editable names, icons, and colors plus one or more dated received-income receipts.
+  When a month has no income sources, the Income page shows a guided empty
+  state with an action that opens the add-source flow.
   Each source exposes its receipt history on the Income page, individual
   receipts can be soft deleted, and a source can be deleted after its active
   receipts are cleared. Income-source details are URL-backed and reuse the
@@ -38,6 +45,9 @@ The implemented product supports:
   browser history, and left-edge swipe dismissal plus a desktop modal fallback.
 - Searchable and filterable transaction history plus a combined month activity feed. The Transactions page shows only expense and refund records, labels refunds as Income, and leaves received-income/paycheck receipts on the Income page and combined activity surfaces.
 - Shared-owner email/password authentication, password change, sign-out, and session revocation.
+- Settings app information derives its version and description from
+  `package.json`, identifies local development explicitly, and includes the
+  short Git commit in production images.
 - File-persistent PGlite development, PostgreSQL parity, and Docker packaging.
 
 ## Version 1 boundaries
@@ -164,6 +174,8 @@ The default PGlite path is automatically migrated and deterministically seeded.
 Production initialization never invokes the development seed. Production startup requires PostgreSQL, migration prestart, verified TLS with a trusted CA bundle, an HTTPS Better Auth origin, a non-placeholder auth secret, and disabled auth-bypass guards. `runtime-environment.mjs` is the shared validation and PostgreSQL connection source for the application, migrations, and owner bootstrap; do not duplicate or weaken those rules.
 
 Pushes to `main` deploy the regular runtime target through GitHub Actions. The workflow assumes the account-scoped `better-budget-github-deploy` IAM role through GitHub OIDC, tags the ECR image with the immutable commit SHA, copies the current ECS task definition so production secrets and service configuration remain authoritative in AWS, replaces only the `Main` container image, and waits for service stability before checking liveness and readiness. Keep the OIDC trust restricted to the immutable BetterBudget repository identity and `main`; keep its permissions limited to the production ECR repository, ECS service, and task execution role. Do not add long-lived AWS credentials or production application secrets to GitHub.
+The Docker build receives `github.sha` as `APP_BUILD_SHA`; Next.js embeds it as
+public, non-secret build metadata for the Settings page.
 
 ## Financial invariants
 
@@ -173,14 +185,14 @@ These are product correctness requirements, not implementation preferences:
 2. Use the branded `MonthKey` form `YYYY-MM` for month identity. Validate it at boundaries.
 3. `Left to budget = expected income - planned amounts`.
 4. Received income is an actual-cash total and remains separate from expected income and left-to-budget math.
-5. `Available = planned - net spending + prior available` when carryover is enabled.
+5. `Available = planned - net spending + carry in`. Carry in is the immediately previous month's ending available balance only when that previous month's carryover setting is enabled and the item exists in both adjacent months.
 6. Net spending treats refunds/credits as reductions in spending.
 7. Carry both positive and negative balances. Derive carryover through chronological history so editing an older plan or transaction changes every affected later month.
-8. Carryover is configured per budget item per month; category and item definitions persist at household scope, while category participation and item plans remain month-specific.
+8. Carryover is configured per budget item per month as an outbound setting. Changing a month's setting controls only whether its ending balance flows into the next month; it does not change its inbound balance or overwrite future-month settings. Category and item definitions persist at household scope, while category participation and item plans remain month-specific.
 9. Every expense/refund owns at least one allocation. An unsplit transaction still has exactly one allocation. Allocation cents must sum exactly to the transaction total.
 10. Transaction direction, total, date, allocations, and relevant month changes must be validated and committed atomically.
 11. Moving an entry to another month is server-confirmed and requires valid destination allocations. Destination items are resolved by the shared household definitions, not by trusting stale client plan identifiers.
-12. Copy only the immediately preceding calendar month and only into a target that has no plan or activity.
+12. Copy only the immediately preceding calendar month, only when its source has active category/item structure or an expected-income plan, and only into a target that has no active plan or activity. Archived category/item definitions and soft-deleted transactions do not make an otherwise empty target ineligible.
 13. A month copy includes category/item structure, ordering, planned amounts, expected-income plans, and carryover settings. It never copies expense/refund transactions or received-income receipts.
 14. Clearing a month resets planned amounts while preserving activity, structure, received-income receipts, and carryover settings. Resetting a budget permanently removes only the selected month's structure, plans, transactions, income activity, and note while preserving household definitions and every other month. Deleting a received-income receipt soft deletes it and updates actual-cash totals; deleting an income source requires its active receipts to be deleted first.
 15. Archiving retains history. Hard deletion is only valid for definitions that have never been used.
