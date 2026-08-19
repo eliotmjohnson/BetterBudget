@@ -1,0 +1,51 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "GetEcrAuthorizationToken",
+            "Effect": "Allow",
+            "Action": "ecr:GetAuthorizationToken",
+            "Resource": "*"
+        },
+        {
+            "Sid": "PushRuntimeImages",
+            "Effect": "Allow",
+            "Action": [
+                "ecr:BatchCheckLayerAvailability",
+                "ecr:BatchGetImage",
+                "ecr:CompleteLayerUpload",
+                "ecr:GetDownloadUrlForLayer",
+                "ecr:InitiateLayerUpload",
+                "ecr:PutImage",
+                "ecr:UploadLayerPart"
+            ],
+            "Resource": "arn:aws:ecr:us-east-2:563692880710:repository/better-budget/app"
+        },
+        {
+            "Sid": "ReadAndRegisterTaskDefinitions",
+            "Effect": "Allow",
+            "Action": [
+                "ecs:DescribeTaskDefinition",
+                "ecs:RegisterTaskDefinition"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "DeployBetterBudgetService",
+            "Effect": "Allow",
+            "Action": ["ecs:DescribeServices", "ecs:UpdateService"],
+            "Resource": "arn:aws:ecs:us-east-2:563692880710:service/default/better-budget-zalpfc"
+        },
+        {
+            "Sid": "PassEcsExecutionRole",
+            "Effect": "Allow",
+            "Action": "iam:PassRole",
+            "Resource": "arn:aws:iam::563692880710:role/better-budget-ecs-execution-role",
+            "Condition": {
+                "StringEquals": {
+                    "iam:PassedToService": "ecs-tasks.amazonaws.com"
+                }
+            }
+        }
+    ]
+}

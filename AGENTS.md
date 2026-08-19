@@ -121,6 +121,8 @@ public/                          PWA icons and static assets
 docs/design/                     Approved visual references
 Dockerfile                       Multi-stage non-root standalone application image
 compose.yaml                     PostgreSQL service and optional full application profile
+.github/workflows/               GitHub Actions production deployment
+docs/aws/                        Account-scoped GitHub OIDC and deployment policies
 ```
 
 High-impact files include:
@@ -160,6 +162,8 @@ The database adapter is selected through `DATABASE_KIND`:
 
 The default PGlite path is automatically migrated and deterministically seeded.
 Production initialization never invokes the development seed. Production startup requires PostgreSQL, migration prestart, verified TLS with a trusted CA bundle, an HTTPS Better Auth origin, a non-placeholder auth secret, and disabled auth-bypass guards. `runtime-environment.mjs` is the shared validation and PostgreSQL connection source for the application, migrations, and owner bootstrap; do not duplicate or weaken those rules.
+
+Pushes to `main` deploy the regular runtime target through GitHub Actions. The workflow assumes the account-scoped `better-budget-github-deploy` IAM role through GitHub OIDC, tags the ECR image with the immutable commit SHA, copies the current ECS task definition so production secrets and service configuration remain authoritative in AWS, replaces only the `Main` container image, and waits for service stability before checking liveness and readiness. Keep the OIDC trust restricted to the immutable BetterBudget repository identity and `main`; keep its permissions limited to the production ECR repository, ECS service, and task execution role. Do not add long-lived AWS credentials or production application secrets to GitHub.
 
 ## Financial invariants
 

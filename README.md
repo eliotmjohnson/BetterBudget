@@ -414,6 +414,50 @@ ALLOW_INSECURE_LOCAL_AUTH=false
 
 Keep `DATABASE_URL`, `DATABASE_SSL_CA`, and `BETTER_AUTH_SECRET` in the deployment secret store. The CA may be injected as a multiline PEM or with literal `\n` separators. Do not include `ssl`, `sslmode`, `sslcert`, `sslkey`, or `sslrootcert` query parameters in `DATABASE_URL`; the shared connection policy owns TLS for the application, migrations, and bootstrap command.
 
+### Automatic production deployment from GitHub
+
+Pushes to `main` run `.github/workflows/deploy-production.yml`. The workflow
+uses GitHub OIDC to obtain temporary AWS credentials, builds the `runtime`
+Docker target for `linux/amd64`, pushes an image tagged with the Git commit SHA,
+copies the current ECS task definition, replaces only the `Main` container
+image, deploys the new revision, waits for ECS stability, and checks `/api/live`
+and `/api/ready`.
+
+The workflow does not store AWS access keys or application secrets in GitHub.
+The existing ECS task definition remains the source for its Secrets Manager
+references, environment, networking, health checks, and execution role.
+
+Configure AWS once before pushing the workflow to `main`:
+
+1. Open IAM **Identity providers**, choose **Add provider**, and select
+   **OpenID Connect**.
+2. Use `https://token.actions.githubusercontent.com` for the provider URL and
+   `sts.amazonaws.com` for the audience. Skip this step if that provider
+   already exists in account `563692880710`.
+3. In IAM **Policies**, create a customer-managed policy from
+   [`docs/aws/github-actions-deploy-policy.json`](docs/aws/github-actions-deploy-policy.json).
+4. Create the IAM role `better-budget-github-deploy`, select the GitHub OIDC
+   provider as its trusted identity, and attach the policy from the previous
+   step.
+5. Open the role's **Trust relationships**, choose **Edit trust policy**, and
+   replace it with
+   [`docs/aws/github-actions-trust-policy.json`](docs/aws/github-actions-trust-policy.json).
+
+The trust policy accepts tokens only for this repository's immutable GitHub
+owner/repository IDs and the `main` branch. The permissions policy can push only
+to `better-budget/app`, update only `better-budget-zalpfc`, and pass only the
+existing ECS execution role.
+
+After the role exists, commit and push the workflow to `main`. Follow the first
+deployment under the repository's **Actions** tab. A successful run leaves the
+public application URL unchanged and registers a new
+`default-better-budget-zalpfc` task-definition revision. Production startup
+applies only missing migrations before serving traffic; it does not seed or
+reset RDS.
+
+Each deployment keeps a commit-tagged ECR image for rollback. Configure an ECR
+lifecycle policy if needed to retain only a suitable number of older images.
+
 ## Eager persistence model
 
 The application is intentionally optimistic for safe, fully validated operations. A normal write follows this sequence:

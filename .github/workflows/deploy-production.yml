@@ -1,0 +1,112 @@
+name: Deploy production to Amazon ECS
+
+on:
+    push:
+        branches:
+            - main
+    workflow_dispatch:
+
+permissions:
+    contents: read
+    id-token: write
+
+concurrency:
+    group: better-budget-production
+    cancel-in-progress: false
+
+env:
+    AWS_REGION: us-east-2
+    ECR_REPOSITORY: better-budget/app
+    ECS_CLUSTER: default
+    ECS_SERVICE: better-budget-zalpfc
+    ECS_TASK_DEFINITION_FAMILY: default-better-budget-zalpfc
+    ECS_CONTAINER_NAME: Main
+    PRODUCTION_URL: https://be-68490a4c10184ca4a009de3cfdd81165.ecs.us-east-2.on.aws
+
+jobs:
+    deploy:
+        name: Build and deploy
+        runs-on: ubuntu-24.04
+        timeout-minutes: 45
+
+        steps:
+            - name: Check out repository
+              uses: actions/checkout@v4
+
+            - name: Set up Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: 24
+                  cache: npm
+
+            - name: Install dependencies
+              run: npm ci
+
+            - name: Verify source
+              run: |
+                  npm run format:check
+                  npm run typecheck
+                  npm run lint
+
+            - name: Configure temporary AWS credentials
+              uses: aws-actions/configure-aws-credentials@v6.2.3
+              with:
+                  role-to-assume: arn:aws:iam::563692880710:role/better-budget-github-deploy
+                  role-session-name: better-budget-${{ github.run_id }}
+                  aws-region: ${{ env.AWS_REGION }}
+
+            - name: Log in to Amazon ECR
+              id: login-ecr
+              uses: aws-actions/amazon-ecr-login@v2
+
+            - name: Set up Docker Buildx
+              uses: docker/setup-buildx-action@v3
+
+            - name: Build and push runtime image
+              uses: docker/build-push-action@v6
+              with:
+                  context: .
+                  file: ./Dockerfile
+                  target: runtime
+                  platforms: linux/amd64
+                  push: true
+                  provenance: false
+                  tags: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+                  cache-from: type=gha,scope=better-budget-runtime
+                  cache-to: type=gha,mode=max,scope=better-budget-runtime
+
+            - name: Download current ECS task definition
+              run: |
+                  aws ecs describe-task-definition \
+                      --task-definition "$ECS_TASK_DEFINITION_FAMILY" \
+                      --query taskDefinition \
+                      > "$RUNNER_TEMP/task-definition.json"
+
+            - name: Insert the new image into the task definition
+              id: task-definition
+              uses: aws-actions/amazon-ecs-render-task-definition@v1
+              with:
+                  task-definition: ${{ runner.temp }}/task-definition.json
+                  container-name: ${{ env.ECS_CONTAINER_NAME }}
+                  image: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+
+            - name: Deploy the new ECS task definition
+              uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+              with:
+                  task-definition: ${{ steps.task-definition.outputs.task-definition }}
+                  cluster: ${{ env.ECS_CLUSTER }}
+                  service: ${{ env.ECS_SERVICE }}
+                  wait-for-service-stability: true
+
+            - name: Verify production health
+              run: |
+                  curl --fail --silent --show-error \
+                      --retry 6 \
+                      --retry-all-errors \
+                      --retry-delay 5 \
+                      "$PRODUCTION_URL/api/live" > /dev/null
+                  curl --fail --silent --show-error \
+                      --retry 6 \
+                      --retry-all-errors \
+                      --retry-delay 5 \
+                      "$PRODUCTION_URL/api/ready" > /dev/null
