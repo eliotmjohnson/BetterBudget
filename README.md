@@ -469,6 +469,24 @@ The production image also embeds that commit SHA as public build metadata. The
 Settings page reads the app version and description from `package.json` and
 shows the first seven commit characters beside its production-build label.
 
+## Release versioning
+
+Better Budget follows Semantic Versioning from `1.0.0`. Each completed
+application change set receives one version bump: patch for backward-compatible
+fixes and corrections, minor for backward-compatible features, and major for
+incompatible changes requiring migration or coordinated adoption. A mixed
+change set takes the highest applicable bump. `package.json` is canonical and
+the root versions in `package-lock.json` must remain synchronized. Changes
+limited to documentation, comments, formatting, or read-only investigation do
+not bump the application version.
+
+Every major release also adds a new version section to this documentation while
+preserving earlier sections as historical context. A Version 2 section, for
+example, must summarize its new features and improvements, changed or removed
+behavior, breaking changes, required migrations, compatibility boundaries, and
+updated non-goals. The matching engineering details must be added to
+`AGENTS.md` in the same change set.
+
 ## Eager persistence model
 
 The application is intentionally optimistic for safe, fully validated operations. A normal write follows this sequence:

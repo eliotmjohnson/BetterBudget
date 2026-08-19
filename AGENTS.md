@@ -325,6 +325,40 @@ Important details:
 
 See `README.md` for complete setup, environment, Docker, and troubleshooting instructions.
 
+## Release versioning
+
+`package.json` is the canonical application version. Keep its version and the
+root package versions in `package-lock.json` synchronized. Starting from
+`1.0.0`, every completed application change set must receive exactly one
+Semantic Versioning bump before handoff:
+
+- **Patch** (`x.y.Z`) for backward-compatible bug fixes, security fixes,
+  accessibility or visual corrections, performance improvements, internal
+  refactors, and shipped build/configuration corrections.
+- **Minor** (`x.Y.0`) for backward-compatible product capabilities, routes,
+  workflows, API additions, or data-model additions.
+- **Major** (`X.0.0`) for incompatible API, data, authentication, deployment,
+  or user-workflow changes that require migration or coordinated adoption.
+
+When one change set contains multiple kinds of work, apply the highest required
+bump once. Do not bump for read-only investigation or changes limited to
+documentation, comments, formatting, or generated development state. The
+Settings page receives the version from `package.json` at build time.
+
+Every major release must add a new, clearly labeled version section to both
+`README.md` and this guide. Preserve earlier version sections as a historical
+record instead of rewriting them around the new release. At minimum, each new
+major-version section must document:
+
+- The release's new user-facing capabilities and important improvements.
+- Changed or removed behavior and other breaking changes.
+- Required data, configuration, authentication, deployment, or workflow
+  migrations.
+- Compatibility boundaries, retained non-goals, and any superseded guidance.
+
+For example, the `2.0.0` change set must add a Version 2 section alongside the
+existing Version 1 material before handoff.
+
 ## Verification expectations
 
 There is intentionally no unit, component, or end-to-end test suite. Do not add automated test dependencies, configuration, or files unless the user explicitly changes that decision.
