@@ -239,58 +239,83 @@ export function useSortableList<T>({
     };
     const updateTarget = (drag: DragState, clientY: number) => {
         const sortableItems = sortableElements();
-        const slotCenters = sortableItems.map((element) => {
-            const rect = element.getBoundingClientRect();
-            const transform = getComputedStyle(element).transform;
-            const translatedY =
-                transform === 'none' ? 0 : new DOMMatrixReadOnly(transform).m42;
-            const activatorRect = element
-                .querySelector<HTMLElement>('[data-sort-long-press]')
-                ?.getBoundingClientRect();
+        const heights = sortableItems.map(
+            (element) => element.getBoundingClientRect().height
+        );
+        const initialIndex = drag.initialOrder.indexOf(drag.draggedId);
+        const slotShifts = heights.map(() => 0);
 
-            return (
-                (activatorRect
-                    ? activatorRect.top + activatorRect.height / 2
-                    : rect.top + rect.height / 2) - translatedY
-            );
-        });
+        for (let index = initialIndex + 1; index < heights.length; index += 1)
+            slotShifts[index] = slotShifts[index - 1]! + heights[index]!;
+        for (let index = initialIndex - 1; index >= 0; index -= 1)
+            slotShifts[index] = slotShifts[index + 1]! - heights[index]!;
+        const sourceMatchesPreviewHeight =
+            Math.abs(drag.activeHeight - drag.overlay.offsetHeight) <= 2;
+        const targetPositions = sourceMatchesPreviewHeight
+            ? slotShifts
+            : sortableItems.map((element) => {
+                  const rect = element.getBoundingClientRect();
+                  const transform = getComputedStyle(element).transform;
+                  const translatedY =
+                      transform === 'none'
+                          ? 0
+                          : new DOMMatrixReadOnly(transform).m42;
+                  const activatorRect = element
+                      .querySelector<HTMLElement>('[data-sort-long-press]')
+                      ?.getBoundingClientRect();
+
+                  return (
+                      (activatorRect
+                          ? activatorRect.top + activatorRect.height / 2
+                          : rect.top + rect.height / 2) - translatedY
+                  );
+              });
+        let pointerPosition = clientY;
+
+        if (sourceMatchesPreviewHeight) {
+            const sourceTransform = getComputedStyle(
+                drag.sortableItem
+            ).transform;
+            const sourceTranslatedY =
+                sourceTransform === 'none'
+                    ? 0
+                    : new DOMMatrixReadOnly(sourceTransform).m42;
+            const sourceTop =
+                previewElement(drag.sortableItem).getBoundingClientRect().top -
+                sourceTranslatedY;
+            const overlayTop =
+                drag.overlayOriginTop + clientY - drag.pointerStartY;
+
+            pointerPosition = overlayTop - sourceTop;
+        }
         let targetIndex = drag.targetIndex;
 
         while (
-            targetIndex < slotCenters.length - 1 &&
-            clientY >
-                (slotCenters[targetIndex]! + slotCenters[targetIndex + 1]!) /
+            targetIndex < targetPositions.length - 1 &&
+            pointerPosition >
+                (targetPositions[targetIndex]! +
+                    targetPositions[targetIndex + 1]!) /
                     2 +
                     8
         )
             targetIndex += 1;
         while (
             targetIndex > 0 &&
-            clientY <
-                (slotCenters[targetIndex - 1]! + slotCenters[targetIndex]!) /
+            pointerPosition <
+                (targetPositions[targetIndex - 1]! +
+                    targetPositions[targetIndex]!) /
                     2 -
                     8
         )
             targetIndex -= 1;
         if (targetIndex === drag.targetIndex) return;
         drag.targetIndex = targetIndex;
-        const initialIndex = drag.initialOrder.indexOf(drag.draggedId);
         const next = [...drag.initialOrder];
         const [moved] = next.splice(initialIndex, 1);
 
         next.splice(targetIndex, 0, moved!);
         drag.currentOrder = next;
-        const heights = sortableItems.map(
-            (element) => element.getBoundingClientRect().height
-        );
-        const activeShift =
-            initialIndex < targetIndex
-                ? heights
-                      .slice(initialIndex + 1, targetIndex + 1)
-                      .reduce((total, height) => total + height, 0)
-                : -heights
-                      .slice(targetIndex, initialIndex)
-                      .reduce((total, height) => total + height, 0);
+        const activeShift = slotShifts[targetIndex]!;
 
         for (const [index, element] of sortableItems.entries()) {
             const shiftsUp =

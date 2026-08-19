@@ -27,7 +27,8 @@ export function TransactionSheet({
     snapshot,
     mutate,
     transaction = null,
-    onDelete
+    onDelete,
+    variant = 'standard'
 }: {
     initialItemId?: string;
     open: boolean;
@@ -37,6 +38,7 @@ export function TransactionSheet({
     mutate: Mutate;
     transaction?: ActivityEntry | null;
     onDelete?: (transaction: ActivityEntry) => void;
+    variant?: 'standard' | 'full-screen-mobile';
 }) {
     const items = useMemo(
         () => snapshot.categories.flatMap((category) => category.items),
@@ -219,8 +221,10 @@ export function TransactionSheet({
             onOpenChange={onOpenChange}
             onExitComplete={onExitComplete}
             title={transaction ? 'Edit transaction' : 'Add transaction'}
+            variant={variant}
             interactionDisabled={allocationPickerActive}
             headerActionVisibility='mobile'
+            showHandle={variant !== 'full-screen-mobile'}
             headerAction={
                 <button
                     className='sheet-header-submit'

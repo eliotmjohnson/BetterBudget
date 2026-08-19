@@ -357,7 +357,7 @@ textarea:focus-visible {
     overflow: visible;
 }
 .summary-arc-progress {
-    opacity: 1;
+    stroke-dasharray: var(--summary-arc-progress-length, 0px) 1000px;
 }
 .budget-bars-enter .summary-arc-progress {
     animation: summary-arc-in 0.9s cubic-bezier(0.29, 1, 0.29, 1) 0.08s both;
@@ -1141,6 +1141,9 @@ body > .sortable-drag-overlay * {
     will-change: transform;
 }
 .navigation-detail-content:focus {
+    outline: none;
+}
+[data-navigation-detail-restored-focus='true']:focus-visible {
     outline: none;
 }
 .navigation-detail-content[data-state='open'] {
@@ -2276,6 +2279,7 @@ body > .sortable-drag-overlay * {
     background: white;
     text-align: left;
     cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
 }
 .income-progress {
     height: 4px;
@@ -3240,7 +3244,7 @@ body > .sortable-drag-overlay * {
 }
 @keyframes summary-arc-in {
     from {
-        opacity: 0.25;
+        stroke-dashoffset: var(--summary-arc-progress-length, 0px);
     }
 }
 @keyframes budget-progress-in {

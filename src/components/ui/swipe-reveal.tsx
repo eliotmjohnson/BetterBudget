@@ -2,14 +2,16 @@
 
 import { Trash2 } from 'lucide-react';
 import {
+    useEffect,
     useRef,
     type PointerEvent as ReactPointerEvent,
     type ReactNode
 } from 'react';
 
 const actionWidth = 68;
-const intentDistance = 10;
-const directionDominance = 1.15;
+const intentDistance = 6;
+const verticalIntentDistance = 24;
+const diagonalVerticalTolerance = 2.25;
 const openDistance = actionWidth * 0.3;
 const flickVelocity = 0.22;
 
@@ -45,6 +47,44 @@ export function SwipeReveal({
     const offsetRef = useRef(0);
     const openRef = useRef(false);
     const suppressClickRef = useRef(false);
+
+    useEffect(() => {
+        const content = contentRef.current;
+
+        if (!content) return;
+        const preventScrollAfterHorizontalLock = (event: TouchEvent) => {
+            const gesture = gestureRef.current;
+            const touch = event.touches[0];
+
+            if (!gesture || !touch || event.touches.length !== 1) return;
+            const deltaX = touch.clientX - gesture.startX;
+            const deltaY = touch.clientY - gesture.startY;
+            const horizontalDistance = Math.abs(deltaX);
+            const verticalDistance = Math.abs(deltaY);
+            const hasHorizontalIntent =
+                gesture.axis === 'horizontal' ||
+                ((openRef.current || deltaX < 0) &&
+                    horizontalDistance >= intentDistance &&
+                    verticalDistance <=
+                        horizontalDistance * diagonalVerticalTolerance);
+
+            if (hasHorizontalIntent && event.cancelable) event.preventDefault();
+        };
+
+        content.addEventListener(
+            'touchmove',
+            preventScrollAfterHorizontalLock,
+            { passive: false }
+        );
+
+        return () => {
+            content.removeEventListener(
+                'touchmove',
+                preventScrollAfterHorizontalLock
+            );
+        };
+    }, []);
+
     const setOffset = (offset: number, settling: boolean) => {
         offsetRef.current = offset;
         const content = contentRef.current;
@@ -93,9 +133,9 @@ export function SwipeReveal({
             : offsetRef.current <= -openDistance;
         const flickedOpen = gesture.velocityX <= -flickVelocity;
         const flickedClosed = gesture.velocityX >= flickVelocity;
-        const shouldOpen =
-            !cancelled &&
-            (flickedOpen || (movedOpen && (!startedOpen || !flickedClosed)));
+        const hasOpenIntent =
+            flickedOpen || (movedOpen && (!startedOpen || !flickedClosed));
+        const shouldOpen = hasOpenIntent && (!cancelled || movedOpen);
 
         settle(shouldOpen);
     };
@@ -177,12 +217,12 @@ export function SwipeReveal({
                         const hasHorizontalIntent =
                             movesTowardAction &&
                             horizontalDistance >= intentDistance &&
-                            horizontalDistance >=
-                                verticalDistance * directionDominance;
+                            verticalDistance <=
+                                horizontalDistance * diagonalVerticalTolerance;
                         const hasVerticalIntent =
-                            verticalDistance >= intentDistance &&
+                            verticalDistance >= verticalIntentDistance &&
                             verticalDistance >
-                                horizontalDistance * directionDominance;
+                                horizontalDistance * diagonalVerticalTolerance;
                         const hasClosedRightwardIntent =
                             !openRef.current &&
                             deltaX >= intentDistance &&

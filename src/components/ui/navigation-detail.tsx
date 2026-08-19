@@ -50,6 +50,29 @@ function setBaseDragPosition(distance: number, width: number) {
     );
 }
 
+function restoreDetailFocus(target: HTMLElement, focusVisible: boolean) {
+    if (!focusVisible) target.dataset.navigationDetailRestoredFocus = 'true';
+    target.focus({ preventScroll: true });
+    if (focusVisible) return;
+
+    requestAnimationFrame(() => {
+        if (document.activeElement !== target) {
+            delete target.dataset.navigationDetailRestoredFocus;
+
+            return;
+        }
+
+        const clearRestoredFocus = () => {
+            delete target.dataset.navigationDetailRestoredFocus;
+            target.removeEventListener('blur', clearRestoredFocus);
+            target.removeEventListener('keydown', clearRestoredFocus);
+        };
+
+        target.addEventListener('blur', clearRestoredFocus, { once: true });
+        target.addEventListener('keydown', clearRestoredFocus, { once: true });
+    });
+}
+
 export function NavigationDetail({
     backLabel = 'Budget',
     children,
@@ -58,6 +81,7 @@ export function NavigationDetail({
     open,
     onOpenChange,
     restoreFocusRef,
+    restoreFocusVisible,
     title,
     titleContent
 }: {
@@ -68,6 +92,7 @@ export function NavigationDetail({
     open: boolean;
     onOpenChange: (open: boolean) => void;
     restoreFocusRef?: RefObject<HTMLElement | null>;
+    restoreFocusVisible?: boolean;
     title: string;
     titleContent?: ReactNode;
 }) {
@@ -75,6 +100,7 @@ export function NavigationDetail({
     const dragRef = useRef<EdgeDragState | null>(null);
     const gestureReadyRef = useRef(false);
     const activeRef = useRef(false);
+    const restoreFocusVisibleRef = useRef(true);
     const settleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const motionCleanupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
@@ -396,9 +422,18 @@ export function NavigationDetail({
 
                         if (!target) return;
                         event.preventDefault();
-                        target.focus();
+                        restoreDetailFocus(
+                            target,
+                            restoreFocusVisibleRef.current
+                        );
                     }}
                     onOpenAutoFocus={(event) => {
+                        restoreFocusVisibleRef.current =
+                            restoreFocusVisible ??
+                            restoreFocusRef?.current?.matches(
+                                ':focus-visible'
+                            ) ??
+                            true;
                         event.preventDefault();
                         contentRef.current?.focus();
                     }}

@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
 import { Providers } from '@/components/providers';
 import { APP_DESCRIPTION, APP_NAME } from '@/domain/app-info';
+import { iosStartupImages } from './ios-startup-images';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -33,7 +34,11 @@ export const metadata: Metadata = {
     appleWebApp: {
         capable: true,
         statusBarStyle: 'default',
-        title: APP_NAME
+        title: APP_NAME,
+        startupImage: iosStartupImages
+    },
+    other: {
+        'apple-mobile-web-app-capable': 'yes'
     }
 };
 

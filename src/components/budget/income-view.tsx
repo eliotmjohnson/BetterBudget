@@ -404,7 +404,8 @@ function IncomeSourceDetails({
     mutate,
     onRecordIncome,
     onOpenChange,
-    restoreFocusRef
+    restoreFocusRef,
+    restoreFocusVisible
 }: {
     plan: IncomePlanView | null;
     snapshot: MonthSnapshot;
@@ -412,6 +413,7 @@ function IncomeSourceDetails({
     onRecordIncome: () => void;
     onOpenChange: (open: boolean) => void;
     restoreFocusRef: RefObject<HTMLElement | null>;
+    restoreFocusVisible: boolean;
 }) {
     const [deleteTarget, setDeleteTarget] = useState<IncomeDeleteTarget | null>(
         null
@@ -518,6 +520,7 @@ function IncomeSourceDetails({
                     if (!open) close();
                 }}
                 restoreFocusRef={restoreFocusRef}
+                restoreFocusVisible={restoreFocusVisible}
                 title={renderedPlan.name}
                 titleContent={
                     <EditableIncomeTitle
@@ -721,6 +724,8 @@ export function IncomeView({
         () => searchParams.get('source')
     );
     const incomeTriggerRef = useRef<HTMLElement | null>(null);
+    const [incomeRestoreFocusVisible, setIncomeRestoreFocusVisible] =
+        useState(true);
     const [adding, setAdding] = useState(false);
     const [recordingPlanId, setRecordingPlanId] = useState<string | null>(null);
     const selectedPlan = requestedPlanId
@@ -743,9 +748,11 @@ export function IncomeView({
     }, [requestedPlanId, selectedPlan]);
     const openIncomeSource = (
         plan: IncomePlanView,
-        trigger: HTMLButtonElement
+        trigger: HTMLButtonElement,
+        restoreFocusVisible: boolean
     ) => {
         incomeTriggerRef.current = trigger;
+        setIncomeRestoreFocusVisible(restoreFocusVisible);
         window.history.pushState(
             incomeHistoryState(plan.id),
             '',
@@ -865,7 +872,11 @@ export function IncomeView({
                                 type='button'
                                 key={plan.id}
                                 onClick={(event) =>
-                                    openIncomeSource(plan, event.currentTarget)
+                                    openIncomeSource(
+                                        plan,
+                                        event.currentTarget,
+                                        event.detail === 0
+                                    )
                                 }
                             >
                                 <div className='income-row-top'>
@@ -907,6 +918,7 @@ export function IncomeView({
                     if (!open) closeIncomeSource();
                 }}
                 restoreFocusRef={incomeTriggerRef}
+                restoreFocusVisible={incomeRestoreFocusVisible}
             />
             <RecordIncome
                 plan={recordingPlan}
