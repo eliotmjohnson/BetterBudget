@@ -14,9 +14,9 @@ Version 1 implements the complete local product foundation:
   source has active budget structure or an expected-income plan, with clear
   feedback when there is nothing to copy. The month-actions list omits copy
   when either side is ineligible.
-- Untouched months begin without category or line-item structure and show setup actions to copy the previous budget or start with a new category.
+- Untouched months begin without category or line-item structure and show setup actions to copy the previous budget or start with a new category. Viewing or navigating through one does not create a `budget_months` record; the first successful mutation that needs the month creates it atomically.
 - Clearing planned amounts without deleting transactions, income receipts, structure, or carryover settings.
-- Resetting a selected month to a fresh empty budget without changing household definitions or any other month.
+- Resetting a selected month to a fresh empty budget without changing any other month. Definitions still used elsewhere are preserved, while definitions left unused by the reset are removed.
 - Categories and budget items with add, rename, reorder, archive, and unused-definition deletion flows. Category names, icons, colors, and deletion are managed from the Budget page; budget-item deletion is revealed with a left swipe. Holding a category header or item row for 350 ms starts reordering without visible drag grips. The interaction uses a transition-free lifted preview, a target-following faded placeholder, interruptible transform-based list reflow, accessible keyboard controls, and gently accelerated edge auto-scroll. Moving more than 8 px before activation cancels the hold so normal scrolling and item swipe-to-delete remain reliable. React and the backend receive the final order once on drop, and progress-bar entrance animations do not replay during sorting.
 - Available amounts are shown by default on the Budget page, with a stable-width animated switch to Planned amounts. Each line-item progress bar starts full when its available balance is untouched and shrinks in proportion as net spending consumes that balance. A negative balance switches to a coral striped warning bar.
 - Budget-item details use a URL-backed iOS-style navigation push on mobile, including browser history and an app-controlled left-edge swipe-to-go-back. The Budget back control and editable item title stay in the fixed detail header while only the detail body scrolls. The underlying swipe remains disabled while an add/edit transaction sheet is visible or exiting. Across every route, cancelable touches beginning in the leftmost 24 px are claimed immediately before Safari can turn them into history gestures; interactive controls retain normal taps and are claimed after rightward drag motion, including diagonals whose vertical movement is up to four times their horizontal movement. Desktop retains the centered detail modal. A floating blue plus button at the bottom right opens the transaction sheet with the current budget item already selected.
@@ -554,7 +554,7 @@ Financial correctness is shared between optimistic client patches and authoritat
   otherwise empty target ineligible.
 - Copy includes structure, order, plans, expected income, and carryover settings, so the new month's outbound switch inherits the source month's choice. It never copies transactions or received-income receipts.
 - Clearing a plan preserves activity, structure, income receipts, and carryover settings.
-- Resetting a budget permanently removes the selected month's structure, plans, transactions, income activity, and note while preserving household definitions and every other month.
+- Resetting a budget permanently removes the selected month's structure, plans, transactions, income activity, and note while preserving every other month and its definitions. Definitions left unused across all months by the reset are permanently deleted.
 - Archive keeps history. Hard deletion is only allowed for unused definitions.
 
 Changes to these rules should update `src/domain/`, server services, mutation contracts, optimistic patches, and documentation together.

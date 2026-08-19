@@ -83,17 +83,10 @@ export async function getMonthSnapshot(
     householdId: string
 ): Promise<MonthSnapshot> {
     const db = await getDatabase();
-    const targetMonthId = await ensureMonth(db, householdId, monthKey);
     const targetDate = monthDate(monthKey);
     const previousDate = monthDate(shiftMonth(monthKey, -1));
     const [
         monthRows,
-        activeCategoryRows,
-        planRows,
-        splitRows,
-        currentIncomeRows,
-        currentReceiptRows,
-        currentTransactionRows,
         previousCategoryRows,
         previousPlanRows,
         previousIncomeRows
@@ -101,8 +94,101 @@ export async function getMonthSnapshot(
         db
             .select()
             .from(budgetMonths)
-            .where(eq(budgetMonths.id, targetMonthId))
+            .where(
+                and(
+                    eq(budgetMonths.householdId, householdId),
+                    eq(budgetMonths.month, targetDate)
+                )
+            )
             .limit(1),
+        db
+            .select({ id: monthlyBudgetCategories.id })
+            .from(monthlyBudgetCategories)
+            .innerJoin(
+                budgetMonths,
+                eq(monthlyBudgetCategories.monthId, budgetMonths.id)
+            )
+            .innerJoin(
+                categories,
+                eq(monthlyBudgetCategories.categoryId, categories.id)
+            )
+            .where(
+                and(
+                    eq(budgetMonths.householdId, householdId),
+                    eq(budgetMonths.month, previousDate),
+                    isNull(categories.archivedAt)
+                )
+            )
+            .limit(1),
+        db
+            .select({ id: monthlyBudgetItems.id })
+            .from(monthlyBudgetItems)
+            .innerJoin(
+                budgetMonths,
+                eq(monthlyBudgetItems.monthId, budgetMonths.id)
+            )
+            .innerJoin(
+                budgetItems,
+                eq(monthlyBudgetItems.budgetItemId, budgetItems.id)
+            )
+            .innerJoin(categories, eq(budgetItems.categoryId, categories.id))
+            .where(
+                and(
+                    eq(budgetMonths.householdId, householdId),
+                    eq(budgetMonths.month, previousDate),
+                    isNull(categories.archivedAt),
+                    isNull(budgetItems.archivedAt)
+                )
+            )
+            .limit(1),
+        db
+            .select({ id: incomePlans.id })
+            .from(incomePlans)
+            .innerJoin(budgetMonths, eq(incomePlans.monthId, budgetMonths.id))
+            .where(
+                and(
+                    eq(budgetMonths.householdId, householdId),
+                    eq(budgetMonths.month, previousDate)
+                )
+            )
+            .limit(1)
+    ]);
+    const previousMonthHasCopyableContent =
+        previousCategoryRows.length > 0 ||
+        previousPlanRows.length > 0 ||
+        previousIncomeRows.length > 0;
+    const currentMonth = monthRows[0];
+
+    if (!currentMonth)
+        return {
+            householdId,
+            monthId: null,
+            monthKey,
+            label: monthLabel(monthKey),
+            canCopyPreviousMonth: previousMonthHasCopyableContent,
+            version: 0,
+            note: null,
+            summary: {
+                expectedIncomeCents: cents(0),
+                receivedIncomeCents: cents(0),
+                plannedCents: cents(0),
+                spentCents: cents(0),
+                leftToBudgetCents: cents(0)
+            },
+            categories: [],
+            incomePlans: [],
+            activity: []
+        };
+
+    const targetMonthId = currentMonth.id;
+    const [
+        activeCategoryRows,
+        planRows,
+        splitRows,
+        currentIncomeRows,
+        currentReceiptRows,
+        currentTransactionRows
+    ] = await Promise.all([
         db
             .select({
                 id: categories.id,
@@ -239,63 +325,8 @@ export async function getMonthSnapshot(
             .orderBy(
                 desc(transactions.occurredOn),
                 desc(transactions.createdAt)
-            ),
-        db
-            .select({ id: monthlyBudgetCategories.id })
-            .from(monthlyBudgetCategories)
-            .innerJoin(
-                budgetMonths,
-                eq(monthlyBudgetCategories.monthId, budgetMonths.id)
             )
-            .innerJoin(
-                categories,
-                eq(monthlyBudgetCategories.categoryId, categories.id)
-            )
-            .where(
-                and(
-                    eq(budgetMonths.householdId, householdId),
-                    eq(budgetMonths.month, previousDate),
-                    isNull(categories.archivedAt)
-                )
-            )
-            .limit(1),
-        db
-            .select({ id: monthlyBudgetItems.id })
-            .from(monthlyBudgetItems)
-            .innerJoin(
-                budgetMonths,
-                eq(monthlyBudgetItems.monthId, budgetMonths.id)
-            )
-            .innerJoin(
-                budgetItems,
-                eq(monthlyBudgetItems.budgetItemId, budgetItems.id)
-            )
-            .innerJoin(categories, eq(budgetItems.categoryId, categories.id))
-            .where(
-                and(
-                    eq(budgetMonths.householdId, householdId),
-                    eq(budgetMonths.month, previousDate),
-                    isNull(categories.archivedAt),
-                    isNull(budgetItems.archivedAt)
-                )
-            )
-            .limit(1),
-        db
-            .select({ id: incomePlans.id })
-            .from(incomePlans)
-            .innerJoin(budgetMonths, eq(incomePlans.monthId, budgetMonths.id))
-            .where(
-                and(
-                    eq(budgetMonths.householdId, householdId),
-                    eq(budgetMonths.month, previousDate)
-                )
-            )
-            .limit(1)
     ]);
-    const currentMonth = monthRows[0];
-
-    if (!currentMonth) throw new Error('Month is unavailable');
-
     const spendByMonthlyItem = new Map<string, bigint>();
 
     for (const row of splitRows) {
@@ -431,9 +462,7 @@ export async function getMonthSnapshot(
                 id: transaction.id,
                 type: transaction.kind,
                 title: transaction.merchant,
-                subtitle: split
-                    ? 'Split transaction'
-                    : (splitInfo?.itemNames[0] ?? 'Budget item'),
+                subtitle: splitInfo?.itemNames.join(', ') || 'Budget item',
                 occurredOn: transaction.occurredOn,
                 amountCents: cents(transaction.totalCents),
                 tone: splitInfo?.tone ?? 'blue',
@@ -503,10 +532,6 @@ export async function getMonthSnapshot(
         currentPlans.length > 0 ||
         currentIncomeRows.length > 0 ||
         currentTransactionRows.length > 0;
-    const previousMonthHasCopyableContent =
-        previousCategoryRows.length > 0 ||
-        previousPlanRows.length > 0 ||
-        previousIncomeRows.length > 0;
 
     return {
         householdId,
@@ -563,6 +588,83 @@ async function assertVersion(
         );
 }
 
+async function deleteUnusedResetDefinitions(
+    db: AppDb,
+    householdId: string,
+    budgetItemDefinitionIds: string[],
+    categoryDefinitionIds: string[]
+): Promise<void> {
+    const candidateItemIds = [...new Set(budgetItemDefinitionIds)];
+
+    if (candidateItemIds.length > 0) {
+        const referencedItems = await db
+            .select({ id: monthlyBudgetItems.budgetItemId })
+            .from(monthlyBudgetItems)
+            .where(inArray(monthlyBudgetItems.budgetItemId, candidateItemIds));
+        const referencedItemIds = new Set(
+            referencedItems.map((item) => item.id)
+        );
+        const unusedItemIds = candidateItemIds.filter(
+            (itemId) => !referencedItemIds.has(itemId)
+        );
+
+        if (unusedItemIds.length > 0)
+            await db
+                .delete(budgetItems)
+                .where(inArray(budgetItems.id, unusedItemIds));
+    }
+
+    const candidateCategoryIds = [...new Set(categoryDefinitionIds)];
+
+    if (candidateCategoryIds.length === 0) return;
+    const [referencedCategories, remainingItems] = await Promise.all([
+        db
+            .select({ id: monthlyBudgetCategories.categoryId })
+            .from(monthlyBudgetCategories)
+            .where(
+                inArray(
+                    monthlyBudgetCategories.categoryId,
+                    candidateCategoryIds
+                )
+            ),
+        db
+            .select({ id: budgetItems.categoryId })
+            .from(budgetItems)
+            .where(inArray(budgetItems.categoryId, candidateCategoryIds))
+    ]);
+    const retainedCategoryIds = new Set([
+        ...referencedCategories.map((category) => category.id),
+        ...remainingItems.map((item) => item.id)
+    ]);
+    const unusedCategoryIds = candidateCategoryIds.filter(
+        (categoryId) => !retainedCategoryIds.has(categoryId)
+    );
+
+    if (unusedCategoryIds.length > 0)
+        await db
+            .delete(categories)
+            .where(
+                and(
+                    eq(categories.householdId, householdId),
+                    inArray(categories.id, unusedCategoryIds)
+                )
+            );
+}
+
+async function recordMutationReceipt(
+    db: AppDb,
+    householdId: string,
+    input: BudgetMutation
+): Promise<void> {
+    await db.insert(mutationReceipts).values({
+        householdId,
+        clientMutationId: input.clientMutationId,
+        operation: input.type,
+        month: monthDate(input.monthKey),
+        result: { ok: true }
+    });
+}
+
 export async function applyBudgetMutation(
     input: BudgetMutation,
     householdId: string
@@ -588,6 +690,33 @@ export async function applyBudgetMutation(
 
     try {
         await db.transaction(async (tx) => {
+            const noOpWhenMonthIsMissing =
+                input.type === 'clearPlannedAmounts' ||
+                input.type === 'resetBudget' ||
+                (input.type === 'updateMonthNote' && input.note.length === 0);
+
+            if (noOpWhenMonthIsMissing) {
+                const existingMonth = await tx
+                    .select({ id: budgetMonths.id })
+                    .from(budgetMonths)
+                    .where(
+                        and(
+                            eq(budgetMonths.householdId, householdId),
+                            eq(budgetMonths.month, monthDate(input.monthKey))
+                        )
+                    )
+                    .limit(1);
+
+                if (!existingMonth[0]) {
+                    await recordMutationReceipt(
+                        tx as AppDb,
+                        householdId,
+                        input
+                    );
+
+                    return;
+                }
+            }
             const monthId = await ensureMonth(
                 tx as AppDb,
                 householdId,
@@ -1532,10 +1661,58 @@ export async function applyBudgetMutation(
                         .where(eq(monthlyBudgetItems.monthId, monthId));
                     break;
                 case 'resetBudget': {
-                    const monthIncomePlans = await tx
-                        .select({ id: incomePlans.id })
-                        .from(incomePlans)
-                        .where(eq(incomePlans.monthId, monthId));
+                    const [
+                        monthIncomePlans,
+                        monthItemDefinitions,
+                        monthCategoryDefinitions
+                    ] = await Promise.all([
+                        tx
+                            .select({ id: incomePlans.id })
+                            .from(incomePlans)
+                            .where(eq(incomePlans.monthId, monthId)),
+                        tx
+                            .select({
+                                id: budgetItems.id,
+                                categoryId: budgetItems.categoryId
+                            })
+                            .from(monthlyBudgetItems)
+                            .innerJoin(
+                                budgetItems,
+                                eq(
+                                    monthlyBudgetItems.budgetItemId,
+                                    budgetItems.id
+                                )
+                            )
+                            .innerJoin(
+                                categories,
+                                eq(budgetItems.categoryId, categories.id)
+                            )
+                            .where(
+                                and(
+                                    eq(monthlyBudgetItems.monthId, monthId),
+                                    eq(categories.householdId, householdId)
+                                )
+                            ),
+                        tx
+                            .select({ id: categories.id })
+                            .from(monthlyBudgetCategories)
+                            .innerJoin(
+                                categories,
+                                eq(
+                                    monthlyBudgetCategories.categoryId,
+                                    categories.id
+                                )
+                            )
+                            .where(
+                                and(
+                                    eq(
+                                        monthlyBudgetCategories.monthId,
+                                        monthId
+                                    ),
+                                    eq(categories.householdId, householdId)
+                                )
+                            )
+                    ]);
 
                     if (monthIncomePlans.length > 0)
                         await tx.delete(incomeReceipts).where(
@@ -1556,19 +1733,26 @@ export async function applyBudgetMutation(
                     await tx
                         .delete(monthlyBudgetCategories)
                         .where(eq(monthlyBudgetCategories.monthId, monthId));
+                    await deleteUnusedResetDefinitions(
+                        tx as AppDb,
+                        householdId,
+                        monthItemDefinitions.map((item) => item.id),
+                        [
+                            ...monthCategoryDefinitions.map(
+                                (category) => category.id
+                            ),
+                            ...monthItemDefinitions.map(
+                                (item) => item.categoryId
+                            )
+                        ]
+                    );
                     await tx
                         .delete(budgetMonths)
                         .where(eq(budgetMonths.id, monthId));
                     break;
                 }
             }
-            await tx.insert(mutationReceipts).values({
-                householdId,
-                clientMutationId: input.clientMutationId,
-                operation: input.type,
-                month: monthDate(input.monthKey),
-                result: { ok: true }
-            });
+            await recordMutationReceipt(tx as AppDb, householdId, input);
         });
 
         return {

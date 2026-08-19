@@ -84,15 +84,22 @@ export function optimisticSnapshot(
                     category.items.map((item) => ({ item, category }))
                 )
                 .find(({ item }) => item.id === input.splits[0]?.monthlyItemId);
+            const itemNamesById = new Map(
+                next.categories.flatMap((category) =>
+                    category.items.map((item) => [item.id, item.name])
+                )
+            );
+            const itemNames = input.splits.flatMap((split) => {
+                const itemName = itemNamesById.get(split.monthlyItemId);
+
+                return itemName ? [itemName] : [];
+            });
 
             next.activity.unshift({
                 id: `optimistic-${input.clientMutationId}`,
                 type: input.kind,
                 title: input.merchant,
-                subtitle:
-                    input.splits.length > 1
-                        ? 'Split transaction'
-                        : (firstItem?.item.name ?? 'Budget item'),
+                subtitle: itemNames.join(', ') || 'Budget item',
                 occurredOn: input.occurredOn,
                 amountCents: cents(input.totalCents),
                 tone: firstItem?.category.tone ?? 'blue',
@@ -137,14 +144,21 @@ export function optimisticSnapshot(
                     category.items.map((item) => ({ item, category }))
                 )
                 .find(({ item }) => item.id === input.splits[0]?.monthlyItemId);
+            const itemNamesById = new Map(
+                next.categories.flatMap((category) =>
+                    category.items.map((item) => [item.id, item.name])
+                )
+            );
+            const itemNames = input.splits.flatMap((split) => {
+                const itemName = itemNamesById.get(split.monthlyItemId);
+
+                return itemName ? [itemName] : [];
+            });
 
             Object.assign(activity, {
                 type: input.kind,
                 title: input.merchant,
-                subtitle:
-                    input.splits.length > 1
-                        ? 'Split transaction'
-                        : (firstItem?.item.name ?? 'Budget item'),
+                subtitle: itemNames.join(', ') || 'Budget item',
                 occurredOn: input.occurredOn,
                 amountCents: cents(input.totalCents),
                 tone: firstItem?.category.tone ?? 'blue',

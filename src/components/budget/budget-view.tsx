@@ -385,7 +385,9 @@ function EditItemForm({
                                             />
                                             <span className='activity-copy'>
                                                 <strong>{entry.title}</strong>
-                                                <span>{entry.subtitle}</span>
+                                                <span title={entry.subtitle}>
+                                                    {entry.subtitle}
+                                                </span>
                                                 {entry.split ? (
                                                     <span className='split-tag'>
                                                         Split

@@ -63,7 +63,9 @@ export interface IncomeReceiptView {
 
 export interface MonthSnapshot {
     householdId: string;
-    monthId: string;
+
+    /** Null while a month has only been viewed and has no persisted state. */
+    monthId: string | null;
     monthKey: MonthKey;
     label: string;
     canCopyPreviousMonth: boolean;

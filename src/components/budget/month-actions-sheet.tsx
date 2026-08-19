@@ -87,8 +87,9 @@ export function MonthActionsSheet({
                             This permanently removes {snapshot.label}&apos;s
                             categories and line items from this month, planned
                             amounts, transactions, expected and received income,
-                            and month note. Household definitions and other
-                            months are not changed.
+                            and month note. Definitions used only by this month
+                            are also removed; definitions shared with other
+                            months stay intact.
                         </p>
                     ) : null}
                     {confirm === 'note' ? (

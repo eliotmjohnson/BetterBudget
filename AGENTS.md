@@ -24,9 +24,9 @@ The implemented product supports:
   when the source contains active budget structure or an expected-income plan,
   with clear feedback when there is nothing to copy. The month-actions list
   omits copy when either side is ineligible.
-- Keeping untouched months free of category and item structure, with Budget-page actions to copy the previous month or start with a new category.
+- Keeping untouched months free of persisted month, category, and item state when they are only viewed, with Budget-page actions to copy the previous month or start with a new category. The first successful mutation that needs the month creates it atomically.
 - Clearing a month's planned amounts without deleting activity or structure.
-- Resetting a selected month to a fresh empty budget without changing household definitions or other months.
+- Resetting a selected month to a fresh empty budget without changing other months. Definitions still used elsewhere are preserved, while definitions left unused by the reset are removed.
 - Household-level category and budget-item definitions with per-month category participation and item plans.
 - Adding, editing, reordering, archiving, and conditionally deleting categories and items. Category name, icon, and color editing lives directly on the Budget page. A 350 ms long-press on a Budget-page category header or item row starts reordering, with a lifted pointer-following preview, an in-list placeholder, and animated neighboring rows. There are no visible drag grips on the Budget page.
 - Planned amount editing and forward-looking per-month carryover settings. A
@@ -194,7 +194,7 @@ These are product correctness requirements, not implementation preferences:
 11. Moving an entry to another month is server-confirmed and requires valid destination allocations. Destination items are resolved by the shared household definitions, not by trusting stale client plan identifiers.
 12. Copy only the immediately preceding calendar month, only when its source has active category/item structure or an expected-income plan, and only into a target that has no active plan or activity. Archived category/item definitions and soft-deleted transactions do not make an otherwise empty target ineligible.
 13. A month copy includes category/item structure, ordering, planned amounts, expected-income plans, and carryover settings. It never copies expense/refund transactions or received-income receipts.
-14. Clearing a month resets planned amounts while preserving activity, structure, received-income receipts, and carryover settings. Resetting a budget permanently removes only the selected month's structure, plans, transactions, income activity, and note while preserving household definitions and every other month. Deleting a received-income receipt soft deletes it and updates actual-cash totals; deleting an income source requires its active receipts to be deleted first.
+14. Clearing a month resets planned amounts while preserving activity, structure, received-income receipts, and carryover settings. Resetting a budget permanently removes only the selected month's structure, plans, transactions, income activity, and note while preserving every other month and its definitions. Category and item definitions left unused across all months by the reset are permanently deleted. Deleting a received-income receipt soft deletes it and updates actual-cash totals; deleting an income source requires its active receipts to be deleted first.
 15. Archiving retains history. Hard deletion is only valid for definitions that have never been used.
 16. Financial multi-row writes, reorder operations, month copying, and archival must run in database transactions.
 
