@@ -22,30 +22,38 @@
             "Resource": "arn:aws:ecr:us-east-2:563692880710:repository/better-budget/app"
         },
         {
-            "Sid": "ReadAndRegisterTaskDefinitions",
+            "Sid": "DiscoverProductionInstance",
             "Effect": "Allow",
-            "Action": [
-                "ecs:DescribeTaskDefinition",
-                "ecs:RegisterTaskDefinition"
-            ],
+            "Action": "ec2:DescribeInstances",
             "Resource": "*"
         },
         {
-            "Sid": "DeployBetterBudgetService",
+            "Sid": "UseRunShellScriptDocument",
             "Effect": "Allow",
-            "Action": ["ecs:DescribeServices", "ecs:UpdateService"],
-            "Resource": "arn:aws:ecs:us-east-2:563692880710:service/default/better-budget-zalpfc"
+            "Action": "ssm:SendCommand",
+            "Resource": "arn:aws:ssm:us-east-2::document/AWS-RunShellScript"
         },
         {
-            "Sid": "PassEcsExecutionRole",
+            "Sid": "DeployToTaggedProductionInstance",
             "Effect": "Allow",
-            "Action": "iam:PassRole",
-            "Resource": "arn:aws:iam::563692880710:role/better-budget-ecs-execution-role",
+            "Action": "ssm:SendCommand",
+            "Resource": "arn:aws:ec2:us-east-2:563692880710:instance/*",
             "Condition": {
                 "StringEquals": {
-                    "iam:PassedToService": "ecs-tasks.amazonaws.com"
+                    "ssm:resourceTag/Application": "better-budget",
+                    "ssm:resourceTag/Environment": "production"
                 }
             }
+        },
+        {
+            "Sid": "ReadSystemsManagerCommandStatus",
+            "Effect": "Allow",
+            "Action": [
+                "ssm:DescribeInstanceInformation",
+                "ssm:GetCommandInvocation",
+                "ssm:ListCommandInvocations"
+            ],
+            "Resource": "*"
         }
     ]
 }

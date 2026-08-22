@@ -39,6 +39,35 @@ Version 1 implements the complete local product foundation:
 
 Approved design references live in [`docs/design`](./docs/design).
 
+## Version 2 deployment release
+
+Version `2.0.0` keeps the Version 1 budgeting product and database model while
+changing the coordinated production deployment architecture:
+
+- The public application is served by CloudFront from a single private
+  `t3a.micro` EC2 VPC origin. The instance has no public IPv4, SSH access, NAT
+  gateway, or load balancer.
+- The existing RDS database, shared owner, ECR repository, Secrets Manager
+  secret, production validation, migration prestart, and health endpoints are
+  retained without a data migration.
+- Pushes to `main` deploy immutable `linux/amd64` images through GitHub OIDC and
+  Systems Manager. Failed liveness or readiness automatically restores the
+  previous image tag.
+- The production URL changes from the ECS Express hostname to the generated
+  CloudFront hostname. Existing browser sessions do not cross origins, and both
+  users must sign in and reinstall the PWA from the new URL before ECS is
+  removed.
+- ECS task-definition deployment is no longer supported by the production
+  workflow. Operators must complete the one-time AWS console migration in
+  [`docs/aws/ec2-cloudfront-migration.md`](docs/aws/ec2-cloudfront-migration.md)
+  before pushing this release to `main`.
+
+Version 2 does not expand the product into multiple households, invitations,
+bank syncing, recurring automation, imports/exports, multiple currencies,
+notifications, realtime push, or offline financial writes. The Version 1
+financial, authentication, and provider-neutral container boundaries remain in
+force.
+
 ## Stack
 
 | Area           | Technology                                                   |
@@ -203,7 +232,7 @@ The example values are in `.env.example`.
 
 The application also respects standard `NODE_ENV` and `CI` values in their normal contexts.
 
-Next.js automatically loads `.env.local` for `dev` and `build`. The production preflight that runs before `npm start` and the standalone `npm run db:*` scripts read the shell environment directly; they do not automatically load `.env.local`. Export or prefix the required values for those commands. Docker and ECS must inject them through the container/task environment and secret references.
+Next.js automatically loads `.env.local` for `dev` and `build`. The production preflight that runs before `npm start` and the standalone `npm run db:*` scripts read the shell environment directly; they do not automatically load `.env.local`. Export or prefix the required values for those commands. Production container platforms must inject them through runtime environment and secret references.
 
 Production startup fails before migrations or HTTP serving unless PostgreSQL, migration prestart, verified TLS, a non-placeholder Better Auth secret, the HTTPS auth origin, and disabled auth-bypass guards are all configured. The local full-Compose profile is the only explicit exception: it requires both local auth-bypass guards and a loopback `BETTER_AUTH_URL`.
 
@@ -426,15 +455,20 @@ Keep `DATABASE_URL`, `DATABASE_SSL_CA`, and `BETTER_AUTH_SECRET` in the deployme
 Pushes to `main` run `.github/workflows/deploy-production.yml`. The workflow
 uses GitHub OIDC to obtain temporary AWS credentials, builds the `runtime`
 Docker target for `linux/amd64`, pushes an image tagged with the Git commit SHA,
-copies the current ECS task definition, replaces only the `Main` container
-image, deploys the new revision, waits for ECS stability, and checks `/api/live`
-and `/api/ready`.
+finds the one running EC2 instance tagged `Application=better-budget` and
+`Environment=production`, and invokes its deployment helper through Systems
+Manager. The helper pulls before stopping the current container, waits for
+`/api/live` and `/api/ready`, and restores the prior image automatically if the
+candidate fails.
 
 The workflow does not store AWS access keys or application secrets in GitHub.
-The existing ECS task definition remains the source for its Secrets Manager
-references, environment, networking, health checks, and execution role.
+The instance role reads the existing Secrets Manager value at each service
+start. Secret values remain in process memory and memory-backed files rather
+than GitHub, systemd configuration, Docker arguments, or persistent host files.
 
-Configure AWS once before pushing the workflow to `main`:
+Complete the console-first
+[`EC2 and CloudFront migration runbook`](docs/aws/ec2-cloudfront-migration.md)
+before pushing Version 2 to `main`. The lasting GitHub configuration is:
 
 1. Open IAM **Identity providers**, choose **Add provider**, and select
    **OpenID Connect**.
@@ -449,21 +483,23 @@ Configure AWS once before pushing the workflow to `main`:
 5. Open the role's **Trust relationships**, choose **Edit trust policy**, and
    replace it with
    [`docs/aws/github-actions-trust-policy.json`](docs/aws/github-actions-trust-policy.json).
+6. In GitHub **Settings**, **Secrets and variables**, **Actions**, create the
+   repository variable `PRODUCTION_URL` with the exact CloudFront HTTPS origin
+   and no trailing slash.
 
 The trust policy accepts tokens only for this repository's immutable GitHub
 owner/repository IDs and the `main` branch. The permissions policy can push only
-to `better-budget/app`, update only `better-budget-zalpfc`, and pass only the
-existing ECS execution role.
+to `better-budget/app` and send the fixed deployment command only to the
+correctly tagged production instance. It cannot update ECS or pass an ECS role.
 
 After the role exists, commit and push the workflow to `main`. Follow the first
-deployment under the repository's **Actions** tab. A successful run leaves the
-public application URL unchanged and registers a new
-`default-better-budget-zalpfc` task-definition revision. Production startup
-applies only missing migrations before serving traffic; it does not seed or
-reset RDS.
+deployment under the repository's **Actions** tab. Production startup applies
+only missing migrations before serving traffic; it does not seed, reset, or
+bootstrap RDS.
 
-Each deployment keeps a commit-tagged ECR image for rollback. Configure an ECR
-lifecycle policy if needed to retain only a suitable number of older images.
+Each deployment keeps the current and preceding image locally and leaves the
+commit-tagged ECR images available for rollback. Run the workflow manually with
+an existing full SHA in `image_tag` to skip the build and redeploy that image.
 
 The production image also embeds that commit SHA as public build metadata. The
 Settings page reads the app version and description from `package.json` and
@@ -660,9 +696,11 @@ The database CLI scripts intentionally set the `react-server` Node condition bec
 .
 ├── drizzle/                       Ordered SQL migrations
 ├── docs/
+│   ├── aws/                       AWS runbook and least-privilege policies
 │   └── design/                    Approved visual concepts
 ├── public/                        PWA icons and static files
 ├── scripts/
+│   ├── aws/                       Private EC2 bootstrap and deployment host
 │   ├── create-owner.ts            Shared-owner bootstrap
 │   ├── migrate.ts                 Development migration command
 │   ├── migrate-production.mjs     Advisory-lock container prestart

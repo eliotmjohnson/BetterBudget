@@ -50,6 +50,35 @@ The implemented product supports:
   short Git commit in production images.
 - File-persistent PGlite development, PostgreSQL parity, and Docker packaging.
 
+## Version 2 deployment release
+
+Version `2.0.0` changes the coordinated AWS production deployment while
+preserving the Version 1 product, financial model, authentication model,
+database schema, and provider-neutral runtime image.
+
+- CloudFront is the public HTTPS origin and connects directly to a single
+  private `t3a.micro` EC2 instance through a VPC origin. Production no longer
+  requires ECS Express, an ALB, NAT, SSH, or a public EC2 IPv4 address.
+- The existing PostgreSQL RDS database, shared owner, ECR repository, production
+  secret, verified TLS policy, advisory-lock migration prestart, and split
+  health endpoints remain authoritative. There is no Version 2 data migration.
+- GitHub Actions builds immutable `linux/amd64` images and deploys through SSM
+  to the uniquely tagged production instance. The host pulls before stopping,
+  checks liveness and readiness, and restores the previous image after a failed
+  deployment.
+- The CloudFront hostname is a new browser and PWA origin. Existing ECS-origin
+  sessions and installed PWAs do not migrate; both users sign in and reinstall
+  from CloudFront before ECS cleanup.
+- Follow `docs/aws/ec2-cloudfront-migration.md` for the one-time console
+  migration and rollback window. Do not push the EC2 workflow to `main` before
+  the instance, distribution, IAM policy, and `PRODUCTION_URL` repository
+  variable are ready.
+
+Version 2 retains all Version 1 non-goals. Do not treat the infrastructure
+change as authorization to add households, invitations, roles, bank syncing,
+recurring automation, imports/exports, currencies, notifications, realtime
+push, or offline financial writes.
+
 ## Version 1 boundaries
 
 Do not silently expand the product into any of the following without explicit user direction:
@@ -124,7 +153,7 @@ src/components/budget/           Budget shell, views, forms, sheets, and optimis
 src/domain/                      Shared exact-money, budget calculations, and domain types
 src/db/                          Drizzle schema, database selection, migration, and seeding
 src/server/                      Auth access, mutation contracts, and authoritative services
-scripts/                         Migration, seed, reset, owner bootstrap, and production prestart
+scripts/                         Database commands, production prestart, and AWS host bootstrap
 runtime-environment.mjs          Shared production validation and PostgreSQL TLS configuration
 drizzle/                         Ordered SQL migrations and migration metadata
 public/                          PWA icons and static assets
@@ -173,9 +202,18 @@ The database adapter is selected through `DATABASE_KIND`:
 The default PGlite path is automatically migrated and deterministically seeded.
 Production initialization never invokes the development seed. Production startup requires PostgreSQL, migration prestart, verified TLS with a trusted CA bundle, an HTTPS Better Auth origin, a non-placeholder auth secret, and disabled auth-bypass guards. `runtime-environment.mjs` is the shared validation and PostgreSQL connection source for the application, migrations, and owner bootstrap; do not duplicate or weaken those rules.
 
-Pushes to `main` deploy the regular runtime target through GitHub Actions. The workflow assumes the account-scoped `better-budget-github-deploy` IAM role through GitHub OIDC, tags the ECR image with the immutable commit SHA, copies the current ECS task definition so production secrets and service configuration remain authoritative in AWS, replaces only the `Main` container image, and waits for service stability before checking liveness and readiness. Keep the OIDC trust restricted to the immutable BetterBudget repository identity and `main`; keep its permissions limited to the production ECR repository, ECS service, and task execution role. Do not add long-lived AWS credentials or production application secrets to GitHub.
+Pushes to `main` deploy the regular runtime target through GitHub Actions. The workflow assumes the account-scoped `better-budget-github-deploy` IAM role through GitHub OIDC, tags the ECR image with the immutable commit SHA, discovers exactly one running instance with the `Application=better-budget` and `Environment=production` tags, and invokes `better-budget-deploy` through Systems Manager. The host pulls the candidate before restarting, checks liveness and readiness, and restores the preceding tag on failure. Keep the OIDC trust restricted to the immutable BetterBudget repository identity and `main`; keep its permissions limited to the production ECR repository and SSM commands on the tagged production instance. Do not add long-lived AWS credentials or production application secrets to GitHub.
 The Docker build receives `github.sha` as `APP_BUILD_SHA`; Next.js embeds it as
 public, non-secret build metadata for the Settings page.
+
+The private EC2 host is initialized by `scripts/aws/bootstrap-ec2.sh`. The
+self-installing script owns the systemd application service, one-minute
+liveness watchdog, memory-backed runtime secret files, dual-stack AWS service
+endpoints, current/previous image tags, and automatic rollback. It reads the
+existing JSON secret at every application start and passes only its three
+runtime values into the container process. `BETTER_AUTH_URL` and deployment
+identifiers live in root-owned non-secret host configuration. Do not persist
+secret values, add SSH access, or bypass the host deployment helper.
 
 ## Financial invariants
 
@@ -314,7 +352,7 @@ Important details:
 - Client code must use `createUuid()` from `src/domain/uuid.ts` instead of calling `crypto.randomUUID()` directly. Mobile browsers can withhold secure-context crypto APIs when the development app is opened over a plain-HTTP LAN address.
 - `npm run db:reset` is intentionally guarded. It only resets the local `.data` PGlite target, refuses production, and refuses PostgreSQL.
 - The `NODE_OPTIONS=--conditions=react-server` used by database scripts is intentional because server-only modules are imported outside the Next.js process.
-- Next.js loads `.env.local` for development and builds, but the production preflight that precedes `npm start` and the standalone `db:*` scripts do not. Export or prefix their required environment variables; Docker/ECS must inject production values through the container environment and secret references.
+- Next.js loads `.env.local` for development and builds, but the production preflight that precedes `npm start` and the standalone `db:*` scripts do not. Export or prefix their required environment variables; production container platforms must inject production values through runtime environment and secret references.
 - `npm run start` and both production Docker targets fail closed on invalid production configuration. The local full-Compose profile is the only explicit production-mode auth-bypass exception and requires a loopback auth URL plus both local bypass guards.
 - `DATABASE_SSL` accepts `disable`, `require`, or `verify-full`; real production requires `verify-full` plus `DATABASE_SSL_CA`. The shared connection helper strips conflicting SSL query parameters from `DATABASE_URL` before applying this policy.
 - `npm run build` currently selects webpack explicitly for a reliable standalone production build.
@@ -397,7 +435,7 @@ The acceptance target for safe actions is a visible update in under 100 ms witho
 
 ## Docker constraints
 
-The regular production image must remain multi-stage, standalone, non-root, and health-checkable. `/api/live` is process-only and is the container liveness target; `/api/ready` verifies database connectivity and is the load-balancer readiness target; `/api/health` remains a compatibility alias for readiness. Keep the production connection pool small and retain the advisory-lock migration prestart. Keep the separate `owner-bootstrap` target non-root and limited to the one-time owner command.
+The regular production image must remain multi-stage, standalone, non-root, and health-checkable. `/api/live` is process-only and is the container and host-watchdog liveness target; `/api/ready` verifies database connectivity and is the deployment-readiness target; `/api/health` remains a compatibility alias for readiness. Keep the production connection pool small and retain the advisory-lock migration prestart. Keep the separate `owner-bootstrap` target non-root and limited to the one-time owner command.
 
 ## Definition of done
 
