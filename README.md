@@ -53,14 +53,17 @@ changing the coordinated production deployment architecture:
 - Pushes to `main` deploy immutable `linux/amd64` images through GitHub OIDC and
   Systems Manager. Failed liveness or readiness automatically restores the
   previous image tag.
-- The production URL changes from the ECS Express hostname to the generated
-  CloudFront hostname. Existing browser sessions do not cross origins, and both
-  users must sign in and reinstall the PWA from the new URL before ECS is
-  removed.
-- ECS task-definition deployment is no longer supported by the production
-  workflow. Operators must complete the one-time AWS console migration in
-  [`docs/aws/ec2-cloudfront-migration.md`](docs/aws/ec2-cloudfront-migration.md)
-  before pushing this release to `main`.
+- The migration was completed on August 22, 2026. Production now uses
+  [`https://ddz00reob9ubc.cloudfront.net`](https://ddz00reob9ubc.cloudfront.net),
+  and the former ECS service, Fargate tasks, load balancer, task definitions,
+  ECS roles, security group, and ECS log groups have been removed.
+- RDS remains publicly accessible by deliberate operator choice while retaining
+  private EC2 access and restricted PostgreSQL ingress. Making it private is an
+  optional later hardening step, not a pending cutover task.
+- The
+  [`EC2 and CloudFront production runbook`](docs/aws/ec2-cloudfront-migration.md)
+  records the live resources, VPC names, routine operations, rollback process,
+  and replacement-host procedure.
 
 Version 2 does not expand the product into multiple households, invitations,
 bank syncing, recurring automation, imports/exports, multiple currencies,
@@ -466,9 +469,10 @@ The instance role reads the existing Secrets Manager value at each service
 start. Secret values remain in process memory and memory-backed files rather
 than GitHub, systemd configuration, Docker arguments, or persistent host files.
 
-Complete the console-first
-[`EC2 and CloudFront migration runbook`](docs/aws/ec2-cloudfront-migration.md)
-before pushing Version 2 to `main`. The lasting GitHub configuration is:
+The EC2 and CloudFront migration is complete. The
+[`production operations runbook`](docs/aws/ec2-cloudfront-migration.md) records
+the live resource inventory and recovery procedure. The lasting GitHub
+configuration is:
 
 1. Open IAM **Identity providers**, choose **Add provider**, and select
    **OpenID Connect**.
@@ -492,10 +496,10 @@ owner/repository IDs and the `main` branch. The permissions policy can push only
 to `better-budget/app` and send the fixed deployment command only to the
 correctly tagged production instance. It cannot update ECS or pass an ECS role.
 
-After the role exists, commit and push the workflow to `main`. Follow the first
-deployment under the repository's **Actions** tab. Production startup applies
-only missing migrations before serving traffic; it does not seed, reset, or
-bootstrap RDS.
+This configuration is already active in production. For a replacement account
+or disaster recovery, recreate it exactly and validate one manual deployment
+before relying on pushes to `main`. Production startup applies only missing
+migrations before serving traffic; it does not seed, reset, or bootstrap RDS.
 
 Each deployment keeps the current and preceding image locally and leaves the
 commit-tagged ECR images available for rollback. Run the workflow manually with

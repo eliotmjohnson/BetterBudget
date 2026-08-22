@@ -66,13 +66,16 @@ database schema, and provider-neutral runtime image.
   to the uniquely tagged production instance. The host pulls before stopping,
   checks liveness and readiness, and restores the previous image after a failed
   deployment.
-- The CloudFront hostname is a new browser and PWA origin. Existing ECS-origin
-  sessions and installed PWAs do not migrate; both users sign in and reinstall
-  from CloudFront before ECS cleanup.
-- Follow `docs/aws/ec2-cloudfront-migration.md` for the one-time console
-  migration and rollback window. Do not push the EC2 workflow to `main` before
-  the instance, distribution, IAM policy, and `PRODUCTION_URL` repository
-  variable are ready.
+- The migration completed on August 22, 2026. The CloudFront hostname is the
+  active browser and PWA origin, and the former ECS service, cluster, Fargate
+  tasks, load balancer, task definitions, ECS roles, security group, and ECS log
+  groups have been removed.
+- RDS public access is intentionally retained for now with restricted ingress.
+  Making RDS private is an optional future hardening step, not an incomplete
+  Version 2 migration task.
+- Use `docs/aws/ec2-cloudfront-migration.md` as the authoritative live-resource,
+  operations, rollback, and replacement-host runbook. Do not reintroduce ECS,
+  an ALB, NAT, SSH, or a public EC2 address without explicit user direction.
 
 Version 2 retains all Version 1 non-goals. Do not treat the infrastructure
 change as authorization to add households, invitations, roles, bank syncing,
