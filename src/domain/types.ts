@@ -5,6 +5,7 @@ export type CategoryTone = 'yellow' | 'coral' | 'blue' | 'mint' | 'lilac';
 export interface BudgetItemView {
     id: string;
     definitionId: string;
+    definitionVersion: number;
     name: string;
     plannedCents: Cents;
     spentCents: Cents;

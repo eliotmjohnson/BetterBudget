@@ -162,6 +162,7 @@ export const categories = pgTable(
         sortOrder: integer('sort_order').notNull(),
         version: integer('version').notNull().default(1),
         archivedAt: timestamp('archived_at', { withTimezone: true }),
+        archivedFromMonth: date('archived_from_month', { mode: 'string' }),
         createdAt,
         updatedAt
     },
@@ -184,6 +185,7 @@ export const budgetItems = pgTable(
         sortOrder: integer('sort_order').notNull(),
         version: integer('version').notNull().default(1),
         archivedAt: timestamp('archived_at', { withTimezone: true }),
+        archivedFromMonth: date('archived_from_month', { mode: 'string' }),
         createdAt,
         updatedAt
     },

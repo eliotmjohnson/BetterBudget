@@ -7,12 +7,50 @@ import {
     useQueryClient
 } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
-import type { MonthKey } from '@/domain/money';
+import { shiftMonth, type MonthKey } from '@/domain/money';
 import type { MonthSnapshot, MutationResult } from '@/domain/types';
 import type { BudgetMutation } from '@/server/mutation-schema';
 
 const snapshotKey = (monthKey: MonthKey) =>
     ['budget-snapshot', monthKey] as const;
+
+function carryoverInvalidationStart(input: BudgetMutation): MonthKey | null {
+    switch (input.type) {
+        case 'updatePlan':
+        case 'toggleCarryover':
+        case 'addTransaction':
+        case 'deleteTransaction':
+        case 'undoDeleteTransaction':
+        case 'archiveCategory':
+        case 'archiveItem':
+        case 'copyPreviousMonth':
+        case 'clearPlannedAmounts':
+        case 'resetBudget':
+            return shiftMonth(input.monthKey, 1);
+        case 'updateTransaction': {
+            const destinationMonth = input.occurredOn.slice(0, 7) as MonthKey;
+
+            return destinationMonth < input.monthKey
+                ? destinationMonth
+                : shiftMonth(input.monthKey, 1);
+        }
+        case 'addIncomePlan':
+        case 'updateIncomePlan':
+        case 'addIncomeReceipt':
+        case 'deleteIncomeReceipt':
+        case 'deleteIncomePlan':
+        case 'addCategory':
+        case 'addItem':
+        case 'renameCategory':
+        case 'renameItem':
+        case 'deleteCategory':
+        case 'deleteItem':
+        case 'reorderCategories':
+        case 'reorderItems':
+        case 'updateMonthNote':
+            return null;
+    }
+}
 
 async function fetchSnapshot(
     monthKey: MonthKey,
@@ -116,7 +154,8 @@ export function useBudgetMutation(
         snapshot: MonthSnapshot,
         input: BudgetMutation
     ) => MonthSnapshot,
-    onMessage?: (message: string) => void
+    onMessage?: (message: string) => void,
+    onMutationSuccess?: (input: BudgetMutation) => void
 ) {
     const queryClient = useQueryClient();
 
@@ -131,43 +170,57 @@ export function useBudgetMutation(
         retryDelay: (attempt) =>
             Math.min(350 * 2 ** attempt + Math.random() * 180, 2_200),
         onMutate: async (input) => {
+            const queryKey = snapshotKey(input.monthKey);
+
             await queryClient.cancelQueries({
-                queryKey: snapshotKey(monthKey)
+                queryKey
             });
-            const previous = queryClient.getQueryData<MonthSnapshot>(
-                snapshotKey(monthKey)
-            );
+            const previous = queryClient.getQueryData<MonthSnapshot>(queryKey);
 
             if (previous)
                 queryClient.setQueryData(
-                    snapshotKey(monthKey),
+                    queryKey,
                     optimisticUpdate(previous, input)
                 );
 
-            return { previous };
+            return { previous, queryKey };
         },
         onSuccess: (result, input) => {
-            queryClient.setQueryData(snapshotKey(monthKey), result.snapshot);
+            queryClient.setQueryData(
+                snapshotKey(input.monthKey),
+                result.snapshot
+            );
+            onMutationSuccess?.(input);
+            const invalidationStart = carryoverInvalidationStart(input);
 
-            if (input.type === 'toggleCarryover')
+            if (invalidationStart)
                 void queryClient.invalidateQueries({
                     predicate: (query) =>
                         query.queryKey[0] === 'budget-snapshot' &&
                         typeof query.queryKey[1] === 'string' &&
-                        query.queryKey[1] > input.monthKey
+                        query.queryKey[1] >= invalidationStart
                 });
         },
-        onError: (error, _input, context) => {
-            if (error instanceof MutationRequestError && error.result?.snapshot)
+        onError: (error, input, context) => {
+            if (
+                error instanceof MutationRequestError &&
+                error.result?.snapshot
+            ) {
                 queryClient.setQueryData(
-                    snapshotKey(monthKey),
+                    snapshotKey(input.monthKey),
                     error.result.snapshot
                 );
-            else if (context?.previous)
-                queryClient.setQueryData(
-                    snapshotKey(monthKey),
-                    context.previous
-                );
+                const invalidationStart = carryoverInvalidationStart(input);
+
+                if (invalidationStart)
+                    void queryClient.invalidateQueries({
+                        predicate: (query) =>
+                            query.queryKey[0] === 'budget-snapshot' &&
+                            typeof query.queryKey[1] === 'string' &&
+                            query.queryKey[1] >= invalidationStart
+                    });
+            } else if (context?.previous)
+                queryClient.setQueryData(context.queryKey, context.previous);
             onMessage?.(
                 error instanceof Error
                     ? error.message

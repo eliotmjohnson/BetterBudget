@@ -348,6 +348,7 @@ export function optimisticSnapshot(
             category?.items.push({
                 id: `optimistic-${input.clientMutationId}`,
                 definitionId: `optimistic-${input.clientMutationId}`,
+                definitionVersion: 1,
                 name: input.name,
                 plannedCents: cents(input.plannedCents),
                 spentCents: cents(0),
@@ -387,7 +388,10 @@ export function optimisticSnapshot(
                 .flatMap((category) => category.items)
                 .find((candidate) => candidate.definitionId === input.itemId);
 
-            if (item) item.name = input.name;
+            if (item) {
+                item.name = input.name;
+                item.definitionVersion += 1;
+            }
             break;
         }
         case 'archiveCategory':

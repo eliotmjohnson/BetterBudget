@@ -67,7 +67,8 @@ export const mutationSchema = z.discriminatedUnion('type', [
     }),
     base.extend({
         type: z.literal('undoDeleteTransaction'),
-        transactionId: z.string().uuid()
+        transactionId: z.string().uuid(),
+        expectedVersion: z.number().int().positive()
     }),
     base.extend({
         type: z.literal('addIncomePlan'),
@@ -124,19 +125,29 @@ export const mutationSchema = z.discriminatedUnion('type', [
     base.extend({
         type: z.literal('renameItem'),
         itemId: z.string().uuid(),
-        name: z.string().trim().min(1).max(80)
+        name: z.string().trim().min(1).max(80),
+        expectedVersion: z.number().int().positive()
     }),
     base.extend({
         type: z.literal('archiveCategory'),
         categoryId: z.string().uuid(),
         expectedVersion: z.number().int().positive()
     }),
-    base.extend({ type: z.literal('archiveItem'), itemId: z.string().uuid() }),
+    base.extend({
+        type: z.literal('archiveItem'),
+        itemId: z.string().uuid(),
+        expectedVersion: z.number().int().positive()
+    }),
     base.extend({
         type: z.literal('deleteCategory'),
-        categoryId: z.string().uuid()
+        categoryId: z.string().uuid(),
+        expectedVersion: z.number().int().positive()
     }),
-    base.extend({ type: z.literal('deleteItem'), itemId: z.string().uuid() }),
+    base.extend({
+        type: z.literal('deleteItem'),
+        itemId: z.string().uuid(),
+        expectedVersion: z.number().int().positive()
+    }),
     base.extend({
         type: z.literal('reorderCategories'),
         categoryIds: z.array(z.string().uuid()).min(1)

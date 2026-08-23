@@ -48,7 +48,7 @@ import { TransactionIcon } from './transaction-icon';
 import { TransactionSheet } from './transaction-sheet';
 
 type Mutate = (input: BudgetMutation) => void;
-type AmountView = 'planned' | 'available';
+export type BudgetAmountView = 'planned' | 'available';
 type DeleteItemTarget = { category: BudgetCategoryView; item: BudgetItemView };
 type CategoryIconValue = (typeof categoryIconOptions)[number]['value'];
 type CategoryDeleteState = 'closed' | 'open' | 'closing';
@@ -458,7 +458,8 @@ function EditableItemTitle({
                 clientMutationId: createUuid(),
                 monthKey: snapshot.monthKey,
                 itemId: item.definitionId,
-                name
+                name,
+                expectedVersion: item.definitionVersion
             });
         setDraft(name);
         setEditing(false);
@@ -588,7 +589,7 @@ function BudgetCategorySection({
     onToggle,
     snapshot
 }: {
-    amountView: AmountView;
+    amountView: BudgetAmountView;
     category: BudgetCategoryView;
     categoryLongPressProps: SortLongPressProps;
     collapsed: boolean;
@@ -797,14 +798,20 @@ function BudgetCategorySection({
 }
 
 export function BudgetView({
+    amountView,
+    animationKey,
     mutationPending,
     snapshot,
     mutate,
+    onAmountViewChange,
     onDeleteTransaction
 }: {
+    amountView: BudgetAmountView;
+    animationKey: number;
     mutationPending: boolean;
     snapshot: MonthSnapshot;
     mutate: Mutate;
+    onAmountViewChange: (amountView: BudgetAmountView) => void;
     onDeleteTransaction: (entry: ActivityEntry) => void;
 }) {
     const searchParams = useSearchParams();
@@ -814,11 +821,11 @@ export function BudgetView({
         () => searchParams.get('item')
     );
     const budgetLayoutRef = useRef<HTMLElement>(null);
+    const previousAnimationKeyRef = useRef(animationKey);
     const summaryArcProgressRef = useRef<SVGPathElement>(null);
     const itemTriggerRef = useRef<HTMLElement | null>(null);
     const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
     const [transactionOpen, setTransactionOpen] = useState(false);
-    const [amountView, setAmountView] = useState<AmountView>('available');
     const [categoryOpen, setCategoryOpen] = useState(false);
     const [itemCategory, setItemCategory] = useState<BudgetCategoryView | null>(
         null
@@ -847,15 +854,26 @@ export function BudgetView({
               ) ?? null)
         : null;
 
-    useEffect(() => {
+    useLayoutEffect(() => {
+        const layout = budgetLayoutRef.current;
+
+        if (!layout) return;
+        const shouldRestartAnimation =
+            previousAnimationKeyRef.current !== animationKey;
+
+        previousAnimationKeyRef.current = animationKey;
+        if (shouldRestartAnimation) {
+            layout.classList.remove('budget-bars-enter');
+            void layout.offsetWidth;
+            layout.classList.add('budget-bars-enter');
+        }
         const timer = window.setTimeout(
-            () =>
-                budgetLayoutRef.current?.classList.remove('budget-bars-enter'),
+            () => layout.classList.remove('budget-bars-enter'),
             1_250
         );
 
         return () => window.clearTimeout(timer);
-    }, []);
+    }, [animationKey]);
     useEffect(() => {
         if (!requestedItemDefinitionId || selectedItem) return;
 
@@ -1039,7 +1057,8 @@ export function BudgetView({
             type: 'archiveItem',
             clientMutationId: createUuid(),
             monthKey: snapshot.monthKey,
-            itemId: deleteItemTarget.item.definitionId
+            itemId: deleteItemTarget.item.definitionId,
+            expectedVersion: deleteItemTarget.item.definitionVersion
         });
         setDeleteItemTarget(null);
     };
@@ -1266,7 +1285,9 @@ export function BudgetView({
                                     className='budget-amount-label planned'
                                     type='button'
                                     aria-pressed={amountView === 'planned'}
-                                    onClick={() => setAmountView('planned')}
+                                    onClick={() =>
+                                        onAmountViewChange('planned')
+                                    }
                                 >
                                     Planned
                                 </button>
@@ -1274,7 +1295,7 @@ export function BudgetView({
                                     accessibilityLabel='Show available amounts'
                                     checked={amountView === 'available'}
                                     onCheckedChange={(available) =>
-                                        setAmountView(
+                                        onAmountViewChange(
                                             available ? 'available' : 'planned'
                                         )
                                     }
@@ -1284,7 +1305,9 @@ export function BudgetView({
                                     className='budget-amount-label available'
                                     type='button'
                                     aria-pressed={amountView === 'available'}
-                                    onClick={() => setAmountView('available')}
+                                    onClick={() =>
+                                        onAmountViewChange('available')
+                                    }
                                 >
                                     Available
                                 </button>

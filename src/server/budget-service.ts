@@ -1,5 +1,17 @@
 import 'server-only';
-import { and, asc, desc, eq, inArray, isNull, lte, sql } from 'drizzle-orm';
+import {
+    and,
+    asc,
+    desc,
+    eq,
+    gt,
+    inArray,
+    isNotNull,
+    isNull,
+    lte,
+    or,
+    sql
+} from 'drizzle-orm';
 import {
     cents,
     monthLabel,
@@ -183,8 +195,7 @@ export async function getMonthSnapshot(
     const targetMonthId = currentMonth.id;
     const [
         activeCategoryRows,
-        planRows,
-        splitRows,
+        targetPlanRows,
         currentIncomeRows,
         currentReceiptRows,
         currentTransactionRows
@@ -206,7 +217,10 @@ export async function getMonthSnapshot(
                 and(
                     eq(monthlyBudgetCategories.monthId, targetMonthId),
                     eq(categories.householdId, householdId),
-                    isNull(categories.archivedAt)
+                    or(
+                        isNull(categories.archivedAt),
+                        gt(categories.archivedFromMonth, targetDate)
+                    )
                 )
             )
             .orderBy(asc(categories.sortOrder)),
@@ -218,6 +232,7 @@ export async function getMonthSnapshot(
                 plannedCents: monthlyBudgetItems.plannedCents,
                 carryoverEnabled: monthlyBudgetItems.carryoverEnabled,
                 itemId: budgetItems.id,
+                itemVersion: budgetItems.version,
                 itemName: budgetItems.name,
                 itemOrder: budgetItems.sortOrder,
                 categoryId: categories.id,
@@ -240,40 +255,18 @@ export async function getMonthSnapshot(
             .where(
                 and(
                     eq(budgetMonths.householdId, householdId),
-                    lte(budgetMonths.month, targetDate),
-                    isNull(categories.archivedAt),
-                    isNull(budgetItems.archivedAt)
+                    eq(budgetMonths.month, targetDate),
+                    or(
+                        isNull(categories.archivedAt),
+                        gt(categories.archivedFromMonth, targetDate)
+                    ),
+                    or(
+                        isNull(budgetItems.archivedAt),
+                        gt(budgetItems.archivedFromMonth, targetDate)
+                    )
                 )
             )
-            .orderBy(
-                asc(budgetMonths.month),
-                asc(categories.sortOrder),
-                asc(budgetItems.sortOrder)
-            ),
-        db
-            .select({
-                monthlyItemId: transactionSplits.monthlyItemId,
-                transactionId: transactions.id,
-                transactionVersion: transactions.version,
-                month: budgetMonths.month,
-                kind: transactions.kind,
-                merchant: transactions.merchant,
-                occurredOn: transactions.occurredOn,
-                amountCents: transactionSplits.amountCents
-            })
-            .from(transactionSplits)
-            .innerJoin(
-                transactions,
-                eq(transactionSplits.transactionId, transactions.id)
-            )
-            .innerJoin(budgetMonths, eq(transactions.monthId, budgetMonths.id))
-            .where(
-                and(
-                    eq(budgetMonths.householdId, householdId),
-                    lte(budgetMonths.month, targetDate),
-                    isNull(transactions.deletedAt)
-                )
-            ),
+            .orderBy(asc(categories.sortOrder), asc(budgetItems.sortOrder)),
         db
             .select()
             .from(incomePlans)
@@ -327,6 +320,111 @@ export async function getMonthSnapshot(
                 desc(transactions.createdAt)
             )
     ]);
+    const targetDefinitionIds = targetPlanRows.map((plan) => plan.itemId);
+    const historicalPlanRows =
+        targetDefinitionIds.length > 0
+            ? await db
+                  .select({
+                      monthlyId: monthlyBudgetItems.id,
+                      monthlyVersion: monthlyBudgetItems.version,
+                      month: budgetMonths.month,
+                      plannedCents: monthlyBudgetItems.plannedCents,
+                      carryoverEnabled: monthlyBudgetItems.carryoverEnabled,
+                      itemId: budgetItems.id,
+                      itemVersion: budgetItems.version,
+                      itemName: budgetItems.name,
+                      itemOrder: budgetItems.sortOrder,
+                      categoryId: categories.id,
+                      categoryName: categories.name,
+                      categoryIcon: categories.icon,
+                      categoryTone: categories.tone,
+                      categoryOrder: categories.sortOrder,
+                      categoryVersion: categories.version
+                  })
+                  .from(monthlyBudgetItems)
+                  .innerJoin(
+                      budgetMonths,
+                      eq(monthlyBudgetItems.monthId, budgetMonths.id)
+                  )
+                  .innerJoin(
+                      budgetItems,
+                      eq(monthlyBudgetItems.budgetItemId, budgetItems.id)
+                  )
+                  .innerJoin(
+                      categories,
+                      eq(budgetItems.categoryId, categories.id)
+                  )
+                  .where(
+                      and(
+                          eq(budgetMonths.householdId, householdId),
+                          lte(budgetMonths.month, targetDate),
+                          inArray(budgetItems.id, targetDefinitionIds)
+                      )
+                  )
+                  .orderBy(asc(budgetItems.id), asc(budgetMonths.month))
+            : [];
+    const historicalPlansByDefinition = new Map<
+        string,
+        typeof historicalPlanRows
+    >();
+
+    for (const plan of historicalPlanRows) {
+        const plans = historicalPlansByDefinition.get(plan.itemId) ?? [];
+
+        plans.push(plan);
+        historicalPlansByDefinition.set(plan.itemId, plans);
+    }
+    const planRows = targetPlanRows.flatMap((targetPlan) => {
+        const history =
+            historicalPlansByDefinition.get(targetPlan.itemId) ?? [];
+        const targetIndex = history.findLastIndex(
+            (plan) => plan.month === targetDate
+        );
+
+        if (targetIndex < 0) return [];
+        const chain = [history[targetIndex]!];
+        let nextMonth = monthKey;
+
+        for (let index = targetIndex - 1; index >= 0; index -= 1) {
+            const plan = history[index]!;
+            const expectedMonth = shiftMonth(nextMonth, -1);
+
+            if (
+                plan.month.slice(0, 7) !== expectedMonth ||
+                !plan.carryoverEnabled
+            )
+                break;
+            chain.unshift(plan);
+            nextMonth = expectedMonth;
+        }
+
+        return chain;
+    });
+    const relevantMonthlyItemIds = planRows.map((plan) => plan.monthlyId);
+    const splitRows =
+        relevantMonthlyItemIds.length > 0
+            ? await db
+                  .select({
+                      monthlyItemId: transactionSplits.monthlyItemId,
+                      transactionId: transactions.id,
+                      kind: transactions.kind,
+                      amountCents: transactionSplits.amountCents
+                  })
+                  .from(transactionSplits)
+                  .innerJoin(
+                      transactions,
+                      eq(transactionSplits.transactionId, transactions.id)
+                  )
+                  .where(
+                      and(
+                          inArray(
+                              transactionSplits.monthlyItemId,
+                              relevantMonthlyItemIds
+                          ),
+                          isNull(transactions.deletedAt)
+                      )
+                  )
+            : [];
     const spendByMonthlyItem = new Map<string, bigint>();
 
     for (const row of splitRows) {
@@ -397,6 +495,7 @@ export async function getMonthSnapshot(
         const item: BudgetItemView = {
             id: row.monthlyId,
             definitionId: row.itemId,
+            definitionVersion: row.itemVersion,
             name: row.itemName,
             plannedCents: cents(row.plannedCents),
             spentCents: cents(values.spent),
@@ -435,10 +534,10 @@ export async function getMonthSnapshot(
     >();
     const planLookup = new Map(planRows.map((row) => [row.monthlyId, row]));
 
-    for (const split of splitRows.filter((row) => row.month === targetDate)) {
+    for (const split of splitRows) {
         const plan = planLookup.get(split.monthlyItemId);
 
-        if (!plan) continue;
+        if (!plan || plan.month !== targetDate) continue;
         const existing = splitInfoByTransaction.get(split.transactionId) ?? {
             itemNames: [],
             tone: plan.categoryTone,
@@ -567,25 +666,97 @@ export async function getMonthSnapshot(
     };
 }
 
-async function assertVersion(
+async function throwMonthlyItemMutationFailure(
     db: AppDb,
-    table: typeof monthlyBudgetItems | typeof transactions,
-    id: string,
-    expectedVersion: number
-): Promise<void> {
+    monthId: string,
+    id: string
+): Promise<never> {
     const rows = await db
-        .select({ version: table.version })
-        .from(table)
-        .where(eq(table.id, id))
+        .select({ id: monthlyBudgetItems.id })
+        .from(monthlyBudgetItems)
+        .where(
+            and(
+                eq(monthlyBudgetItems.id, id),
+                eq(monthlyBudgetItems.monthId, monthId)
+            )
+        )
         .limit(1);
 
     if (!rows[0])
-        throw new MutationFailure('not_found', 'That item no longer exists.');
-    if (rows[0].version !== expectedVersion)
+        throw new MutationFailure('not_found', 'That budget item is not here.');
+
+    throw new MutationFailure(
+        'conflict',
+        'This changed on another device. The latest version has been loaded.'
+    );
+}
+
+async function throwTransactionMutationFailure(
+    db: AppDb,
+    monthId: string,
+    id: string
+): Promise<never> {
+    const rows = await db
+        .select({ id: transactions.id })
+        .from(transactions)
+        .where(and(eq(transactions.id, id), eq(transactions.monthId, monthId)))
+        .limit(1);
+
+    if (!rows[0])
         throw new MutationFailure(
-            'conflict',
-            'This changed on another device. The latest version has been loaded.'
+            'not_found',
+            'That transaction is not in this month.'
         );
+
+    throw new MutationFailure(
+        'conflict',
+        'This changed on another device. The latest version has been loaded.'
+    );
+}
+
+async function throwCategoryMutationFailure(
+    db: AppDb,
+    householdId: string,
+    id: string
+): Promise<never> {
+    const rows = await db
+        .select({ id: categories.id })
+        .from(categories)
+        .where(
+            and(eq(categories.id, id), eq(categories.householdId, householdId))
+        )
+        .limit(1);
+
+    if (!rows[0])
+        throw new MutationFailure('not_found', 'That category is not here.');
+
+    throw new MutationFailure(
+        'conflict',
+        'This changed on another device. The latest version has been loaded.'
+    );
+}
+
+async function throwItemDefinitionMutationFailure(
+    db: AppDb,
+    householdId: string,
+    id: string
+): Promise<never> {
+    const rows = await db
+        .select({ id: budgetItems.id })
+        .from(budgetItems)
+        .innerJoin(categories, eq(budgetItems.categoryId, categories.id))
+        .where(
+            and(eq(budgetItems.id, id), eq(categories.householdId, householdId))
+        )
+        .limit(1);
+
+    if (!rows[0])
+        throw new MutationFailure('not_found', 'That budget item is not here.');
+
+    throw new MutationFailure(
+        'conflict',
+        'This changed on another device. The latest version has been loaded.'
+    );
 }
 
 async function deleteUnusedResetDefinitions(
@@ -740,38 +911,62 @@ export async function applyBudgetMutation(
                     'Income must be recorded in the selected month.'
                 );
             switch (input.type) {
-                case 'updatePlan':
-                    await assertVersion(
-                        tx as AppDb,
-                        monthlyBudgetItems,
-                        input.monthlyItemId,
-                        input.expectedVersion
-                    );
-                    await tx
+                case 'updatePlan': {
+                    const updated = await tx
                         .update(monthlyBudgetItems)
                         .set({
                             plannedCents: BigInt(input.plannedCents),
                             version: input.expectedVersion + 1,
                             updatedAt: new Date()
                         })
-                        .where(eq(monthlyBudgetItems.id, input.monthlyItemId));
+                        .where(
+                            and(
+                                eq(monthlyBudgetItems.id, input.monthlyItemId),
+                                eq(monthlyBudgetItems.monthId, monthId),
+                                eq(
+                                    monthlyBudgetItems.version,
+                                    input.expectedVersion
+                                )
+                            )
+                        )
+                        .returning({ id: monthlyBudgetItems.id });
+
+                    if (!updated[0])
+                        await throwMonthlyItemMutationFailure(
+                            tx as AppDb,
+                            monthId,
+                            input.monthlyItemId
+                        );
                     break;
-                case 'toggleCarryover':
-                    await assertVersion(
-                        tx as AppDb,
-                        monthlyBudgetItems,
-                        input.monthlyItemId,
-                        input.expectedVersion
-                    );
-                    await tx
+                }
+                case 'toggleCarryover': {
+                    const updated = await tx
                         .update(monthlyBudgetItems)
                         .set({
                             carryoverEnabled: input.enabled,
                             version: input.expectedVersion + 1,
                             updatedAt: new Date()
                         })
-                        .where(eq(monthlyBudgetItems.id, input.monthlyItemId));
+                        .where(
+                            and(
+                                eq(monthlyBudgetItems.id, input.monthlyItemId),
+                                eq(monthlyBudgetItems.monthId, monthId),
+                                eq(
+                                    monthlyBudgetItems.version,
+                                    input.expectedVersion
+                                )
+                            )
+                        )
+                        .returning({ id: monthlyBudgetItems.id });
+
+                    if (!updated[0])
+                        await throwMonthlyItemMutationFailure(
+                            tx as AppDb,
+                            monthId,
+                            input.monthlyItemId
+                        );
                     break;
+                }
                 case 'addTransaction': {
                     const total = BigInt(input.totalCents);
 
@@ -816,12 +1011,6 @@ export async function applyBudgetMutation(
                     break;
                 }
                 case 'updateTransaction': {
-                    await assertVersion(
-                        tx as AppDb,
-                        transactions,
-                        input.transactionId,
-                        input.expectedVersion
-                    );
                     const total = BigInt(input.totalCents);
 
                     if (!splitsMatchTotal(input.totalCents, input.splits))
@@ -919,7 +1108,7 @@ export async function applyBudgetMutation(
                                 'The destination month needs matching budget items before this transaction can move.'
                             );
                     }
-                    await tx
+                    const updated = await tx
                         .update(transactions)
                         .set({
                             monthId: destinationMonthId,
@@ -934,8 +1123,18 @@ export async function applyBudgetMutation(
                         .where(
                             and(
                                 eq(transactions.id, input.transactionId),
-                                eq(transactions.monthId, monthId)
+                                eq(transactions.monthId, monthId),
+                                eq(transactions.version, input.expectedVersion),
+                                isNull(transactions.deletedAt)
                             )
+                        )
+                        .returning({ id: transactions.id });
+
+                    if (!updated[0])
+                        await throwTransactionMutationFailure(
+                            tx as AppDb,
+                            monthId,
+                            input.transactionId
                         );
                     await tx
                         .delete(transactionSplits)
@@ -954,28 +1153,58 @@ export async function applyBudgetMutation(
                     );
                     break;
                 }
-                case 'deleteTransaction':
-                    await assertVersion(
-                        tx as AppDb,
-                        transactions,
-                        input.transactionId,
-                        input.expectedVersion
-                    );
-                    await tx
+                case 'deleteTransaction': {
+                    const updated = await tx
                         .update(transactions)
                         .set({
                             deletedAt: new Date(),
                             version: input.expectedVersion + 1,
                             updatedAt: new Date()
                         })
-                        .where(eq(transactions.id, input.transactionId));
+                        .where(
+                            and(
+                                eq(transactions.id, input.transactionId),
+                                eq(transactions.monthId, monthId),
+                                eq(transactions.version, input.expectedVersion),
+                                isNull(transactions.deletedAt)
+                            )
+                        )
+                        .returning({ id: transactions.id });
+
+                    if (!updated[0])
+                        await throwTransactionMutationFailure(
+                            tx as AppDb,
+                            monthId,
+                            input.transactionId
+                        );
                     break;
-                case 'undoDeleteTransaction':
-                    await tx
+                }
+                case 'undoDeleteTransaction': {
+                    const updated = await tx
                         .update(transactions)
-                        .set({ deletedAt: null, updatedAt: new Date() })
-                        .where(eq(transactions.id, input.transactionId));
+                        .set({
+                            deletedAt: null,
+                            version: input.expectedVersion + 1,
+                            updatedAt: new Date()
+                        })
+                        .where(
+                            and(
+                                eq(transactions.id, input.transactionId),
+                                eq(transactions.monthId, monthId),
+                                eq(transactions.version, input.expectedVersion),
+                                isNotNull(transactions.deletedAt)
+                            )
+                        )
+                        .returning({ id: transactions.id });
+
+                    if (!updated[0])
+                        await throwTransactionMutationFailure(
+                            tx as AppDb,
+                            monthId,
+                            input.transactionId
+                        );
                     break;
+                }
                 case 'addIncomePlan': {
                     const existing = await tx
                         .select({ sortOrder: incomePlans.sortOrder })
@@ -1248,8 +1477,8 @@ export async function applyBudgetMutation(
                     });
                     break;
                 }
-                case 'renameCategory':
-                    await tx
+                case 'renameCategory': {
+                    const updated = await tx
                         .update(categories)
                         .set({
                             name: input.name,
@@ -1264,23 +1493,59 @@ export async function applyBudgetMutation(
                                 eq(categories.householdId, householdId),
                                 eq(categories.version, input.expectedVersion)
                             )
+                        )
+                        .returning({ id: categories.id });
+
+                    if (!updated[0])
+                        await throwCategoryMutationFailure(
+                            tx as AppDb,
+                            householdId,
+                            input.categoryId
                         );
                     break;
-                case 'renameItem':
-                    await tx
+                }
+                case 'renameItem': {
+                    const updated = await tx
                         .update(budgetItems)
                         .set({
                             name: input.name,
-                            version: sql`${budgetItems.version} + 1`,
+                            version: input.expectedVersion + 1,
                             updatedAt: new Date()
                         })
-                        .where(eq(budgetItems.id, input.itemId));
+                        .where(
+                            and(
+                                eq(budgetItems.id, input.itemId),
+                                eq(budgetItems.version, input.expectedVersion),
+                                inArray(
+                                    budgetItems.categoryId,
+                                    tx
+                                        .select({ id: categories.id })
+                                        .from(categories)
+                                        .where(
+                                            eq(
+                                                categories.householdId,
+                                                householdId
+                                            )
+                                        )
+                                )
+                            )
+                        )
+                        .returning({ id: budgetItems.id });
+
+                    if (!updated[0])
+                        await throwItemDefinitionMutationFailure(
+                            tx as AppDb,
+                            householdId,
+                            input.itemId
+                        );
                     break;
-                case 'archiveCategory':
-                    await tx
+                }
+                case 'archiveCategory': {
+                    const updated = await tx
                         .update(categories)
                         .set({
                             archivedAt: new Date(),
+                            archivedFromMonth: monthDate(input.monthKey),
                             version: input.expectedVersion + 1,
                             updatedAt: new Date()
                         })
@@ -1290,19 +1555,71 @@ export async function applyBudgetMutation(
                                 eq(categories.householdId, householdId),
                                 eq(categories.version, input.expectedVersion)
                             )
+                        )
+                        .returning({ id: categories.id });
+
+                    if (!updated[0])
+                        await throwCategoryMutationFailure(
+                            tx as AppDb,
+                            householdId,
+                            input.categoryId
                         );
                     break;
-                case 'archiveItem':
-                    await tx
+                }
+                case 'archiveItem': {
+                    const updated = await tx
                         .update(budgetItems)
                         .set({
                             archivedAt: new Date(),
-                            version: sql`${budgetItems.version} + 1`,
+                            archivedFromMonth: monthDate(input.monthKey),
+                            version: input.expectedVersion + 1,
                             updatedAt: new Date()
                         })
-                        .where(eq(budgetItems.id, input.itemId));
+                        .where(
+                            and(
+                                eq(budgetItems.id, input.itemId),
+                                eq(budgetItems.version, input.expectedVersion),
+                                inArray(
+                                    budgetItems.categoryId,
+                                    tx
+                                        .select({ id: categories.id })
+                                        .from(categories)
+                                        .where(
+                                            eq(
+                                                categories.householdId,
+                                                householdId
+                                            )
+                                        )
+                                )
+                            )
+                        )
+                        .returning({ id: budgetItems.id });
+
+                    if (!updated[0])
+                        await throwItemDefinitionMutationFailure(
+                            tx as AppDb,
+                            householdId,
+                            input.itemId
+                        );
                     break;
+                }
                 case 'deleteCategory': {
+                    const owned = await tx
+                        .select({ id: categories.id })
+                        .from(categories)
+                        .where(
+                            and(
+                                eq(categories.id, input.categoryId),
+                                eq(categories.householdId, householdId)
+                            )
+                        )
+                        .limit(1);
+
+                    if (!owned[0])
+                        throw new MutationFailure(
+                            'not_found',
+                            'That category is not here.'
+                        );
                     const definitions = await tx
                         .select({ id: budgetItems.id })
                         .from(budgetItems)
@@ -1330,17 +1647,46 @@ export async function applyBudgetMutation(
                     await tx
                         .delete(budgetItems)
                         .where(eq(budgetItems.categoryId, input.categoryId));
-                    await tx
+                    const deleted = await tx
                         .delete(categories)
                         .where(
                             and(
                                 eq(categories.id, input.categoryId),
-                                eq(categories.householdId, householdId)
+                                eq(categories.householdId, householdId),
+                                eq(categories.version, input.expectedVersion)
                             )
+                        )
+                        .returning({ id: categories.id });
+
+                    if (!deleted[0])
+                        await throwCategoryMutationFailure(
+                            tx as AppDb,
+                            householdId,
+                            input.categoryId
                         );
                     break;
                 }
                 case 'deleteItem': {
+                    const owned = await tx
+                        .select({ id: budgetItems.id })
+                        .from(budgetItems)
+                        .innerJoin(
+                            categories,
+                            eq(budgetItems.categoryId, categories.id)
+                        )
+                        .where(
+                            and(
+                                eq(budgetItems.id, input.itemId),
+                                eq(categories.householdId, householdId)
+                            )
+                        )
+                        .limit(1);
+
+                    if (!owned[0])
+                        throw new MutationFailure(
+                            'not_found',
+                            'That budget item is not here.'
+                        );
                     const used = await tx
                         .select({ id: monthlyBudgetItems.id })
                         .from(monthlyBudgetItems)
@@ -1354,9 +1700,22 @@ export async function applyBudgetMutation(
                             'validation',
                             'This item has budget history and can only be archived.'
                         );
-                    await tx
+                    const deleted = await tx
                         .delete(budgetItems)
-                        .where(eq(budgetItems.id, input.itemId));
+                        .where(
+                            and(
+                                eq(budgetItems.id, input.itemId),
+                                eq(budgetItems.version, input.expectedVersion)
+                            )
+                        )
+                        .returning({ id: budgetItems.id });
+
+                    if (!deleted[0])
+                        await throwItemDefinitionMutationFailure(
+                            tx as AppDb,
+                            householdId,
+                            input.itemId
+                        );
                     break;
                 }
                 case 'reorderCategories': {

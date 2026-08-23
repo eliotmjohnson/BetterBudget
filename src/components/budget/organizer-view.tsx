@@ -125,7 +125,8 @@ export function OrganizerView({
                 clientMutationId: createUuid(),
                 monthKey: snapshot.monthKey,
                 itemId: selection.item.definitionId,
-                name
+                name,
+                expectedVersion: selection.item.definitionVersion
             });
         setSelection(null);
     };
@@ -144,7 +145,8 @@ export function OrganizerView({
                 type: 'archiveItem',
                 clientMutationId: createUuid(),
                 monthKey: snapshot.monthKey,
-                itemId: selection.item.definitionId
+                itemId: selection.item.definitionId,
+                expectedVersion: selection.item.definitionVersion
             });
         setSelection(null);
     };
@@ -155,14 +157,16 @@ export function OrganizerView({
                 type: 'deleteCategory',
                 clientMutationId: createUuid(),
                 monthKey: snapshot.monthKey,
-                categoryId: selection.category.id
+                categoryId: selection.category.id,
+                expectedVersion: selection.category.version
             });
         else
             mutate({
                 type: 'deleteItem',
                 clientMutationId: createUuid(),
                 monthKey: snapshot.monthKey,
-                itemId: selection.item.definitionId
+                itemId: selection.item.definitionId,
+                expectedVersion: selection.item.definitionVersion
             });
         setSelection(null);
     };

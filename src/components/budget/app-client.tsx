@@ -7,7 +7,7 @@ import type { ActivityEntry, MonthSnapshot } from '@/domain/types';
 import { createUuid } from '@/domain/uuid';
 import type { BudgetMutation } from '@/server/mutation-schema';
 import { AppShell, type AppView } from './app-shell';
-import { BudgetView } from './budget-view';
+import { BudgetView, type BudgetAmountView } from './budget-view';
 import { IncomeView } from './income-view';
 import { MonthActionsSheet } from './month-actions-sheet';
 import { optimisticSnapshot } from './optimistic';
@@ -45,10 +45,17 @@ export function BudgetApp({
     const syncing = useDelayedSyncIndicator();
     const showToast = useToast();
     const [monthActionsOpen, setMonthActionsOpen] = useState(false);
+    const [budgetAmountView, setBudgetAmountView] =
+        useState<BudgetAmountView>('available');
+    const [budgetAnimationKey, setBudgetAnimationKey] = useState(0);
     const budgetMutation = useBudgetMutation(
         snapshot.monthKey,
         optimisticSnapshot,
-        (message) => showToast({ message })
+        (message) => showToast({ message }),
+        (input) => {
+            if (input.type === 'copyPreviousMonth')
+                setBudgetAnimationKey((current) => current + 1);
+        }
     );
     const mutate = (input: BudgetMutation) => {
         if (!online) {
@@ -80,7 +87,8 @@ export function BudgetApp({
                     type: 'undoDeleteTransaction',
                     clientMutationId: createUuid(),
                     monthKey: snapshot.monthKey,
-                    transactionId: entry.id
+                    transactionId: entry.id,
+                    expectedVersion: entry.version + 1
                 });
             }
         });
@@ -110,9 +118,12 @@ export function BudgetApp({
             <SettingsView onMessage={(message) => showToast({ message })} />
         ) : (
             <BudgetView
+                amountView={budgetAmountView}
+                animationKey={budgetAnimationKey}
                 mutationPending={budgetMutation.isPending}
                 snapshot={snapshot}
                 mutate={mutate}
+                onAmountViewChange={setBudgetAmountView}
                 onDeleteTransaction={deleteTransaction}
             />
         );

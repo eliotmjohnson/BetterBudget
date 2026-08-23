@@ -1,11 +1,11 @@
-import { Receipt, RotateCcw, type LucideIcon } from 'lucide-react';
+import { CircleDollarSign, Receipt, type LucideIcon } from 'lucide-react';
 import type { ActivityEntry, CategoryTone } from '@/domain/types';
 
 type TransactionType = Exclude<ActivityEntry['type'], 'income'>;
 
 const iconMap: Record<TransactionType, LucideIcon> = {
     expense: Receipt,
-    refund: RotateCcw
+    refund: CircleDollarSign
 };
 
 export function TransactionIcon({
