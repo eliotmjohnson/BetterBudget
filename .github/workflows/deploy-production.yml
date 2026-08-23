@@ -28,7 +28,7 @@ jobs:
     deploy:
         name: Build and deploy
         runs-on: ubuntu-24.04
-        timeout-minutes: 45
+        timeout-minutes: 60
 
         steps:
             - name: Select image tag
@@ -54,18 +54,18 @@ jobs:
 
             - name: Validate production configuration
               run: |
-                  if [[ ! "$PRODUCTION_URL" =~ ^https://[^/]+$ ]]; then
+                  if [[ ! "$PRODUCTION_URL" =~ ^https://[A-Za-z0-9][A-Za-z0-9.-]*[A-Za-z0-9]$ ]]; then
                       echo "Set the PRODUCTION_URL repository variable to the CloudFront HTTPS origin." >&2
                       exit 1
                   fi
 
             - name: Check out repository
               if: steps.release.outputs.build_image == 'true'
-              uses: actions/checkout@v4
+              uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
 
             - name: Set up Node.js
               if: steps.release.outputs.build_image == 'true'
-              uses: actions/setup-node@v4
+              uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
               with:
                   node-version: 24
                   cache: npm
@@ -82,24 +82,57 @@ jobs:
                   npm run lint
 
             - name: Configure temporary AWS credentials
-              uses: aws-actions/configure-aws-credentials@v6.2.3
+              uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c # v6.2.3
               with:
                   role-to-assume: arn:aws:iam::563692880710:role/better-budget-github-deploy
                   role-session-name: better-budget-${{ github.run_id }}
                   aws-region: ${{ env.AWS_REGION }}
 
+            - name: Verify immutable ECR repository
+              run: |
+                  mutability=$(aws ecr describe-repositories \
+                      --repository-names "$ECR_REPOSITORY" \
+                      --query 'repositories[0].imageTagMutability' \
+                      --output text)
+
+                  if [[ "$mutability" != "IMMUTABLE" ]]; then
+                      echo "ECR repository $ECR_REPOSITORY must use immutable image tags; found $mutability." >&2
+                      exit 1
+                  fi
+
+            - name: Inspect release image
+              id: release_image
+              env:
+                  BUILD_IMAGE: ${{ steps.release.outputs.build_image }}
+                  IMAGE_TAG: ${{ steps.release.outputs.image_tag }}
+              run: |
+                  image_digest=$(aws ecr batch-get-image \
+                      --repository-name "$ECR_REPOSITORY" \
+                      --image-ids "imageTag=$IMAGE_TAG" \
+                      --query 'images[0].imageId.imageDigest' \
+                      --output text)
+                  image_exists=false
+                  if [[ "$image_digest" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+                      image_exists=true
+                  elif [[ "$BUILD_IMAGE" != "true" ]]; then
+                      echo "ECR does not contain rollback image $IMAGE_TAG." >&2
+                      exit 1
+                  fi
+
+                  echo "exists=$image_exists" >> "$GITHUB_OUTPUT"
+
             - name: Log in to Amazon ECR
-              if: steps.release.outputs.build_image == 'true'
+              if: steps.release.outputs.build_image == 'true' && steps.release_image.outputs.exists != 'true'
               id: login-ecr
-              uses: aws-actions/amazon-ecr-login@v2
+              uses: aws-actions/amazon-ecr-login@aded0d722166a37980e030aa969dda0bfe6b6947 # v2.1.7
 
             - name: Set up Docker Buildx
-              if: steps.release.outputs.build_image == 'true'
-              uses: docker/setup-buildx-action@v3
+              if: steps.release.outputs.build_image == 'true' && steps.release_image.outputs.exists != 'true'
+              uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
 
             - name: Build and push runtime image
-              if: steps.release.outputs.build_image == 'true'
-              uses: docker/build-push-action@v6
+              if: steps.release.outputs.build_image == 'true' && steps.release_image.outputs.exists != 'true'
+              uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
               with:
                   context: .
                   file: ./Dockerfile
@@ -153,13 +186,13 @@ jobs:
                       --instance-ids "$INSTANCE_ID" \
                       --document-name AWS-RunShellScript \
                       --timeout-seconds 900 \
-                      --parameters "commands=sudo /usr/local/sbin/better-budget-deploy $IMAGE_TAG" \
+                      --parameters "commands=[\"sudo /usr/local/sbin/better-budget-deploy $IMAGE_TAG\"],executionTimeout=[\"2400\"]" \
                       --comment "Deploy Better Budget $IMAGE_TAG" \
                       --query 'Command.CommandId' \
                       --output text)
 
                   status=Pending
-                  for _ in {1..180}; do
+                  for _ in {1..480}; do
                       status=$(aws ssm get-command-invocation \
                           --command-id "$command_id" \
                           --instance-id "$INSTANCE_ID" \
@@ -176,17 +209,26 @@ jobs:
                       esac
                   done
 
-                  echo "Systems Manager command status: $status"
-                  aws ssm get-command-invocation \
+                  standard_output=$(aws ssm get-command-invocation \
                       --command-id "$command_id" \
                       --instance-id "$INSTANCE_ID" \
                       --query StandardOutputContent \
-                      --output text || true
-                  aws ssm get-command-invocation \
+                      --output text || true)
+                  standard_error=$(aws ssm get-command-invocation \
                       --command-id "$command_id" \
                       --instance-id "$INSTANCE_ID" \
                       --query StandardErrorContent \
-                      --output text >&2 || true
+                      --output text || true)
+
+                  echo "Systems Manager command status: $status"
+                  if [[ -n "$standard_output" && "$standard_output" != "None" ]]; then
+                      echo "Systems Manager standard output:"
+                      printf '%s\n' "$standard_output"
+                  fi
+                  if [[ -n "$standard_error" && "$standard_error" != "None" ]]; then
+                      echo "Systems Manager diagnostics from standard error:" >&2
+                      printf '%s\n' "$standard_error" >&2
+                  fi
 
                   if [[ "$status" != "Success" ]]; then
                       echo "The EC2 deployment did not succeed." >&2
@@ -195,13 +237,16 @@ jobs:
 
             - name: Verify production health
               run: |
-                  curl --fail --silent --show-error \
-                      --retry 12 \
-                      --retry-all-errors \
-                      --retry-delay 5 \
-                      "$PRODUCTION_URL/api/live" > /dev/null
-                  curl --fail --silent --show-error \
-                      --retry 12 \
-                      --retry-all-errors \
-                      --retry-delay 5 \
-                      "$PRODUCTION_URL/api/ready" > /dev/null
+                  verify_endpoint() {
+                      curl --fail --silent --show-error \
+                          --connect-timeout 5 \
+                          --max-time 15 \
+                          --retry 12 \
+                          --retry-all-errors \
+                          --retry-delay 5 \
+                          --retry-max-time 90 \
+                          "$1" > /dev/null
+                  }
+
+                  verify_endpoint "$PRODUCTION_URL/api/live"
+                  verify_endpoint "$PRODUCTION_URL/api/ready"

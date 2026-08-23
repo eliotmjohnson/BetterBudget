@@ -206,8 +206,10 @@ The default PGlite path is automatically migrated and deterministically seeded.
 Production initialization never invokes the development seed. Production startup requires PostgreSQL, migration prestart, verified TLS with a trusted CA bundle, an HTTPS Better Auth origin, a non-placeholder auth secret, and disabled auth-bypass guards. `runtime-environment.mjs` is the shared validation and PostgreSQL connection source for the application, migrations, and owner bootstrap; do not duplicate or weaken those rules.
 
 Pushes to `main` deploy the regular runtime target through GitHub Actions. The workflow assumes the account-scoped `better-budget-github-deploy` IAM role through GitHub OIDC, tags the ECR image with the immutable commit SHA, discovers exactly one running instance with the `Application=better-budget` and `Environment=production` tags, and invokes `better-budget-deploy` through Systems Manager. The host pulls the candidate before restarting, checks liveness and readiness, and restores the preceding tag on failure. Keep the OIDC trust restricted to the immutable BetterBudget repository identity and `main`; keep its permissions limited to the production ECR repository and SSM commands on the tagged production instance. Do not add long-lived AWS credentials or production application secrets to GitHub.
-The Docker build receives `github.sha` as `APP_BUILD_SHA`; Next.js embeds it as
-public, non-secret build metadata for the Settings page.
+The workflow verifies that the production ECR repository uses immutable tags,
+and its external actions plus the Docker base image are pinned to immutable
+digests. The Docker build receives `github.sha` as `APP_BUILD_SHA`; Next.js
+embeds it as public, non-secret build metadata for the Settings page.
 
 The private EC2 host is initialized by `scripts/aws/bootstrap-ec2.sh`. The
 self-installing script owns the systemd application service, one-minute

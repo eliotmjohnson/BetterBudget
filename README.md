@@ -462,7 +462,10 @@ finds the one running EC2 instance tagged `Application=better-budget` and
 `Environment=production`, and invokes its deployment helper through Systems
 Manager. The helper pulls before stopping the current container, waits for
 `/api/live` and `/api/ready`, and restores the prior image automatically if the
-candidate fails.
+candidate fails. The workflow fails closed unless the production ECR repository
+uses immutable tags, and safely reuses an existing commit image when a workflow
+is rerun. Its external actions and the Node runtime base image are pinned to
+immutable commit and image digests.
 
 The workflow does not store AWS access keys or application secrets in GitHub.
 The instance role reads the existing Secrets Manager value at each service
@@ -487,16 +490,21 @@ configuration is:
 5. Open the role's **Trust relationships**, choose **Edit trust policy**, and
    replace it with
    [`docs/aws/github-actions-trust-policy.json`](docs/aws/github-actions-trust-policy.json).
-6. In GitHub **Settings**, **Secrets and variables**, **Actions**, create the
+6. Configure ECR repository `better-budget/app` with image-tag mutability set to
+   **Immutable**.
+7. In GitHub **Settings**, **Secrets and variables**, **Actions**, create the
    repository variable `PRODUCTION_URL` with the exact CloudFront HTTPS origin
    and no trailing slash.
 
 The trust policy accepts tokens only for this repository's immutable GitHub
-owner/repository IDs and the `main` branch. The permissions policy can push only
-to `better-budget/app` and send the fixed deployment command only to the
-correctly tagged production instance. It cannot update ECS or pass an ECS role.
+owner/repository IDs and the `main` branch. The permissions policy can inspect
+and push only to `better-budget/app` and send the fixed deployment command only
+to the correctly tagged production instance. It cannot change ECR repository
+settings, update ECS, or pass an ECS role. Publish an updated version of the
+customer-managed policy before the next deployment whenever its version-
+controlled JSON changes.
 
-This configuration is already active in production. For a replacement account
+This configuration is the required production state. For a replacement account
 or disaster recovery, recreate it exactly and validate one manual deployment
 before relying on pushes to `main`. Production startup applies only missing
 migrations before serving traffic; it does not seed, reset, or bootstrap RDS.

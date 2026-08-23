@@ -24,8 +24,8 @@ gateway, or load balancer.
   `vo_GKXJkQDSOGRChpUS3Ha7rz` are deployed.
 - EC2 instance `i-058062ec86ebb26ae` is the only instance tagged
   `Application=better-budget` and `Environment=production`.
-- Pushes to `main` build and deploy immutable commit-SHA images through GitHub
-  OIDC and Systems Manager.
+- Pushes to `main` verify ECR tag immutability, then build and deploy immutable
+  commit-SHA images through GitHub OIDC and Systems Manager.
 - Public `/api/live` and `/api/ready` checks pass, owner authentication works,
   existing data is present, and deployment rollback has been exercised.
 - The old ECS service, cluster, tasks, load balancer, target groups, ECS
@@ -177,21 +177,32 @@ A push to `main` is the complete normal deployment action. The workflow in
 [`deploy-production.yml`](../../.github/workflows/deploy-production.yml):
 
 1. Checks formatting, TypeScript, and linting.
-2. Builds the runtime target for `linux/amd64`.
-3. Pushes the image to ECR with the full Git commit SHA.
+2. Verifies that `better-budget/app` uses ECR's `IMMUTABLE` tag policy.
+3. Reuses the immutable commit image when it already exists, including on a
+   workflow rerun; otherwise builds the runtime target for `linux/amd64` from a
+   digest-pinned Node image and pushes it with the full Git commit SHA.
 4. Finds exactly one running EC2 instance carrying both production tags.
 5. Confirms that instance is online in Systems Manager.
 6. Runs `better-budget-deploy <commit-sha>` through Systems Manager.
-7. Waits for the host to pass liveness and readiness.
-8. Verifies both public CloudFront health endpoints.
+7. Waits for the host to pass liveness and readiness within the bounded command
+   and workflow timeout budgets.
+8. Verifies both public CloudFront health endpoints with bounded retries.
 
 GitHub stores no AWS access key or application secret. The repository variable
 `PRODUCTION_URL` is the exact CloudFront HTTPS origin without a trailing slash.
 The OIDC trust remains limited to this repository and the `main` branch. The
 deployment policy in
 [`github-actions-deploy-policy.json`](github-actions-deploy-policy.json) permits
-only the production ECR push, tagged-instance discovery, and the fixed SSM
-deployment path.
+only inspection and pushes for the production ECR repository, tagged-instance
+discovery, and the fixed SSM deployment path. All external workflow actions are
+pinned to verified full commit SHAs, with their release versions retained in
+comments for deliberate updates.
+
+Before deploying a workflow revision that changes the version-controlled IAM
+policy, publish that JSON as the current version of the customer-managed policy
+attached to `better-budget-github-deploy`. Keep `better-budget/app` configured
+with **Immutable** image tags. The workflow checks both prerequisites before it
+builds an image or changes the host.
 
 Production startup applies only missing, advisory-lock-protected migrations.
 It does not seed, reset, recreate the database, or recreate the owner. RDS data
