@@ -18,6 +18,29 @@ interface DragState {
     velocity: number;
 }
 
+function restoreSheetFocus(target: HTMLElement, focusVisible: boolean) {
+    if (!focusVisible) target.dataset.sheetRestoredFocus = 'true';
+    target.focus({ preventScroll: true });
+    if (focusVisible) return;
+
+    requestAnimationFrame(() => {
+        if (document.activeElement !== target) {
+            delete target.dataset.sheetRestoredFocus;
+
+            return;
+        }
+
+        const clearRestoredFocus = () => {
+            delete target.dataset.sheetRestoredFocus;
+            target.removeEventListener('blur', clearRestoredFocus);
+            target.removeEventListener('keydown', clearRestoredFocus);
+        };
+
+        target.addEventListener('blur', clearRestoredFocus, { once: true });
+        target.addEventListener('keydown', clearRestoredFocus, { once: true });
+    });
+}
+
 export function Sheet({
     open,
     onOpenChange,
@@ -30,6 +53,7 @@ export function Sheet({
     headerActionVisibility = 'all',
     showHandle = true,
     restoreFocusRef,
+    restoreFocusVisible,
     interactionDisabled = false,
     children
 }: {
@@ -37,19 +61,21 @@ export function Sheet({
     onOpenChange: (open: boolean) => void;
     onExitComplete?: () => void;
     title: string;
-    variant?: 'standard' | 'full-screen-mobile';
+    variant?: 'standard' | 'raised-mobile' | 'full-screen-mobile';
     layer?: 'base' | 'nested';
     footer?: ReactNode;
     headerAction?: ReactNode;
     headerActionVisibility?: 'all' | 'mobile';
     showHandle?: boolean;
     restoreFocusRef?: RefObject<HTMLElement | null>;
+    restoreFocusVisible?: boolean;
     interactionDisabled?: boolean;
     children: ReactNode;
 }) {
     const contentRef = useRef<HTMLDivElement>(null);
     const overlayRef = useRef<HTMLDivElement>(null);
     const dragRef = useRef<DragState | null>(null);
+    const restoreFocusVisibleRef = useRef(true);
     const settleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -202,9 +228,24 @@ export function Sheet({
                         if (interactionDisabled) event.preventDefault();
                     }}
                     onCloseAutoFocus={(event) => {
-                        if (!restoreFocusRef?.current) return;
+                        const target = restoreFocusRef?.current;
+
+                        if (!target) return;
                         event.preventDefault();
-                        restoreFocusRef.current.focus();
+                        restoreSheetFocus(
+                            target,
+                            restoreFocusVisibleRef.current
+                        );
+                    }}
+                    onOpenAutoFocus={(event) => {
+                        restoreFocusVisibleRef.current =
+                            restoreFocusVisible ??
+                            restoreFocusRef?.current?.matches(
+                                ':focus-visible'
+                            ) ??
+                            true;
+                        event.preventDefault();
+                        contentRef.current?.focus();
                     }}
                     onPointerDownOutside={(event) => {
                         if (interactionDisabled) event.preventDefault();

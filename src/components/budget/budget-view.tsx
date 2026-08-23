@@ -34,6 +34,7 @@ import {
     monthLabel,
     shiftMonth
 } from '@/domain/money';
+import type { BudgetAmountView } from '@/domain/budget-preferences';
 import type {
     ActivityEntry,
     BudgetCategoryView,
@@ -48,7 +49,6 @@ import { TransactionIcon } from './transaction-icon';
 import { TransactionSheet } from './transaction-sheet';
 
 type Mutate = (input: BudgetMutation) => void;
-export type BudgetAmountView = 'planned' | 'available';
 type DeleteItemTarget = { category: BudgetCategoryView; item: BudgetItemView };
 type CategoryIconValue = (typeof categoryIconOptions)[number]['value'];
 type CategoryDeleteState = 'closed' | 'open' | 'closing';
@@ -571,6 +571,7 @@ function EditItemDetails({
                 onOpenChange={setAddingTransactionOpen}
                 snapshot={snapshot}
                 mutate={mutate}
+                variant='full-screen-mobile'
             />
         </NavigationDetail>
     );

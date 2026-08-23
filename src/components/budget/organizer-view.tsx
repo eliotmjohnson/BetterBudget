@@ -172,15 +172,17 @@ export function OrganizerView({
     };
 
     return (
-        <section className='screen standard-screen organize-screen'>
-            <div className='screen-heading-row'>
-                <div>
-                    <p className='eyebrow'>Structure and ordering</p>
-                    <h1 className='screen-heading'>Organize budget</h1>
-                </div>
+        <section className='organize-screen organize-screen--detail'>
+            <div className='organize-detail-toolbar'>
+                <p className='organize-note'>
+                    <Info size={15} />
+                    Drag to reorder on desktop, or use the item menu on touch
+                    devices.
+                </p>
                 <button
                     className='primary-button compact-action'
                     aria-label='Add category'
+                    aria-haspopup='dialog'
                     type='button'
                     onClick={() => {
                         setName('');
@@ -191,11 +193,6 @@ export function OrganizerView({
                     <span className='organize-action-label'>Category</span>
                 </button>
             </div>
-            <p className='organize-note'>
-                <Info size={15} />
-                Drag to reorder on desktop, or use the item menu on touch
-                devices.
-            </p>
             {snapshot.categories.map((category) => (
                 <section
                     className='organize-category'
@@ -302,6 +299,7 @@ export function OrganizerView({
                 Add category
             </button>
             <Sheet
+                layer='nested'
                 open={categoryOpen}
                 onOpenChange={setCategoryOpen}
                 title='Add category'
@@ -335,6 +333,7 @@ export function OrganizerView({
                 </div>
             </Sheet>
             <Sheet
+                layer='nested'
                 open={itemCategory !== null}
                 onOpenChange={(open) => {
                     if (!open) setItemCategory(null);
@@ -383,6 +382,7 @@ export function OrganizerView({
                 </div>
             </Sheet>
             <Sheet
+                layer='nested'
                 open={selection !== null}
                 onOpenChange={(open) => {
                     if (!open) setSelection(null);

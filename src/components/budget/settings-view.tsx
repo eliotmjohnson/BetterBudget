@@ -1,14 +1,20 @@
 'use client';
 
 import {
+    ChartColumn,
+    Check,
     ChevronRight,
+    CircleDollarSign,
+    Clock3,
     FlaskConical,
     KeyRound,
+    ListTree,
     LogOut,
     MonitorSmartphone,
     ShieldCheck
 } from 'lucide-react';
-import { useState } from 'react';
+import Link from 'next/link';
+import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Sheet } from '@/components/ui/sheet';
 import {
@@ -17,14 +23,38 @@ import {
     APP_NAME,
     APP_VERSION
 } from '@/domain/app-info';
+import type { BudgetAmountView } from '@/domain/budget-preferences';
+import { APP_TIME_ZONE } from '@/domain/calendar';
+import { APP_CURRENCY, type MonthKey } from '@/domain/money';
 import { authClient } from '@/lib/auth-client';
 
 export function SettingsView({
+    defaultBudgetAmountView,
+    monthKey,
+    onDefaultBudgetAmountViewChange,
+    onOrganize,
     onMessage
 }: {
+    defaultBudgetAmountView: BudgetAmountView;
+    monthKey: MonthKey;
+    onDefaultBudgetAmountViewChange: (view: BudgetAmountView) => void;
+    onOrganize: (
+        trigger: HTMLAnchorElement,
+        restoreFocusVisible: boolean
+    ) => void;
     onMessage: (message: string) => void;
 }) {
     const router = useRouter();
+    const currencyTriggerRef = useRef<HTMLButtonElement>(null);
+    const amountViewTriggerRef = useRef<HTMLButtonElement>(null);
+    const organizerRestoreFocusVisibleRef = useRef(true);
+    const organizerPointerActivationRef = useRef(false);
+    const [currencyRestoreFocusVisible, setCurrencyRestoreFocusVisible] =
+        useState(true);
+    const [amountViewRestoreFocusVisible, setAmountViewRestoreFocusVisible] =
+        useState(true);
+    const [currencyOpen, setCurrencyOpen] = useState(false);
+    const [amountViewOpen, setAmountViewOpen] = useState(false);
     const [passwordOpen, setPasswordOpen] = useState(false);
     const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
@@ -59,14 +89,97 @@ export function SettingsView({
             </div>
             <h2 className='settings-section-title'>Budget</h2>
             <div className='settings-list'>
-                <div className='settings-row static-row'>
+                <button
+                    ref={currencyTriggerRef}
+                    className='settings-row'
+                    type='button'
+                    onClick={(event) => {
+                        setCurrencyRestoreFocusVisible(event.detail === 0);
+                        setCurrencyOpen(true);
+                    }}
+                >
                     <MonitorSmartphone size={20} />
                     <span>
                         <strong>Currency and region</strong>
-                        <small>USD · America/Chicago</small>
+                        <small>
+                            {APP_CURRENCY} · {APP_TIME_ZONE}
+                        </small>
                     </span>
-                    <span />
-                </div>
+                    <ChevronRight size={18} />
+                </button>
+                <button
+                    ref={amountViewTriggerRef}
+                    className='settings-row'
+                    type='button'
+                    onClick={(event) => {
+                        setAmountViewRestoreFocusVisible(event.detail === 0);
+                        setAmountViewOpen(true);
+                    }}
+                >
+                    <ChartColumn size={20} />
+                    <span>
+                        <strong>Default amount view</strong>
+                        <small>
+                            {defaultBudgetAmountView === 'available'
+                                ? 'Available'
+                                : 'Planned'}
+                        </small>
+                    </span>
+                    <ChevronRight size={18} />
+                </button>
+                <Link
+                    className='settings-row'
+                    href={`/organize?month=${monthKey}`}
+                    aria-haspopup='dialog'
+                    onFocus={(event) => {
+                        if (event.currentTarget.matches(':focus-visible'))
+                            organizerRestoreFocusVisibleRef.current = true;
+                    }}
+                    onMouseDown={() => {
+                        organizerPointerActivationRef.current = true;
+                        organizerRestoreFocusVisibleRef.current = false;
+                    }}
+                    onPointerDown={() => {
+                        organizerPointerActivationRef.current = true;
+                        organizerRestoreFocusVisibleRef.current = false;
+                    }}
+                    onTouchStart={() => {
+                        organizerPointerActivationRef.current = true;
+                        organizerRestoreFocusVisibleRef.current = false;
+                    }}
+                    onKeyDown={(event) => {
+                        if (event.key !== 'Enter' && event.key !== ' ') return;
+                        organizerPointerActivationRef.current = false;
+                        organizerRestoreFocusVisibleRef.current = true;
+                    }}
+                    onClick={(event) => {
+                        if (
+                            event.defaultPrevented ||
+                            event.button !== 0 ||
+                            event.metaKey ||
+                            event.ctrlKey ||
+                            event.shiftKey ||
+                            event.altKey
+                        )
+                            return;
+                        event.preventDefault();
+                        onOrganize(
+                            event.currentTarget,
+                            !organizerPointerActivationRef.current &&
+                                event.detail === 0 &&
+                                organizerRestoreFocusVisibleRef.current
+                        );
+                        organizerPointerActivationRef.current = false;
+                        organizerRestoreFocusVisibleRef.current = true;
+                    }}
+                >
+                    <ListTree size={20} />
+                    <span>
+                        <strong>Organize budget</strong>
+                        <small>Manage categories, items, and ordering</small>
+                    </span>
+                    <ChevronRight size={18} />
+                </Link>
             </div>
             <h2 className='settings-section-title'>Security</h2>
             <div className='settings-list'>
@@ -167,6 +280,99 @@ export function SettingsView({
                 <span>{APP_DESCRIPTION}</span>
                 <small>{APP_BUILD_LABEL}</small>
             </footer>
+            <Sheet
+                open={currencyOpen}
+                onOpenChange={setCurrencyOpen}
+                restoreFocusRef={currencyTriggerRef}
+                restoreFocusVisible={currencyRestoreFocusVisible}
+                title='Currency and region'
+            >
+                <div className='form-grid'>
+                    <div className='settings-list'>
+                        <div className='settings-row static-row'>
+                            <CircleDollarSign size={20} />
+                            <span>
+                                <strong>Currency</strong>
+                                <small>US dollar ({APP_CURRENCY})</small>
+                            </span>
+                            <span />
+                        </div>
+                        <div className='settings-row static-row'>
+                            <Clock3 size={20} />
+                            <span>
+                                <strong>Time zone</strong>
+                                <small>{APP_TIME_ZONE}</small>
+                            </span>
+                            <span />
+                        </div>
+                    </div>
+                    <p className='confirmation-copy'>
+                        Better Budget currently uses one fixed currency and time
+                        zone. Existing amounts are never converted.
+                    </p>
+                </div>
+            </Sheet>
+            <Sheet
+                open={amountViewOpen}
+                onOpenChange={setAmountViewOpen}
+                restoreFocusRef={amountViewTriggerRef}
+                restoreFocusVisible={amountViewRestoreFocusVisible}
+                title='Default amount view'
+                variant='raised-mobile'
+            >
+                <div
+                    className='settings-list'
+                    role='group'
+                    aria-label='Default amount view'
+                >
+                    <button
+                        className='settings-row'
+                        type='button'
+                        aria-pressed={defaultBudgetAmountView === 'available'}
+                        onClick={() => {
+                            onDefaultBudgetAmountViewChange('available');
+                            setAmountViewOpen(false);
+                        }}
+                    >
+                        <CircleDollarSign size={20} />
+                        <span>
+                            <strong>Available</strong>
+                            <small>Show what remains after spending</small>
+                        </span>
+                        <span
+                            className='settings-selection-indicator'
+                            aria-hidden='true'
+                        >
+                            {defaultBudgetAmountView === 'available' ? (
+                                <Check size={19} strokeWidth={2.4} />
+                            ) : null}
+                        </span>
+                    </button>
+                    <button
+                        className='settings-row'
+                        type='button'
+                        aria-pressed={defaultBudgetAmountView === 'planned'}
+                        onClick={() => {
+                            onDefaultBudgetAmountViewChange('planned');
+                            setAmountViewOpen(false);
+                        }}
+                    >
+                        <ChartColumn size={20} />
+                        <span>
+                            <strong>Planned</strong>
+                            <small>Show the amount assigned to each item</small>
+                        </span>
+                        <span
+                            className='settings-selection-indicator'
+                            aria-hidden='true'
+                        >
+                            {defaultBudgetAmountView === 'planned' ? (
+                                <Check size={19} strokeWidth={2.4} />
+                            ) : null}
+                        </span>
+                    </button>
+                </div>
+            </Sheet>
             <Sheet
                 open={passwordOpen}
                 onOpenChange={setPasswordOpen}

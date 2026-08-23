@@ -1145,6 +1145,7 @@ body > .sortable-drag-overlay * {
 }
 [data-navigation-detail-restored-focus='true']:focus-visible {
     outline: none;
+    box-shadow: none;
 }
 .navigation-detail-content[data-state='open'] {
     animation: navigation-detail-in 0.6s cubic-bezier(0.29, 1, 0.29, 1) both;
@@ -2423,6 +2424,22 @@ body > .sortable-drag-overlay * {
     color: var(--muted);
     font-size: 12px;
 }
+.organize-screen--detail {
+    min-width: 0;
+}
+.organize-detail-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+.organize-detail-toolbar .organize-note {
+    min-width: 0;
+    flex: 1;
+    margin: 0;
+    line-height: 1.4;
+}
 .organize-category {
     margin-bottom: 12px;
     border: 1px solid var(--line);
@@ -2522,6 +2539,18 @@ body > .sortable-drag-overlay * {
     background: white;
     text-align: left;
     cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+.settings-row:focus {
+    outline: none;
+}
+.settings-row:focus-visible {
+    box-shadow: inset 0 0 0 3px color-mix(in srgb, var(--blue) 25%, transparent);
+}
+[data-sheet-restored-focus='true']:focus-visible,
+.settings-row[data-navigation-detail-restored-focus='true']:focus-visible {
+    outline: none;
+    box-shadow: none;
 }
 .settings-row:last-child {
     border-bottom: 0;
@@ -2541,6 +2570,13 @@ body > .sortable-drag-overlay * {
     font-weight: 500;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+.settings-selection-indicator {
+    width: 20px;
+    min-width: 20px;
+    display: grid;
+    place-items: center;
+    color: var(--blue);
 }
 .settings-section-title {
     margin: 26px 0 9px;
@@ -2806,6 +2842,9 @@ body > .sortable-drag-overlay * {
 }
 
 @media (max-width: 759.98px) {
+    .sheet-content[data-variant='raised-mobile'] {
+        min-height: min(310px, 52dvh);
+    }
     body[data-navigation-detail-state] .app-frame {
         backface-visibility: hidden;
         will-change: transform;

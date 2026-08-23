@@ -18,8 +18,8 @@ Version 1 implements the complete local product foundation:
 - Clearing planned amounts without deleting transactions, income receipts, structure, or carryover settings.
 - Resetting a selected month to a fresh empty budget without changing any other month. Definitions still used elsewhere are preserved, while definitions left unused by the reset are removed.
 - Categories and budget items with add, rename, reorder, archive, and unused-definition deletion flows. Category names, icons, colors, and deletion are managed from the Budget page; budget-item deletion is revealed with a left swipe. Holding a category header or item row for 350 ms starts reordering without visible drag grips. The interaction uses a transition-free lifted preview, a target-following faded placeholder, interruptible transform-based list reflow, accessible keyboard controls, and gently accelerated edge auto-scroll. Moving more than 8 px before activation cancels the hold so normal scrolling and item swipe-to-delete remain reliable. React and the backend receive the final order once on drop, and progress-bar entrance animations do not replay during sorting.
-- Available amounts are shown by default on the Budget page, with a stable-width animated switch to Planned amounts. Each line-item progress bar starts full when its available balance is untouched and shrinks in proportion as net spending consumes that balance. A negative balance switches to a coral striped warning bar.
-- Budget-item details use a URL-backed iOS-style navigation push on mobile, including browser history and an app-controlled left-edge swipe-to-go-back. The Budget back control and editable item title stay in the fixed detail header while only the detail body scrolls. The underlying swipe remains disabled while an add/edit transaction sheet is visible or exiting. Across every route, cancelable touches beginning in the leftmost 20 px are claimed immediately outside controls, while controls retain normal taps and every drag from that strip is prevented regardless of direction so Safari cannot claim it as a history gesture. Desktop retains the centered detail modal. A floating blue plus button at the bottom right opens the transaction sheet with the current budget item already selected.
+- Available amounts are shown by default on the Budget page, with a stable-width animated switch to Planned amounts. Settings can change the per-device default without making temporary Budget-page switches persistent. Each line-item progress bar starts full when its available balance is untouched and shrinks in proportion as net spending consumes that balance. A negative balance switches to a coral striped warning bar.
+- Budget-item details use a URL-backed iOS-style navigation push on mobile, including browser history and an app-controlled left-edge swipe-to-go-back. The Budget back control and editable item title stay in the fixed detail header while only the detail body scrolls. The underlying swipe remains disabled while an add/edit transaction sheet is visible or exiting. Across every route, cancelable touches beginning in the leftmost 20 px are claimed immediately outside controls, while controls retain normal taps and every drag from that strip is prevented regardless of direction so Safari cannot claim it as a history gesture. Desktop retains the centered detail modal. A floating blue plus button opens the transaction sheet with the current budget item already selected; item-scoped add and edit flows are full-screen on mobile without a close control or grabber, while global transaction sheets keep their standard presentation.
 - Planned amount editing and forward-looking per-month carryover settings. A
   month's switch sends its ending balance to the immediately following month;
   it does not change that month's inbound balance.
@@ -164,20 +164,20 @@ Do not commit `.env.local` or real credentials.
 
 ## Application routes
 
-| Route            | Purpose                                                                 |
-| ---------------- | ----------------------------------------------------------------------- |
-| `/`              | Budget plan, month summary, category groups, and month activity         |
-| `/transactions`  | Search and manage expenses plus refund-backed Income entries            |
-| `/income`        | Expected-income plans and received-income receipts                      |
-| `/organize`      | Category/item organization, ordering, carryover, archive, and additions |
-| `/settings`      | Security/session controls and non-production failure scenarios          |
-| `/sign-in`       | Shared household owner sign-in                                          |
-| `/api/snapshot`  | Authenticated canonical month snapshot                                  |
-| `/api/mutations` | Validated/idempotent mutation endpoint and mutation status lookup       |
-| `/api/live`      | Process-only container liveness check                                   |
-| `/api/ready`     | Database-backed traffic readiness check                                 |
-| `/api/health`    | Backward-compatible alias for `/api/ready`                              |
-| `/api/auth/*`    | Better Auth handlers                                                    |
+| Route            | Purpose                                                                |
+| ---------------- | ---------------------------------------------------------------------- |
+| `/`              | Budget plan, month summary, category groups, and month activity        |
+| `/transactions`  | Search and manage expenses plus refund-backed Income entries           |
+| `/income`        | Expected-income plans and received-income receipts                     |
+| `/organize`      | URL-backed Settings detail for category/item organization and ordering |
+| `/settings`      | Security/session controls and non-production failure scenarios         |
+| `/sign-in`       | Shared household owner sign-in                                         |
+| `/api/snapshot`  | Authenticated canonical month snapshot                                 |
+| `/api/mutations` | Validated/idempotent mutation endpoint and mutation status lookup      |
+| `/api/live`      | Process-only container liveness check                                  |
+| `/api/ready`     | Database-backed traffic readiness check                                |
+| `/api/health`    | Backward-compatible alias for `/api/ready`                             |
+| `/api/auth/*`    | Better Auth handlers                                                   |
 
 Month-aware routes accept a query such as `?month=2026-08`. The UI preserves the selected month when moving between primary sections.
 
@@ -515,7 +515,12 @@ an existing full SHA in `image_tag` to skip the build and redeploy that image.
 
 The production image also embeds that commit SHA as public build metadata. The
 Settings page reads the app version and description from `package.json` and
-shows the first seven commit characters beside its production-build label.
+shows the first seven commit characters beside its production-build label. Its
+Budget section explains the fixed USD and `America/Chicago` configuration,
+stores the default Available/Planned amount view per browser or installed PWA,
+and opens the category and budget-item organizer for the selected month. The
+organizer uses mobile push navigation with Back, browser history, and a
+left-edge swipe to dismiss, plus the shared centered modal on desktop.
 
 ## Release versioning
 

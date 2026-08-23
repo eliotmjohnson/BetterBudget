@@ -63,6 +63,7 @@ export function AppShell({
 }) {
     const router = useRouter();
     const path = view === 'budget' ? '/' : `/${view}`;
+    const contentView = view === 'organize' ? 'settings' : view;
     const monthHref = (month: MonthKey) => `${path}?month=${month}`;
     const navigate = (
         event: MouseEvent<HTMLAnchorElement>,
@@ -92,7 +93,7 @@ export function AppShell({
                             className={`nav-item ${view === itemView || (view === 'organize' && itemView === 'settings') ? 'active' : ''}`}
                             href={`${href}?month=${monthKey}`}
                             aria-current={
-                                view === itemView ? 'page' : undefined
+                                contentView === itemView ? 'page' : undefined
                             }
                             onClick={(event) => navigate(event, itemView)}
                         >
@@ -157,7 +158,7 @@ export function AppShell({
                     </div>
                 ) : null}
                 <div
-                    key={`${view}-${monthKey}`}
+                    key={`${contentView}-${monthKey}`}
                     className='app-content app-content--enter'
                 >
                     {children}
@@ -169,7 +170,9 @@ export function AppShell({
                         key={itemView}
                         className={`nav-item ${view === itemView || (view === 'organize' && itemView === 'settings') ? 'active' : ''}`}
                         href={`${href}?month=${monthKey}`}
-                        aria-current={view === itemView ? 'page' : undefined}
+                        aria-current={
+                            contentView === itemView ? 'page' : undefined
+                        }
                         onClick={(event) => navigate(event, itemView)}
                     >
                         <Icon size={21} strokeWidth={1.7} />

@@ -81,6 +81,7 @@ export function NavigationDetail({
     open,
     onOpenChange,
     restoreFocusRef,
+    restoreFocusPreferenceRef,
     restoreFocusVisible,
     title,
     titleContent
@@ -92,6 +93,7 @@ export function NavigationDetail({
     open: boolean;
     onOpenChange: (open: boolean) => void;
     restoreFocusRef?: RefObject<HTMLElement | null>;
+    restoreFocusPreferenceRef?: RefObject<boolean>;
     restoreFocusVisible?: boolean;
     title: string;
     titleContent?: ReactNode;
@@ -429,6 +431,7 @@ export function NavigationDetail({
                     }}
                     onOpenAutoFocus={(event) => {
                         restoreFocusVisibleRef.current =
+                            restoreFocusPreferenceRef?.current ??
                             restoreFocusVisible ??
                             restoreFocusRef?.current?.matches(
                                 ':focus-visible'

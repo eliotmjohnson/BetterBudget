@@ -1,13 +1,18 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
+import { NavigationDetail } from '@/components/ui/navigation-detail';
 import { useToast } from '@/components/ui/toast-provider';
+import {
+    BUDGET_AMOUNT_VIEW_COOKIE,
+    type BudgetAmountView
+} from '@/domain/budget-preferences';
 import type { ActivityEntry, MonthSnapshot } from '@/domain/types';
 import { createUuid } from '@/domain/uuid';
 import type { BudgetMutation } from '@/server/mutation-schema';
 import { AppShell, type AppView } from './app-shell';
-import { BudgetView, type BudgetAmountView } from './budget-view';
+import { BudgetView } from './budget-view';
 import { IncomeView } from './income-view';
 import { MonthActionsSheet } from './month-actions-sheet';
 import { optimisticSnapshot } from './optimistic';
@@ -31,10 +36,14 @@ function viewFromPathname(pathname: string, fallback: AppView): AppView {
     return fallback;
 }
 
+const organizerHistoryStateKey = 'betterBudgetOrganizerMonth';
+
 export function BudgetApp({
+    initialBudgetAmountView,
     initialSnapshot,
     view
 }: {
+    initialBudgetAmountView: BudgetAmountView;
     initialSnapshot: MonthSnapshot;
     view: AppView;
 }) {
@@ -44,9 +53,12 @@ export function BudgetApp({
     const online = useConnectivity();
     const syncing = useDelayedSyncIndicator();
     const showToast = useToast();
+    const organizerTriggerRef = useRef<HTMLElement | null>(null);
+    const organizerRestoreFocusVisibleRef = useRef(true);
     const [monthActionsOpen, setMonthActionsOpen] = useState(false);
-    const [budgetAmountView, setBudgetAmountView] =
-        useState<BudgetAmountView>('available');
+    const [defaultBudgetAmountView, setDefaultBudgetAmountView] = useState(
+        initialBudgetAmountView
+    );
     const [budgetAnimationKey, setBudgetAnimationKey] = useState(0);
     const budgetMutation = useBudgetMutation(
         snapshot.monthKey,
@@ -103,6 +115,43 @@ export function BudgetApp({
             `${nextPath}?month=${snapshot.monthKey}`
         );
     };
+    const openOrganizer = (
+        trigger: HTMLAnchorElement,
+        restoreFocusVisible: boolean
+    ) => {
+        organizerTriggerRef.current = trigger;
+        organizerRestoreFocusVisibleRef.current = restoreFocusVisible;
+        if (restoreFocusVisible)
+            delete trigger.dataset.navigationDetailRestoredFocus;
+        else trigger.dataset.navigationDetailRestoredFocus = 'true';
+        window.history.pushState(
+            { [organizerHistoryStateKey]: snapshot.monthKey },
+            '',
+            `/organize?month=${snapshot.monthKey}`
+        );
+    };
+    const closeOrganizer = () => {
+        const currentState = window.history.state;
+        const openedFromSettings =
+            currentState &&
+            typeof currentState === 'object' &&
+            (currentState as Record<string, unknown>)[
+                organizerHistoryStateKey
+            ] === snapshot.monthKey;
+
+        if (openedFromSettings) {
+            window.history.back();
+
+            return;
+        }
+        window.history.replaceState(
+            null,
+            '',
+            `/settings?month=${snapshot.monthKey}`
+        );
+    };
+    const settingsSurface =
+        activeView === 'settings' || activeView === 'organize';
     const content =
         activeView === 'transactions' ? (
             <TransactionsView
@@ -112,18 +161,24 @@ export function BudgetApp({
             />
         ) : activeView === 'income' ? (
             <IncomeView snapshot={snapshot} mutate={mutate} />
-        ) : activeView === 'organize' ? (
-            <OrganizerView snapshot={snapshot} mutate={mutate} />
-        ) : activeView === 'settings' ? (
-            <SettingsView onMessage={(message) => showToast({ message })} />
+        ) : settingsSurface ? (
+            <SettingsView
+                defaultBudgetAmountView={defaultBudgetAmountView}
+                monthKey={snapshot.monthKey}
+                onDefaultBudgetAmountViewChange={(nextView) => {
+                    setDefaultBudgetAmountView(nextView);
+                    document.cookie = `${BUDGET_AMOUNT_VIEW_COOKIE}=${nextView}; Path=/; Max-Age=31536000; SameSite=Lax${window.location.protocol === 'https:' ? '; Secure' : ''}`;
+                }}
+                onOrganize={openOrganizer}
+                onMessage={(message) => showToast({ message })}
+            />
         ) : (
-            <BudgetView
-                amountView={budgetAmountView}
+            <BudgetScreen
                 animationKey={budgetAnimationKey}
+                defaultAmountView={defaultBudgetAmountView}
                 mutationPending={budgetMutation.isPending}
                 snapshot={snapshot}
                 mutate={mutate}
-                onAmountViewChange={setBudgetAmountView}
                 onDeleteTransaction={deleteTransaction}
             />
         );
@@ -140,6 +195,20 @@ export function BudgetApp({
             mutationPending={budgetMutation.isPending}
         >
             {content}
+            {settingsSurface ? (
+                <NavigationDetail
+                    backLabel='Settings'
+                    open={activeView === 'organize'}
+                    onOpenChange={(open) => {
+                        if (!open) closeOrganizer();
+                    }}
+                    restoreFocusRef={organizerTriggerRef}
+                    restoreFocusPreferenceRef={organizerRestoreFocusVisibleRef}
+                    title='Organize budget'
+                >
+                    <OrganizerView snapshot={snapshot} mutate={mutate} />
+                </NavigationDetail>
+            ) : null}
             <MonthActionsSheet
                 open={monthActionsOpen}
                 onOpenChange={setMonthActionsOpen}
@@ -148,5 +217,35 @@ export function BudgetApp({
                 mutationPending={budgetMutation.isPending}
             />
         </AppShell>
+    );
+}
+
+function BudgetScreen({
+    animationKey,
+    defaultAmountView,
+    mutationPending,
+    snapshot,
+    mutate,
+    onDeleteTransaction
+}: {
+    animationKey: number;
+    defaultAmountView: BudgetAmountView;
+    mutationPending: boolean;
+    snapshot: MonthSnapshot;
+    mutate: (input: BudgetMutation) => boolean;
+    onDeleteTransaction: (entry: ActivityEntry) => void;
+}) {
+    const [amountView, setAmountView] = useState(defaultAmountView);
+
+    return (
+        <BudgetView
+            amountView={amountView}
+            animationKey={animationKey}
+            mutationPending={mutationPending}
+            snapshot={snapshot}
+            mutate={mutate}
+            onAmountViewChange={setAmountView}
+            onDeleteTransaction={onDeleteTransaction}
+        />
     );
 }

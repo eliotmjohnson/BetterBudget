@@ -1,5 +1,8 @@
 import { z } from 'zod';
 
+export const APP_CURRENCY = 'USD';
+export const APP_LOCALE = 'en-US';
+
 export type Cents = string & { readonly __brand: 'Cents' };
 export type MonthKey = string & { readonly __brand: 'MonthKey' };
 
@@ -18,9 +21,9 @@ export function formatCurrency(
 ): string {
     const amount = Number(BigInt(value)) / 100;
 
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat(APP_LOCALE, {
         style: 'currency',
-        currency: 'USD',
+        currency: APP_CURRENCY,
         maximumFractionDigits: options.compact ? 0 : 2,
         minimumFractionDigits: options.compact ? 0 : 2,
         signDisplay: options.sign ? 'always' : 'auto',
@@ -43,7 +46,7 @@ export function formatCurrencyInput(value: Cents | string): string {
 export function monthLabel(monthKey: MonthKey | string): string {
     const [year, month] = monthKey.split('-').map(Number);
 
-    return new Intl.DateTimeFormat('en-US', {
+    return new Intl.DateTimeFormat(APP_LOCALE, {
         month: 'long',
         year: 'numeric',
         timeZone: 'UTC'
