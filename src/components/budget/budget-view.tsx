@@ -45,12 +45,15 @@ import type {
 import { createUuid } from '@/domain/uuid';
 import type { BudgetMutation } from '@/server/mutation-schema';
 import { CategoryIcon, categoryIconOptions } from './category-icon';
+import {
+    CategoryDetailsFields,
+    type CategoryIconValue
+} from './category-details-fields';
 import { TransactionIcon } from './transaction-icon';
 import { TransactionSheet } from './transaction-sheet';
 
 type Mutate = (input: BudgetMutation) => void;
 type DeleteItemTarget = { category: BudgetCategoryView; item: BudgetItemView };
-type CategoryIconValue = (typeof categoryIconOptions)[number]['value'];
 type CategoryDeleteState = 'closed' | 'open' | 'closing';
 type TransactionActivityEntry = ActivityEntry & {
     type: Exclude<ActivityEntry['type'], 'income'>;
@@ -81,13 +84,6 @@ const remainingAvailableProgress = (remaining: bigint, spent: bigint) => {
 
     return Math.min(100, Number(basisPoints) / 100);
 };
-const categoryToneOptions: Array<{ value: CategoryTone; label: string }> = [
-    { value: 'yellow', label: 'Yellow' },
-    { value: 'coral', label: 'Coral' },
-    { value: 'blue', label: 'Blue' },
-    { value: 'mint', label: 'Mint' },
-    { value: 'lilac', label: 'Lilac' }
-];
 
 function itemUrl(definitionId?: string) {
     const url = new URL(window.location.href);
@@ -127,89 +123,6 @@ function subscribeToItemHistory(onStoreChange: () => void) {
 
 function notifyItemHistoryChange() {
     window.dispatchEvent(new Event(itemHistoryEvent));
-}
-
-function CategoryDetailsFields({
-    icon,
-    idPrefix,
-    name,
-    onIconChange,
-    onNameChange,
-    onToneChange,
-    placeholder,
-    tone
-}: {
-    icon: CategoryIconValue;
-    idPrefix: string;
-    name: string;
-    onIconChange: (icon: CategoryIconValue) => void;
-    onNameChange: (name: string) => void;
-    onToneChange: (tone: CategoryTone) => void;
-    placeholder?: string;
-    tone: CategoryTone;
-}) {
-    return (
-        <>
-            <div className='category-editor-preview'>
-                <CategoryIcon icon={icon} tone={tone} size={22} />
-                <div>
-                    <strong>{name.trim() || 'Category'}</strong>
-                    <span>Category preview</span>
-                </div>
-            </div>
-            <div className='field'>
-                <label htmlFor={`${idPrefix}-name`}>Name</label>
-                <input
-                    id={`${idPrefix}-name`}
-                    placeholder={placeholder}
-                    value={name}
-                    onChange={(event) => onNameChange(event.target.value)}
-                />
-            </div>
-            <div className='field'>
-                <label>Icon</label>
-                <div
-                    className='category-icon-picker'
-                    role='group'
-                    aria-label='Category icon'
-                >
-                    {categoryIconOptions.map((option) => (
-                        <button
-                            className={`category-icon-choice ${icon === option.value ? 'selected' : ''}`}
-                            type='button'
-                            key={option.value}
-                            aria-label={`${option.label} icon`}
-                            aria-pressed={icon === option.value}
-                            onClick={() => onIconChange(option.value)}
-                        >
-                            <CategoryIcon icon={option.value} tone={tone} />
-                        </button>
-                    ))}
-                </div>
-            </div>
-            <div className='field'>
-                <label>Color</label>
-                <div
-                    className='category-tone-picker'
-                    role='group'
-                    aria-label='Category color'
-                >
-                    {categoryToneOptions.map((option) => (
-                        <button
-                            className={`category-tone-choice tone-${option.value}`}
-                            type='button'
-                            key={option.value}
-                            aria-label={option.label}
-                            aria-pressed={tone === option.value}
-                            onClick={() => onToneChange(option.value)}
-                        >
-                            <span />
-                        </button>
-                    ))}
-                </div>
-            </div>
-        </>
-    );
 }
 
 function PlanInput({
@@ -283,6 +196,18 @@ function EditItemForm({
         () => Map.groupBy(itemTransactions, ({ entry }) => entry.occurredOn),
         [itemTransactions]
     );
+    const remainingCents = BigInt(item.availableCents);
+    const remainingState =
+        remainingCents < 0n
+            ? 'negative'
+            : remainingCents > 0n
+              ? 'positive'
+              : 'neutral';
+    const remainingLabel =
+        remainingCents < 0n ? 'Over budget this month' : 'Remaining this month';
+    const remainingAmount = money(
+        (remainingCents < 0n ? -remainingCents : remainingCents).toString()
+    );
     const commitPlanned = () => {
         const plannedCents = planned || '0';
 
@@ -299,6 +224,17 @@ function EditItemForm({
 
     return (
         <div className='navigation-detail-form'>
+            <div className='line-item-remaining' data-state={remainingState}>
+                <span className='line-item-remaining-label'>
+                    {remainingLabel}
+                </span>
+                <strong>{remainingAmount}</strong>
+                <span className='line-item-remaining-note'>
+                    {remainingCents < 0n
+                        ? "Beyond this month's available funds"
+                        : "Available after this month's activity"}
+                </span>
+            </div>
             <div className='field'>
                 <label htmlFor='item-planned'>Planned amount</label>
                 <CurrencyInput
@@ -474,7 +410,6 @@ function EditableItemTitle({
             value={draft}
             onBlur={commit}
             onChange={(event) => setDraft(event.target.value)}
-            onFocus={(event) => event.currentTarget.select()}
             onKeyDown={(event) => {
                 if (event.key === 'Enter') event.currentTarget.blur();
                 if (event.key === 'Escape') {
@@ -486,7 +421,7 @@ function EditableItemTitle({
         />
     ) : (
         <button
-            className='navigation-detail-title-button'
+            className='navigation-detail-title-button navigation-detail-title-button--wrap'
             type='button'
             aria-label={`Rename ${item.name}`}
             onClick={() => {
@@ -602,11 +537,6 @@ function BudgetCategorySection({
     onToggle: (categoryId: string) => void;
     snapshot: MonthSnapshot;
 }) {
-    const categoryPlanned = category.items
-        .reduce((total, item) => total + BigInt(item.plannedCents), 0n)
-        .toString();
-    const categoryAmount =
-        amountView === 'planned' ? categoryPlanned : category.availableCents;
     const pendingCategory = category.id.startsWith('optimistic-');
     const {
         containerRef: itemContainerRef,
@@ -639,9 +569,6 @@ function BudgetCategorySection({
                 >
                     <CategoryIcon icon={category.icon} tone={category.tone} />
                     <span className='category-title'>{category.name}</span>
-                    <span className='category-total'>
-                        {money(categoryAmount)}
-                    </span>
                     <ChevronDown
                         size={18}
                         style={{
@@ -739,13 +666,21 @@ function BudgetCategorySection({
                                                         mutate={mutate}
                                                     />
                                                 ) : (
-                                                    <span
-                                                        className={`money-cell ${BigInt(item.availableCents) < 0n ? 'available-negative' : BigInt(item.availableCents) > 0n ? 'available-positive' : ''}`}
+                                                    <button
+                                                        className={`money-cell money-cell-button ${BigInt(item.availableCents) < 0n ? 'available-negative' : BigInt(item.availableCents) > 0n ? 'available-positive' : ''}`}
+                                                        type='button'
+                                                        aria-label={`Open ${item.name}, ${money(item.availableCents)} remaining`}
+                                                        onClick={(event) =>
+                                                            onSelectItem(
+                                                                item,
+                                                                event.currentTarget
+                                                            )
+                                                        }
                                                     >
                                                         {money(
                                                             item.availableCents
                                                         )}
-                                                    </span>
+                                                    </button>
                                                 )}
                                             </div>
                                             <div

@@ -1231,6 +1231,7 @@ export async function applyBudgetMutation(
                             name: input.name,
                             icon: input.icon,
                             tone: input.tone,
+                            expectedCents: BigInt(input.expectedCents),
                             version: input.expectedVersion + 1,
                             updatedAt: new Date()
                         })

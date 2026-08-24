@@ -76,13 +76,17 @@ export function useSortableList<T>({
     getLabel,
     items,
     onReorder,
-    previewSelector
+    overlayLayer = 'base',
+    previewSelector,
+    scrollContainerSelector = '.app-content'
 }: {
     getId: (item: T) => string;
     getLabel: (item: T) => string;
     items: T[];
     onReorder: (ids: string[]) => void;
+    overlayLayer?: 'base' | 'nested';
     previewSelector?: string;
+    scrollContainerSelector?: string;
 }): {
     containerRef: RefCallback<HTMLDivElement>;
     getKeyboardProps: (item: T, disabled?: boolean) => SortKeyboardProps;
@@ -117,6 +121,11 @@ export function useSortableList<T>({
                 element instanceof HTMLElement &&
                 element.dataset.sortableItem === 'true'
         );
+    const scrollContainer = () => {
+        const container = rootRef.current?.closest(scrollContainerSelector);
+
+        return container instanceof HTMLElement ? container : null;
+    };
     const previewElement = (sortableItem: HTMLElement) => {
         const preview = previewSelector
             ? sortableItem.querySelector(previewSelector)
@@ -369,13 +378,13 @@ export function useSortableList<T>({
 
                 return;
             }
-            const scrollContainer = rootRef.current?.closest('.app-content');
+            const container = scrollContainer();
 
-            if (scrollContainer instanceof HTMLElement) {
-                const previousScrollTop = scrollContainer.scrollTop;
+            if (container) {
+                const previousScrollTop = container.scrollTop;
 
-                scrollContainer.scrollTop += drag.autoScrollVelocity * elapsed;
-                if (scrollContainer.scrollTop !== previousScrollTop)
+                container.scrollTop += drag.autoScrollVelocity * elapsed;
+                if (container.scrollTop !== previousScrollTop)
                     updateTarget(drag, drag.currentY);
             }
             drag.autoScrollFrame = window.requestAnimationFrame(tick);
@@ -468,12 +477,13 @@ export function useSortableList<T>({
         drag.currentY = clientY;
         drag.overlay.style.transform = `translate3d(0, ${clientY - drag.pointerStartY}px, 0) scale(1.012)`;
         updateTarget(drag, clientY);
-        const scrollContainer = rootRef.current?.closest('.app-content');
+        const container = scrollContainer();
 
-        if (scrollContainer instanceof HTMLElement) {
-            const rect = scrollContainer.getBoundingClientRect();
-            const bottomNav =
-                document.querySelector<HTMLElement>('.bottom-nav');
+        if (container) {
+            const rect = container.getBoundingClientRect();
+            const bottomNav = container.matches('.app-content')
+                ? document.querySelector<HTMLElement>('.bottom-nav')
+                : null;
             const bottomNavTop =
                 bottomNav && getComputedStyle(bottomNav).display !== 'none'
                     ? bottomNav.getBoundingClientRect().top
@@ -526,6 +536,7 @@ export function useSortableList<T>({
         const overlay = document.createElement('div');
 
         overlay.className = 'sortable-drag-overlay';
+        overlay.dataset.layer = overlayLayer;
         for (const className of source.closest('.category-section')
             ?.classList ?? [])
             if (className.startsWith('tone-')) overlay.classList.add(className);

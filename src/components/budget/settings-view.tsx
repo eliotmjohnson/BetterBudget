@@ -176,7 +176,9 @@ export function SettingsView({
                     <ListTree size={20} />
                     <span>
                         <strong>Organize budget</strong>
-                        <small>Manage categories, items, and ordering</small>
+                        <small>
+                            Rename, reorder, and delete categories and items
+                        </small>
                     </span>
                     <ChevronRight size={18} />
                 </Link>

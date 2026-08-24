@@ -28,14 +28,14 @@ The implemented product supports:
 - Clearing a month's planned amounts without deleting activity or structure.
 - Resetting a selected month to a fresh empty budget without changing other months. Definitions still used elsewhere are preserved, while definitions left unused by the reset are removed.
 - Household-level category and budget-item definitions with per-month category participation and item plans.
-- Adding, editing, reordering, archiving, and conditionally deleting categories and items. Category name, icon, and color editing lives directly on the Budget page. A 350 ms long-press on a Budget-page category header or item row starts reordering, with a lifted pointer-following preview, an in-list placeholder, and animated neighboring rows. There are no visible drag grips on the Budget page.
+- Adding, editing, reordering, archiving, and conditionally deleting categories and items. The Budget page retains creation, direct category name/icon/color editing, and item swipe deletion. The Settings organizer is a focused, collapsible Budget-style list with compact 56 px category headers and 44 px item rows for category appearance and item-name editing, history-preserving deletion, permanent deletion of unused definitions, and reordering; it intentionally does not create structure. A 350 ms long-press on a category header or item row starts reordering on both surfaces, with a lifted pointer-following preview, an in-list placeholder, and animated neighboring rows. There are no visible drag grips.
 - Planned amount editing and forward-looking per-month carryover settings. A
   month's switch sends its ending balance to the immediately following month;
   it does not change that month's inbound balance.
 - Cents-first currency inputs that always display a formatted value such as `$200.57`; typing digits shifts them through the decimal places without requiring a decimal point.
 - Expense and refund transactions, including exact splits across budget items.
 - Adding transactions globally or from a line-item detail with that item preselected, editing transactions, soft deleting, and undoing transaction deletion.
-- Expected-income sources with editable names, icons, and colors plus one or more dated received-income receipts.
+- Expected-income sources with editable names, icons, colors, and expected amounts plus one or more dated received-income receipts.
   When a month has no income sources, the Income page shows a guided empty
   state with an action that opens the add-source flow.
   Each source exposes its receipt history on the Income page, individual
@@ -52,8 +52,12 @@ The implemented product supports:
   stores the default Available/Planned Budget amount view per browser or
   installed PWA, and opens the selected month's URL-backed organizer with the
   same mobile push, Back/browser-history, left-edge swipe dismissal, and
-  desktop modal pattern used by budget-item and income-source details.
-  Switching the amount view directly on the Budget page remains temporary.
+  desktop modal pattern used by budget-item and income-source details. The
+  organizer reuses the Budget list's hold-to-drag and keyboard ordering,
+  category appearance editor, and shared sheet behavior while limiting its
+  scope to renaming, reordering, and deletion.
+  Switching the amount view directly on the Budget page remains active for the
+  current app session and resets from this default only on a fresh load.
 - File-persistent PGlite development, PostgreSQL parity, and Docker packaging.
 
 ## Version 2 deployment release
@@ -124,7 +128,7 @@ The visual system is deliberately iOS-like and restrained:
 - A mobile bottom navigation and bottom-sheet interactions.
 - Category headers expose an edit menu; budget-item rows alone use a deliberately leftward swipe to reveal Delete. Keep the inactive swipe action fully transparent so fast vertical scrolling cannot flash its red layer.
 - The Budget page defaults its amount display to Available unless the per-device Settings preference selects Planned. Switching Planned/Available on the Budget page remains temporary and must not resize rows. A line-item progress bar represents the share of its starting available balance still remaining: it is full before any net spending and shrinks toward empty as spending consumes the balance, including carried-in funds and refunds. A negative balance replaces the regular fill with a coral striped warning bar and an accessible over-budget amount. Reordering starts after a 350 ms long-press on the category header or item row; movement beyond 8 px before activation must cancel so vertical scrolling and item swipe-delete remain reliable. A visually hidden keyboard control must continue to support Arrow Up/Arrow Down reordering. Use a transition-free rendered drag copy inside a neutral compositor shell plus animated list reflow. Never move the source clone directly with inherited row/header transitions because that creates compositor ghosting. During a pointer drag, keep the real DOM order fixed, translate the faded placeholder into the current target slot, and move neighboring rows with interruptible transforms; commit the React/server order once on drop. Edge auto-scroll is frame-based with gradual acceleration/deceleration and continues while the pointer is held near an edge. Item reordering remains within its current category. Summary and budget progress entrance animations are one-shot and must not replay when a drag preview is created or a list order is committed.
-- Budget-item details are URL-backed and use an iOS-style navigation push below 760 px. The detail page slides in from the right while the mobile header, Budget content, and bottom navigation parallax left; Back, browser history, refresh, and an app-controlled left-edge swipe all preserve navigation-stack semantics. The global left-edge guard must leave this custom swipe available from x=0 while suppressing Safari's cancelable native history gesture. Disable the underlying detail swipe while any child sheet is visible or exiting so add/edit transaction interactions cannot pop the line-item route. Keep the Budget back control and editable item title in a fixed detail header while only the detail body scrolls. A floating blue plus action remains at the bottom right and opens the add-transaction sheet with the current item preselected. Item-scoped add and edit transaction sheets are full-screen below 760 px, omit the mobile close control and grabber, and retain the header Add/Save action; at 760 px and above, they use the shared centered modal treatment. Global transaction sheets retain their established standard presentation.
+- Budget-item details are URL-backed and use an iOS-style navigation push below 760 px. The detail page slides in from the right while the mobile header, Budget content, and bottom navigation parallax left; Back, browser history, refresh, and an app-controlled left-edge swipe all preserve navigation-stack semantics. The global left-edge guard must leave this custom swipe available from x=0 while suppressing Safari's cancelable native history gesture. Disable the underlying detail swipe while any child sheet is visible or exiting so add/edit transaction interactions cannot pop the line-item route. Keep the Budget back control and editable item title in a fixed detail header while only the detail body scrolls, led by a prominent remaining-this-month summary. A floating blue plus action remains at the bottom right and opens the add-transaction sheet with the current item preselected. Item-scoped add and edit transaction sheets are full-screen below 760 px, omit the mobile close control and grabber, and retain the header Add/Save action; at 760 px and above, they use the shared centered modal treatment. Global transaction sheets retain their established standard presentation.
 - The Transactions page keeps its All, Expenses, and Income type pills visible and applies those inline choices immediately. Its sliders control opens a full filter sheet with transaction type, budget item, and split-status controls. Sheet changes are drafts until Apply filters is pressed; closing the sheet discards them, and the sheet's Clear filters action resets only the drafts. Applied filters give the sliders control a distinct blue treatment and active-count badge. While filters are applied, expose an outside Clear action immediately after the Income pill in the same left-aligned group, never pushed to the far edge of the row. That action resets the applied type, item, and split filters without clearing search. A populated search field exposes an accessible clear control that empties the query without returning focus to the input.
 - All sheets share the same interaction contract: transparent/non-dimming overlay, 0.6 s `cubic-bezier(0.29, 1, 0.29, 1)` entrance, 0.45 s `cubic-bezier(0.4, 1, 0.4, 1)` exit, and mobile downward drag-to-dismiss with distance, velocity, and projected-distance thresholds. Keep the grabber, title, and close control fixed while only `.sheet-body` scrolls; prevent horizontal sheet overflow. Desktop sheets use the same timing as centered modals without drag dismissal.
 - Sheets focus their content container on open instead of drawing a focus ring
@@ -133,7 +137,7 @@ The visual system is deliberately iOS-like and restrained:
   focus on restoration.
 - The mobile PWA intentionally disables page zoom, text selection, touch callouts, document-level pull-to-refresh, and cancelable Safari history gestures beginning within the leftmost 20 px on any route. The global touch guard must remain capture-phase and non-passive for touchstart and touchmove, claim non-control edge touches immediately, preserve normal control taps, and prevent every move that begins inside the edge strip regardless of direction. Mount it once above all routes. `.app-content` is the vertical overscroll surface for every route, continues behind the translucent blurred bottom navigation, and must retain enough bottom padding/scroll padding to expose the final content above that navigation. The top header remains opaque white, and route content enters over 0.65 s with the established blur-to-sharp motion.
 - A slim desktop left navigation, primary budget column, and summary/activity rail.
-- At least 44 px interactive targets, safe-area padding, keyboard focus management, accessible status announcements, and reduced-motion support.
+- At least 44 px interactive targets, plus safe-area padding, keyboard focus management, accessible status announcements, and reduced-motion support.
 
 Do not replace the established brand or visual language with a generic dashboard theme. Extend existing primitives and tokens first.
 
@@ -466,6 +470,7 @@ Before handing off a meaningful change:
 8. Confirm `npm run typecheck` passes for application or configuration changes.
 9. Confirm `npm run lint` passes; linting is mandatory even when `lint:fix` made no changes.
 10. Confirm `npm run build` passes for meaningful application, dependency, or build-configuration changes.
-11. Report exactly which verification commands and manual flows ran.
-12. Update `README.md` and this guide when workflows, environment variables, architecture, or product behavior change.
-13. Do not publish externally unless explicitly requested.
+11. Use the [Release versioning](#release-versioning) guide to classify every completed application change set, apply exactly one required Semantic Versioning bump, and confirm `package.json` and the root package versions in `package-lock.json` match. Skip the bump only for the exceptions named in that guide.
+12. Report exactly which verification commands and manual flows ran.
+13. Update `README.md` and this guide when workflows, environment variables, architecture, or product behavior change.
+14. Do not publish externally unless explicitly requested.

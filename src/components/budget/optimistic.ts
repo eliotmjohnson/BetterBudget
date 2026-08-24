@@ -224,11 +224,20 @@ export function optimisticSnapshot(
             const receiptIds = new Set(
                 plan.receipts.map((receipt) => receipt.id)
             );
+            const expectedDelta =
+                BigInt(input.expectedCents) - BigInt(plan.expectedCents);
 
             plan.name = input.name;
             plan.icon = input.icon;
             plan.tone = input.tone;
+            plan.expectedCents = cents(input.expectedCents);
             plan.version += 1;
+            next.summary.expectedIncomeCents = cents(
+                BigInt(next.summary.expectedIncomeCents) + expectedDelta
+            );
+            next.summary.leftToBudgetCents = cents(
+                BigInt(next.summary.leftToBudgetCents) + expectedDelta
+            );
             for (const entry of next.activity) {
                 if (!receiptIds.has(entry.id)) continue;
                 entry.title = input.name;

@@ -358,7 +358,8 @@ function EditableIncomeTitle({
                 expectedVersion: plan.version,
                 name,
                 icon: incomeIconValue(plan.icon),
-                tone: plan.tone
+                tone: plan.tone,
+                expectedCents: plan.expectedCents
             });
         setDraft(name);
         setEditing(false);
@@ -373,7 +374,6 @@ function EditableIncomeTitle({
             value={draft}
             onBlur={commit}
             onChange={(event) => setDraft(event.target.value)}
-            onFocus={(event) => event.currentTarget.select()}
             onKeyDown={(event) => {
                 if (event.key === 'Enter') event.currentTarget.blur();
                 if (event.key === 'Escape') {
@@ -395,6 +395,48 @@ function EditableIncomeTitle({
         >
             {plan.name}
         </button>
+    );
+}
+
+function IncomePlanInput({
+    plan,
+    snapshot,
+    mutate
+}: {
+    plan: IncomePlanView;
+    snapshot: MonthSnapshot;
+    mutate: Mutate;
+}) {
+    const [value, setValue] = useState<string>(plan.expectedCents);
+    const commit = () => {
+        const expectedCents = value || '0';
+
+        if (expectedCents === plan.expectedCents) return;
+        mutate({
+            type: 'updateIncomePlan',
+            clientMutationId: createUuid(),
+            monthKey: snapshot.monthKey,
+            incomePlanId: plan.id,
+            expectedVersion: plan.version,
+            name: plan.name,
+            icon: incomeIconValue(plan.icon),
+            tone: plan.tone,
+            expectedCents
+        });
+    };
+
+    return (
+        <CurrencyInput
+            id='income-source-expected'
+            className='income-source-expected-input'
+            aria-label={`Expected amount for ${plan.name}`}
+            value={value}
+            onValueChange={setValue}
+            onBlur={commit}
+            onKeyDown={(event) => {
+                if (event.key === 'Enter') event.currentTarget.blur();
+            }}
+        />
     );
 }
 
@@ -461,7 +503,8 @@ function IncomeSourceDetails({
                 expectedVersion: renderedPlan.version,
                 name: renderedPlan.name,
                 icon: appearanceIcon,
-                tone: appearanceTone
+                tone: appearanceTone,
+                expectedCents: renderedPlan.expectedCents
             });
         setAppearanceOpen(false);
     };
@@ -534,8 +577,15 @@ function IncomeSourceDetails({
                 <div className='income-source-details'>
                     <div className='income-source-stats'>
                         <div>
-                            <span>Expected</span>
-                            <strong>{money(renderedPlan.expectedCents)}</strong>
+                            <label htmlFor='income-source-expected'>
+                                Expected
+                            </label>
+                            <IncomePlanInput
+                                key={`${renderedPlan.id}:${renderedPlan.expectedCents}`}
+                                plan={renderedPlan}
+                                snapshot={snapshot}
+                                mutate={mutate}
+                            />
                         </div>
                         <div>
                             <span>Received</span>

@@ -59,6 +59,9 @@ export function BudgetApp({
     const [defaultBudgetAmountView, setDefaultBudgetAmountView] = useState(
         initialBudgetAmountView
     );
+    const [budgetAmountView, setBudgetAmountView] = useState(
+        initialBudgetAmountView
+    );
     const [budgetAnimationKey, setBudgetAnimationKey] = useState(0);
     const budgetMutation = useBudgetMutation(
         snapshot.monthKey,
@@ -80,6 +83,22 @@ export function BudgetApp({
         budgetMutation.mutate(input);
 
         return true;
+    };
+    const mutateConfirmed = async (input: BudgetMutation) => {
+        if (!online) {
+            showToast({
+                message: 'Reconnect before saving financial changes.'
+            });
+
+            return false;
+        }
+        try {
+            await budgetMutation.mutateAsync(input);
+
+            return true;
+        } catch {
+            return false;
+        }
     };
     const deleteTransaction = (entry: ActivityEntry) => {
         const deletion: BudgetMutation = {
@@ -175,10 +194,11 @@ export function BudgetApp({
         ) : (
             <BudgetScreen
                 animationKey={budgetAnimationKey}
-                defaultAmountView={defaultBudgetAmountView}
+                amountView={budgetAmountView}
                 mutationPending={budgetMutation.isPending}
                 snapshot={snapshot}
                 mutate={mutate}
+                onAmountViewChange={setBudgetAmountView}
                 onDeleteTransaction={deleteTransaction}
             />
         );
@@ -206,7 +226,11 @@ export function BudgetApp({
                     restoreFocusPreferenceRef={organizerRestoreFocusVisibleRef}
                     title='Organize budget'
                 >
-                    <OrganizerView snapshot={snapshot} mutate={mutate} />
+                    <OrganizerView
+                        snapshot={snapshot}
+                        mutate={mutate}
+                        mutateConfirmed={mutateConfirmed}
+                    />
                 </NavigationDetail>
             ) : null}
             <MonthActionsSheet
@@ -222,21 +246,21 @@ export function BudgetApp({
 
 function BudgetScreen({
     animationKey,
-    defaultAmountView,
+    amountView,
     mutationPending,
     snapshot,
     mutate,
+    onAmountViewChange,
     onDeleteTransaction
 }: {
     animationKey: number;
-    defaultAmountView: BudgetAmountView;
+    amountView: BudgetAmountView;
     mutationPending: boolean;
     snapshot: MonthSnapshot;
     mutate: (input: BudgetMutation) => boolean;
+    onAmountViewChange: (amountView: BudgetAmountView) => void;
     onDeleteTransaction: (entry: ActivityEntry) => void;
 }) {
-    const [amountView, setAmountView] = useState(defaultAmountView);
-
     return (
         <BudgetView
             amountView={amountView}
@@ -244,7 +268,7 @@ function BudgetScreen({
             mutationPending={mutationPending}
             snapshot={snapshot}
             mutate={mutate}
-            onAmountViewChange={setAmountView}
+            onAmountViewChange={onAmountViewChange}
             onDeleteTransaction={onDeleteTransaction}
         />
     );

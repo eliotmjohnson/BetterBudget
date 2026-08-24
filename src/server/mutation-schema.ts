@@ -83,7 +83,8 @@ export const mutationSchema = z.discriminatedUnion('type', [
         expectedVersion: z.number().int().positive(),
         name: z.string().trim().min(1).max(80),
         icon: categoryIconSchema,
-        tone: categoryToneSchema
+        tone: categoryToneSchema,
+        expectedCents: z.string().regex(/^\d+$/)
     }),
     base.extend({
         type: z.literal('addIncomeReceipt'),
