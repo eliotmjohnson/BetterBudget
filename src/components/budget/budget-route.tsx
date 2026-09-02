@@ -6,8 +6,9 @@ import {
     parseBudgetAmountView
 } from '@/domain/budget-preferences';
 import { monthKeySchema } from '@/domain/money';
+import { currentMonthKey } from '@/domain/calendar';
 import { requireAccess } from '@/server/access';
-import { getMonthSnapshot } from '@/server/budget-service';
+import { getMonthSnapshot } from '@/server/month-snapshot';
 
 export async function BudgetRoute({
     view,
@@ -21,10 +22,9 @@ export async function BudgetRoute({
         searchParams,
         cookies()
     ]);
-    const parsed = monthKeySchema.safeParse(params.month ?? '2026-08');
-    const monthKey = parsed.success
-        ? parsed.data
-        : monthKeySchema.parse('2026-08');
+    const fallbackMonth = currentMonthKey();
+    const parsed = monthKeySchema.safeParse(params.month ?? fallbackMonth);
+    const monthKey = parsed.success ? parsed.data : fallbackMonth;
     const snapshot = await getMonthSnapshot(monthKey, access.householdId);
     const initialBudgetAmountView = parseBudgetAmountView(
         cookieStore.get(BUDGET_AMOUNT_VIEW_COOKIE)?.value

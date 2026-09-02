@@ -1,0 +1,54 @@
+{
+    "permissions": {
+        "allow": [
+            "Bash(npm run typecheck)",
+            "Bash(npm run lint)",
+            "Bash(npm run lint:fix)",
+            "Bash(npm run format)",
+            "Bash(npm run format:check)",
+            "Bash(npm run build)",
+            "Bash(npm run db:generate)",
+            "Bash(npm audit)",
+            "Bash(npm ls *)",
+            "Bash(npx prettier --check *)",
+            "Bash(npx tsc --noEmit *)",
+            "Bash(git status *)",
+            "Bash(git diff *)",
+            "Bash(git log *)",
+            "Bash(git show *)",
+            "Bash(git ls-files *)",
+            "Bash(git blame *)",
+            "Bash(git branch --list *)",
+            "Bash(git stash list *)",
+            "Bash(npm run verify)",
+            "Bash(npm run verify:fix)",
+            "Bash(npm run db:inspect)",
+            "Bash(curl -s http://localhost:3000/*)",
+            "Bash(curl -s -o /dev/null *)"
+        ],
+        "ask": [
+            "Bash(npm run db:reset*)",
+            "Bash(npm run db:migrate*)",
+            "Bash(npm run db:seed*)",
+            "Bash(npm run db:owner*)",
+            "Bash(git push*)",
+            "Bash(gh pr *)",
+            "Bash(docker *)",
+            "Bash(aws *)"
+        ]
+    },
+    "hooks": {
+        "PostToolUse": [
+            {
+                "matcher": "Write|Edit",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "jq -r '.tool_response.filePath // .tool_input.file_path' | { read -r f; npx prettier --write --ignore-unknown \"$f\"; } 2>/dev/null || true",
+                        "statusMessage": "Formatting with Prettier"
+                    }
+                ]
+            }
+        ]
+    }
+}

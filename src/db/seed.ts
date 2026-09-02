@@ -13,10 +13,43 @@ import {
     transactions
 } from './schema';
 import { DEFAULT_HOUSEHOLD_ID, ensureDefaultHousehold } from './household';
+import { APP_TIME_ZONE } from '../domain/calendar';
 
+const seedMonthFormatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: APP_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit'
+});
+
+type SeedMonth = { year: number; month: number };
+
+function resolveSeedMonths(now = new Date()): {
+    current: SeedMonth;
+    previous: SeedMonth;
+} {
+    const parts = seedMonthFormatter.formatToParts(now);
+    const year = Number(parts.find((part) => part.type === 'year')?.value);
+    const month = Number(parts.find((part) => part.type === 'month')?.value);
+    const current: SeedMonth = { year, month };
+    const previous: SeedMonth =
+        month === 1
+            ? { year: year - 1, month: 12 }
+            : { year, month: month - 1 };
+
+    return { current, previous };
+}
+
+function dayOfMonth(month: SeedMonth, day: number): string {
+    const paddedMonth = String(month.month).padStart(2, '0');
+    const paddedDay = String(day).padStart(2, '0');
+
+    return `${month.year}-${paddedMonth}-${paddedDay}`;
+}
+
+const seedMonths = resolveSeedMonths();
 const ids = {
-    july: '20000000-0000-4000-8000-000000000007',
-    august: '20000000-0000-4000-8000-000000000008',
+    previousMonth: '20000000-0000-4000-8000-000000000007',
+    currentMonth: '20000000-0000-4000-8000-000000000008',
     giving: '30000000-0000-4000-8000-000000000001',
     housing: '30000000-0000-4000-8000-000000000002',
     food: '30000000-0000-4000-8000-000000000003',
@@ -33,7 +66,7 @@ const ids = {
     personal: '40000000-0000-4000-8000-000000000009',
     debt: '40000000-0000-4000-8000-000000000010'
 };
-const augustPlans = [
+const monthlyPlans = [
     [ids.charity, 35_000n, false],
     [ids.mortgage, 215_000n, false],
     [ids.utilities, 34_000n, false],
@@ -60,16 +93,16 @@ export async function seedDatabase(db: AppDb): Promise<void> {
     await ensureDefaultHousehold(db);
     await db.insert(budgetMonths).values([
         {
-            id: ids.july,
+            id: ids.previousMonth,
             householdId: DEFAULT_HOUSEHOLD_ID,
-            month: '2026-07-01',
-            note: 'Summer reset'
+            month: dayOfMonth(seedMonths.previous, 1),
+            note: 'Previous month'
         },
         {
-            id: ids.august,
+            id: ids.currentMonth,
             householdId: DEFAULT_HOUSEHOLD_ID,
-            month: '2026-08-01',
-            note: 'Back-to-school month'
+            month: dayOfMonth(seedMonths.current, 1),
+            note: 'Planning this month'
         }
     ]);
     await db.insert(categories).values([
@@ -117,7 +150,7 @@ export async function seedDatabase(db: AppDb): Promise<void> {
     await db
         .insert(monthlyBudgetCategories)
         .values(
-            [ids.july, ids.august].flatMap((monthId) =>
+            [ids.previousMonth, ids.currentMonth].flatMap((monthId) =>
                 [
                     ids.giving,
                     ids.housing,
@@ -190,26 +223,26 @@ export async function seedDatabase(db: AppDb): Promise<void> {
         }
     ]);
 
-    const julyPlanIds = new Map<string, string>();
-    const augustPlanIds = new Map<string, string>();
+    const previousMonthPlanIds = new Map<string, string>();
+    const currentMonthPlanIds = new Map<string, string>();
 
-    for (const [itemId, planned, carryover] of augustPlans) {
-        const julyId = crypto.randomUUID();
-        const augustId = crypto.randomUUID();
+    for (const [itemId, planned, carryover] of monthlyPlans) {
+        const previousMonthId = crypto.randomUUID();
+        const currentMonthId = crypto.randomUUID();
 
-        julyPlanIds.set(itemId, julyId);
-        augustPlanIds.set(itemId, augustId);
+        previousMonthPlanIds.set(itemId, previousMonthId);
+        currentMonthPlanIds.set(itemId, currentMonthId);
         await db.insert(monthlyBudgetItems).values([
             {
-                id: julyId,
-                monthId: ids.july,
+                id: previousMonthId,
+                monthId: ids.previousMonth,
                 budgetItemId: itemId,
                 plannedCents: itemId === ids.emergency ? 220_000n : planned,
                 carryoverEnabled: carryover
             },
             {
-                id: augustId,
-                monthId: ids.august,
+                id: currentMonthId,
+                monthId: ids.currentMonth,
                 budgetItemId: itemId,
                 plannedCents: planned,
                 carryoverEnabled: carryover
@@ -224,7 +257,7 @@ export async function seedDatabase(db: AppDb): Promise<void> {
     await db.insert(incomePlans).values([
         {
             id: incomeOne,
-            monthId: ids.august,
+            monthId: ids.currentMonth,
             name: 'Paycheck',
             icon: 'briefcase',
             tone: 'mint',
@@ -233,7 +266,7 @@ export async function seedDatabase(db: AppDb): Promise<void> {
         },
         {
             id: incomeTwo,
-            monthId: ids.august,
+            monthId: ids.currentMonth,
             name: 'Paycheck',
             icon: 'wallet',
             tone: 'blue',
@@ -242,7 +275,7 @@ export async function seedDatabase(db: AppDb): Promise<void> {
         },
         {
             id: sideWork,
-            monthId: ids.august,
+            monthId: ids.currentMonth,
             name: 'Side work',
             icon: 'sparkles',
             tone: 'lilac',
@@ -253,35 +286,75 @@ export async function seedDatabase(db: AppDb): Promise<void> {
     await db.insert(incomeReceipts).values([
         {
             incomePlanId: incomeOne,
-            receivedOn: '2026-08-01',
+            receivedOn: dayOfMonth(seedMonths.current, 1),
             amountCents: 360_000n,
             note: 'First paycheck'
         },
         {
             incomePlanId: incomeTwo,
-            receivedOn: '2026-08-15',
+            receivedOn: dayOfMonth(seedMonths.current, 15),
             amountCents: 360_000n,
             note: 'Second paycheck'
         }
     ]);
 
     const expenses: Array<[string, string, bigint, string]> = [
-        ['Charity', ids.charity, 35_000n, '2026-08-02'],
-        ['Mortgage', ids.mortgage, 215_000n, '2026-08-03'],
-        ['Electricity Co.', ids.utilities, 28_600n, '2026-08-12'],
-        ['Whole Foods', ids.groceries, 8_624n, '2026-08-12'],
-        ['Target', ids.groceries, 4_311n, '2026-08-11'],
-        ['Walmart', ids.groceries, 7_263n, '2026-08-09'],
-        ['Costco', ids.groceries, 13_822n, '2026-08-07'],
-        ['Aldi', ids.groceries, 5_547n, '2026-08-05'],
-        ['Neighborhood Market', ids.groceries, 12_533n, '2026-08-04'],
-        ['Uber Eats', ids.restaurants, 2_875n, '2026-08-10'],
-        ['Restaurants', ids.restaurants, 16_925n, '2026-08-06'],
-        ['Insurance', ids.insurance, 40_000n, '2026-08-05'],
-        ['Gas Station', ids.transport, 4_500n, '2026-08-09'],
-        ['Car repair', ids.transport, 12_200n, '2026-08-08'],
-        ['Personal', ids.personal, 5_000n, '2026-08-06'],
-        ['Debt payment', ids.debt, 6_000n, '2026-08-01']
+        ['Charity', ids.charity, 35_000n, dayOfMonth(seedMonths.current, 2)],
+        ['Mortgage', ids.mortgage, 215_000n, dayOfMonth(seedMonths.current, 3)],
+        [
+            'Electricity Co.',
+            ids.utilities,
+            28_600n,
+            dayOfMonth(seedMonths.current, 12)
+        ],
+        [
+            'Whole Foods',
+            ids.groceries,
+            8_624n,
+            dayOfMonth(seedMonths.current, 12)
+        ],
+        ['Target', ids.groceries, 4_311n, dayOfMonth(seedMonths.current, 11)],
+        ['Walmart', ids.groceries, 7_263n, dayOfMonth(seedMonths.current, 9)],
+        ['Costco', ids.groceries, 13_822n, dayOfMonth(seedMonths.current, 7)],
+        ['Aldi', ids.groceries, 5_547n, dayOfMonth(seedMonths.current, 5)],
+        [
+            'Neighborhood Market',
+            ids.groceries,
+            12_533n,
+            dayOfMonth(seedMonths.current, 4)
+        ],
+        [
+            'Uber Eats',
+            ids.restaurants,
+            2_875n,
+            dayOfMonth(seedMonths.current, 10)
+        ],
+        [
+            'Restaurants',
+            ids.restaurants,
+            16_925n,
+            dayOfMonth(seedMonths.current, 6)
+        ],
+        [
+            'Insurance',
+            ids.insurance,
+            40_000n,
+            dayOfMonth(seedMonths.current, 5)
+        ],
+        [
+            'Gas Station',
+            ids.transport,
+            4_500n,
+            dayOfMonth(seedMonths.current, 9)
+        ],
+        [
+            'Car repair',
+            ids.transport,
+            12_200n,
+            dayOfMonth(seedMonths.current, 8)
+        ],
+        ['Personal', ids.personal, 5_000n, dayOfMonth(seedMonths.current, 6)],
+        ['Debt payment', ids.debt, 6_000n, dayOfMonth(seedMonths.current, 1)]
     ];
 
     for (const [merchant, itemId, amount, occurredOn] of expenses) {
@@ -289,7 +362,7 @@ export async function seedDatabase(db: AppDb): Promise<void> {
 
         await db.insert(transactions).values({
             id: transactionId,
-            monthId: ids.august,
+            monthId: ids.currentMonth,
             kind: 'expense',
             merchant,
             occurredOn,
@@ -297,7 +370,7 @@ export async function seedDatabase(db: AppDb): Promise<void> {
         });
         await db.insert(transactionSplits).values({
             transactionId,
-            monthlyItemId: augustPlanIds.get(itemId)!,
+            monthlyItemId: currentMonthPlanIds.get(itemId)!,
             amountCents: amount
         });
     }

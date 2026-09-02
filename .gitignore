@@ -3,5 +3,6 @@ node_modules
 .data
 .env
 .env.local
+.claude/settings.local.json
 *.tsbuildinfo
 .DS_Store

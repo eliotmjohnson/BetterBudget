@@ -82,6 +82,7 @@ function clearTitleMotion(content: HTMLElement | null) {
     title?.style.removeProperty('--navigation-detail-title-x');
     title?.style.removeProperty('--navigation-detail-title-y');
     title?.style.removeProperty('--navigation-detail-title-first-line');
+    title?.style.removeProperty('--navigation-detail-title-head');
     title?.style.removeProperty('--navigation-detail-title-line');
     title?.style.removeProperty('--navigation-detail-title-tail');
     title?.style.removeProperty('--navigation-detail-title-motion-x');

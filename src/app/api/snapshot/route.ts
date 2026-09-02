@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { monthKeySchema } from '@/domain/money';
 import { getAccess } from '@/server/access';
-import { getMonthSnapshot } from '@/server/budget-service';
+import { getMonthSnapshot } from '@/server/month-snapshot';
+import { currentMonthKey } from '@/domain/calendar';
 
 export async function GET(request: Request) {
     const access = await getAccess();
@@ -10,7 +11,7 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const url = new URL(request.url);
     const parsed = monthKeySchema.safeParse(
-        url.searchParams.get('month') ?? '2026-08'
+        url.searchParams.get('month') ?? currentMonthKey()
     );
 
     if (!parsed.success)

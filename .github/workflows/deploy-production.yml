@@ -76,10 +76,7 @@ jobs:
 
             - name: Verify source
               if: steps.release.outputs.build_image == 'true'
-              run: |
-                  npm run format:check
-                  npm run typecheck
-                  npm run lint
+              run: npm run verify
 
             - name: Configure temporary AWS credentials
               uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c # v6.2.3

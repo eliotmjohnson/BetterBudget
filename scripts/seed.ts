@@ -6,7 +6,9 @@ async function main() {
 
     await seedDatabase(db);
     await closeDatabase();
-    console.log('Deterministic August 2026 data is ready.');
+    console.log(
+        'Deterministic development data is ready for the current and previous month.'
+    );
 }
 
 main().catch((error: unknown) => {

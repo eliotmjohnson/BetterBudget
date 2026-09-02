@@ -2,4 +2,10 @@ node_modules
 .next
 .data
 .git
+.github
+.claude
 .env*
+docs
+*.md
+.DS_Store
+*.tsbuildinfo

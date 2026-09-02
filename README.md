@@ -4,72 +4,63 @@ Better Budget is a mobile-first household budgeting PWA with eager updates, exac
 
 It is designed for one household using one shared owner login. The default development workflow needs no external database: Next.js automatically migrates and seeds a file-persistent PGlite database. The same application can run against PostgreSQL locally or through the provider-neutral Docker image.
 
+## Documentation map
+
+This README is the human setup and operations manual: prerequisites, quick
+start, environment variables, database workflows, deployment, troubleshooting,
+and package scripts.
+
+`AGENTS.md` is the engineering contract for anyone — person or coding agent —
+changing application code, and it names four on-demand references:
+
+| Topic                                        | File                                   |
+| -------------------------------------------- | -------------------------------------- |
+| Implemented product capabilities             | `docs/agents/product.md`               |
+| Layout, motion, gesture, and sheet contracts | `docs/agents/design.md`                |
+| Mutation lifecycle and optimistic rules      | `docs/agents/persistence.md`           |
+| Version 2 deployment model                   | `docs/agents/deployment.md`            |
+| Live AWS resources, operations, and rollback | `docs/aws/ec2-cloudfront-migration.md` |
+
+When behavior changes, update whichever file actually documents it rather than
+restating it in both.
+
 ## Current status
 
-Version 1 implements the complete local product foundation:
+Version 1 implements the complete product foundation: month-scoped budgets with
+notes and navigation, household category and budget-item definitions with
+per-month plans, month copying and clearing, budget resets, planned amounts with
+forward-looking carryover, expense and refund transactions with exact splits,
+expected and received income, searchable and filterable transaction history,
+URL-backed budget-item and income-source details, and a Settings organizer.
 
-- Separate budgets and notes for each calendar month.
-- Immediate previous/next month navigation.
-- Copying the immediately previous month into an empty target month when the
-  source has active budget structure or an expected-income plan, with clear
-  feedback when there is nothing to copy. The month-actions list omits copy
-  when either side is ineligible.
-- Untouched months begin without category or line-item structure and show setup actions to copy the previous budget or start with a new category. Viewing or navigating through one does not create a `budget_months` record; the first successful mutation that needs the month creates it atomically.
-- Clearing planned amounts without deleting transactions, income receipts, structure, or carryover settings.
-- Resetting a selected month to a fresh empty budget without changing any other month. Definitions still used elsewhere are preserved, while definitions left unused by the reset are removed.
-- Categories and budget items with add, rename, reorder, archive, and unused-definition deletion flows. The Budget page keeps direct creation, category appearance editing, and swipe-to-delete access. Settings opens a focused, collapsible organizer for renaming category appearance and item names, reordering, history-preserving deletion, and permanent deletion of definitions that have never been used. Holding a category header or item row for 350 ms starts reordering without visible drag grips on both surfaces. The interaction uses a transition-free lifted preview, a target-following faded placeholder, interruptible transform-based list reflow, accessible keyboard controls, and gently accelerated edge auto-scroll. Moving more than 8 px before activation cancels the hold so normal scrolling and item swipe-to-delete remain reliable. React and the backend receive the final order once on drop, and progress-bar entrance animations do not replay during sorting.
-- Available amounts are shown by default on the Budget page, with a stable-width animated switch to Planned amounts. The selected view remains active while the app is open; a fresh load initializes it from the per-device Settings default without persisting temporary Budget-page switches. Each line-item progress bar starts full when its available balance is untouched and shrinks in proportion as net spending consumes that balance. A negative balance switches to a coral striped warning bar.
-- Budget-item details use a URL-backed iOS-style navigation push on mobile, including browser history and an app-controlled left-edge swipe-to-go-back. The Budget back control and editable item title stay in the fixed detail header while only the detail body scrolls, which begins with a prominent remaining-this-month summary. The underlying swipe remains disabled while an add/edit transaction sheet is visible or exiting. Across every route, cancelable touches beginning in the leftmost 20 px are claimed immediately outside controls, while controls retain normal taps and every drag from that strip is prevented regardless of direction so Safari cannot claim it as a history gesture. Desktop retains the centered detail modal. A floating blue plus button opens the transaction sheet with the current budget item already selected; item-scoped add and edit flows are full-screen on mobile without a close control or grabber, while global transaction sheets keep their standard presentation.
-- Planned amount editing and forward-looking per-month carryover settings. A
-  month's switch sends its ending balance to the immediately following month;
-  it does not change that month's inbound balance.
-- Cents-first currency inputs that always display a formatted value such as `$200.57`; typing digits shifts them through the decimal places without requiring a decimal point.
-- Expected-income sources with editable names, icons, colors, and expected amounts plus per-source received-transaction history,
-  soft deletion of individual receipts, and safe source deletion after its
-  receipts are cleared. Income-source details use the same URL-backed mobile
-  navigation push, Back behavior, left-edge swipe dismissal, and desktop modal
-  fallback as budget-item details. Empty months show a guided state that opens
-  the existing add-source flow.
-- Expenses and refunds with merchant, date, note, allocation, exact split support, editing, soft deletion, and Undo.
-- Transaction search with a non-refocusing clear control, immediately applied type pills, and a full draft-before-apply filter sheet for transaction type, budget item, and split status. Applied filters receive a distinct icon/count treatment and an outside Clear action directly after the inline pills.
-- Optimistic updates, idempotent mutation retries, conflict detection, rollback isolation, and offline feedback.
-- Better Auth email/password sessions with public signup disabled.
-- Mobile bottom navigation, desktop side navigation, responsive summary rail, PWA metadata/icons, and accessible sheets.
-- PGlite, PostgreSQL, and Docker development paths.
+Underneath that: optimistic updates with idempotent mutation retries, conflict
+detection, isolated rollback, and offline feedback; Better Auth email/password
+sessions with public signup disabled; a mobile bottom navigation, desktop side
+navigation, and responsive summary rail; and PGlite, PostgreSQL, and Docker
+development paths.
 
+`docs/agents/product.md` holds the complete implemented-capability inventory.
 Approved design references live in [`docs/design`](./docs/design).
 
 ## Version 2 deployment release
 
-Version `2.0.0` keeps the Version 1 budgeting product and database model while
-changing the coordinated production deployment architecture:
+Version `2.0.0` kept the Version 1 budgeting product and database model while
+changing the production deployment architecture. CloudFront serves the public
+application from a single private `t3a.micro` EC2 VPC origin with no public
+IPv4, SSH access, NAT gateway, or load balancer. Pushes to `main` deploy
+immutable `linux/amd64` images through GitHub OIDC and Systems Manager, and a
+failed liveness or readiness check restores the previous image tag.
 
-- The public application is served by CloudFront from a single private
-  `t3a.micro` EC2 VPC origin. The instance has no public IPv4, SSH access, NAT
-  gateway, or load balancer.
-- The existing RDS database, shared owner, ECR repository, Secrets Manager
-  secret, production validation, migration prestart, and health endpoints are
-  retained without a data migration.
-- Pushes to `main` deploy immutable `linux/amd64` images through GitHub OIDC and
-  Systems Manager. Failed liveness or readiness automatically restores the
-  previous image tag.
-- The migration was completed on August 22, 2026. Production now uses
-  [`https://ddz00reob9ubc.cloudfront.net`](https://ddz00reob9ubc.cloudfront.net),
-  and the former ECS service, Fargate tasks, load balancer, task definitions,
-  ECS roles, security group, and ECS log groups have been removed.
-- RDS remains publicly accessible by deliberate operator choice while retaining
-  private EC2 access and restricted PostgreSQL ingress. Making it private is an
-  optional later hardening step, not a pending cutover task.
-- The
-  [`EC2 and CloudFront production runbook`](docs/aws/ec2-cloudfront-migration.md)
-  records the live resources, VPC names, routine operations, rollback process,
-  and replacement-host procedure.
+The migration completed on August 22, 2026 with no data migration. Production is
+[`https://ddz00reob9ubc.cloudfront.net`](https://ddz00reob9ubc.cloudfront.net).
+RDS remains publicly accessible by deliberate operator choice, with private EC2
+access and restricted PostgreSQL ingress; making it private is an optional later
+hardening step, not a pending cutover task.
 
-Version 2 does not expand the product into multiple households, invitations,
-bank syncing, recurring automation, imports/exports, multiple currencies,
-notifications, realtime push, or offline financial writes. The Version 1
-financial, authentication, and provider-neutral container boundaries remain in
-force.
+The [EC2 and CloudFront production runbook](docs/aws/ec2-cloudfront-migration.md)
+records the live resources, VPC names, routine operations, rollback process, and
+replacement-host procedure. `docs/agents/deployment.md` records the engineering
+boundaries that come with it.
 
 ## Stack
 
@@ -118,7 +109,7 @@ npm run dev
 Open:
 
 ```text
-http://localhost:3000/?month=2026-08
+http://localhost:3000
 ```
 
 No PostgreSQL service is required. On the first database access, the application:
@@ -126,7 +117,7 @@ No PostgreSQL service is required. On the first database access, the application
 1. Creates `.data/pglite`.
 2. Applies the ordered SQL migrations in `drizzle/`.
 3. Inserts deterministic development data.
-4. Serves the August 2026 budget, with July 2026 history available for carryover behavior.
+4. Serves the current month's budget, with the previous month seeded as history so carryover behavior is visible immediately.
 
 The database persists between development-server restarts and is ignored by Git.
 
@@ -146,7 +137,7 @@ On macOS, find the current Wi-Fi address with:
 ipconfig getifaddr en0
 ```
 
-Open `http://<mac-ip-address>:3000/?month=2026-08` on the phone. For example, an address of `192.168.1.50` becomes `http://192.168.1.50:3000/?month=2026-08`.
+Open `http://<mac-ip-address>:3000` on the phone. For example, an address of `192.168.1.50` becomes `http://192.168.1.50:3000`.
 
 At development-server startup, `next.config.ts` automatically allows the computer's active IPv4 network addresses to access Next.js development assets. Restart `npm run dev:mobile` after changing Wi-Fi networks or receiving a different local address. Client-generated UUIDs also include a fallback for plain-HTTP LAN development, where browsers may withhold secure-context crypto APIs.
 
@@ -179,24 +170,24 @@ Do not commit `.env.local` or real credentials.
 | `/api/health`    | Backward-compatible alias for `/api/ready`                             |
 | `/api/auth/*`    | Better Auth handlers                                                   |
 
-Month-aware routes accept a query such as `?month=2026-08`. The UI preserves the selected month when moving between primary sections.
+Month-aware routes accept a query such as `?month=2026-08` and default to the current month. The UI preserves the selected month when moving between primary sections.
 
 ### Transaction history and filters
 
-The Transactions route is intentionally different from the combined activity surfaces. It contains expense and refund records only, labels refunds as **Income**, and does not duplicate received-income or paycheck receipts from the Income page.
+The Transactions route is intentionally different from the combined activity
+surfaces. It contains expense and refund records only, labels refunds as
+**Income**, and does not duplicate received-income or paycheck receipts from the
+Income page.
 
-The transaction controls follow these interaction rules:
-
-- Search matches the merchant, budget-item subtitle, and note. Its clear icon appears only for a populated query, empties the query, and does not return focus to the input.
-- The visible All, Expenses, and Income pills apply their transaction-type choice immediately.
-- The sliders button opens the full filter sheet for transaction type, budget item, and split status. Changes made there remain drafts until **Apply filters** is pressed. Closing the sheet discards the drafts.
-- **Clear filters** inside the sheet resets its draft controls. It does not change the applied results until **Apply filters** is pressed.
-- Applied filters give the sliders button a blue active treatment and a badge containing the number of active filter dimensions.
-- While any filter is applied, an outside **Clear** control appears immediately after the Income pill in the same left-aligned row. It resets the applied type, budget-item, and split-status filters while leaving the search query unchanged.
+Search matches the merchant, budget-item subtitle, and note. The All, Expenses,
+and Income pills apply immediately, while the sliders button opens a filter
+sheet whose changes stay drafts until **Apply filters** is pressed.
+`docs/agents/design.md` holds the precise filter, badge, and clear-control
+contract.
 
 ## Seeded development data
 
-The deterministic local seed provides a useful August 2026 household scenario, including:
+The local seed builds a household scenario in the current month, with the previous month seeded as carryover history. Its merchants, amounts, categories, and structure are fixed, so every reset produces the same scenario; only the calendar months follow today's date, which keeps a fresh checkout from opening on an empty month. It includes:
 
 - Category and budget-item structure.
 - Planned amounts.
@@ -317,7 +308,7 @@ To build and run the production-style application image plus PostgreSQL:
 docker compose --profile full up --build
 ```
 
-Open `http://localhost:3000/?month=2026-08` and verify:
+Open `http://localhost:3000` and verify:
 
 ```bash
 curl --fail http://localhost:3000/api/live
@@ -529,20 +520,16 @@ task rather than an organizer action.
 ## Release versioning
 
 Better Budget follows Semantic Versioning from `1.0.0`. Each completed
-application change set receives one version bump: patch for backward-compatible
-fixes and corrections, minor for backward-compatible features, and major for
-incompatible changes requiring migration or coordinated adoption. A mixed
-change set takes the highest applicable bump. `package.json` is canonical and
-the root versions in `package-lock.json` must remain synchronized. Changes
-limited to documentation, comments, formatting, or read-only investigation do
-not bump the application version.
+application change set receives exactly one bump: patch for backward-compatible
+fixes and corrections, minor for backward-compatible features, major for
+incompatible changes requiring migration or coordinated adoption. A mixed change
+set takes the highest applicable bump. `package.json` is canonical and the root
+versions in `package-lock.json` must stay synchronized. Changes limited to
+documentation, comments, formatting, or read-only investigation do not bump.
 
-Every major release also adds a new version section to this documentation while
-preserving earlier sections as historical context. A Version 2 section, for
-example, must summarize its new features and improvements, changed or removed
-behavior, breaking changes, required migrations, compatibility boundaries, and
-updated non-goals. The matching engineering details must be added to
-`AGENTS.md` in the same change set.
+`AGENTS.md` holds the full classification guide and the requirement that every
+major release adds a version section to both files. The Version 2 sections are
+the worked example.
 
 ## Eager persistence model
 
@@ -570,23 +557,21 @@ Atomic server transaction + mutation receipt
 Replace cache with canonical server snapshot
 ```
 
-Key guarantees:
+The guarantees that matter when reading the code: safe actions update within one
+animation frame and under the 100 ms acceptance target; every mutation carries a
+unique `clientMutationId`; the mutation receipt commits atomically with the
+financial change, so retries cannot duplicate transactions, receipts,
+allocations, or copied months; direct versioned edits send `expectedVersion` and
+a mismatch produces a conflict rather than an overwrite; routine success is
+silent; and offline financial writes are not queued in version 1.
 
-- Safe actions should visibly update within one animation frame and under the 100 ms acceptance target.
-- Every mutation has a unique `clientMutationId`.
-- The mutation receipt is committed atomically with the financial change, so retries cannot duplicate transactions, receipts, allocations, or copied months.
-- Direct versioned edits send `expectedVersion`; a mismatch produces a conflict instead of overwriting newer data.
-- Routine success is silent.
-- A saving indicator is delayed for roughly 400 ms so fast writes do not flash status UI.
-- Idempotent transient failures retry with short exponential backoff and jitter.
-- An ambiguous timeout is checked by mutation ID before rollback/retry.
-- Harmless canonical differences, such as timestamps or normalized order, reconcile silently.
-- Permanent failures roll back only the affected cache patch and keep useful form values.
-- Offline financial writes are not queued in version 1. Drafts are retained, unsafe optimistic writes are reverted, and the offline banner remains visible.
+Server-confirmed actions such as month copy, plan clearing, archival with
+history, password changes, and cross-month transaction moves show only a local
+pending state. The client refreshes authoritative state on focus, route/month
+navigation, successful writes, and a lightweight visible-tab interval.
 
-Server-confirmed actions such as month copy, plan clearing, archival with history, password changes, and cross-month transaction moves show only a local pending state. They do not block the whole application.
-
-The client refreshes authoritative state on focus, route/month navigation, successful writes, and a lightweight visible-tab interval. WebSockets are not required for version 1 convergence.
+`docs/agents/persistence.md` holds the full mutation lifecycle rules, the
+safe-versus-server-confirmed operation lists, and the reconciliation contract.
 
 ### Failure scenario panel
 
@@ -604,57 +589,32 @@ Use the panel to verify saving feedback, retry behavior, isolated rollback, reta
 
 ## Financial rules
 
-Financial correctness is shared between optimistic client patches and authoritative server services.
+Financial correctness is shared between optimistic client patches and
+authoritative server services. The rules a reader needs up front:
 
-- All monetary values are signed integer cents in code and PostgreSQL `bigint` in storage.
-- Cents are serialized as base-10 strings; JavaScript floating-point arithmetic is not used for money.
+- All monetary values are signed integer cents in code and PostgreSQL `bigint`
+  in storage, serialized as base-10 strings. JavaScript floating-point
+  arithmetic is never used for money.
 - A month key has the validated `YYYY-MM` form.
-- `Left to budget = expected income - planned amounts`.
-- Received income is tracked separately from expected income and does not change left-to-budget math.
-- `Available = planned - net spending + carry in`. Carry in is the immediately
-  previous month's ending available balance only when that previous month's
-  carryover switch was enabled and the item exists in both adjacent months.
-- Refunds/credits reduce net spending.
-- Positive and negative balances both carry forward.
-- A month's carryover switch controls whether its ending available balance
-  flows into the next month. Toggling it does not change the selected month's
-  inbound balance or overwrite any future month's switch.
-- Carryover is derived chronologically from history. Correcting an older transaction or plan changes later affected months.
-- Every transaction has at least one allocation. An unsplit transaction has one allocation, and split allocation cents must exactly equal the transaction total.
-- Cross-month moves are server-confirmed and require matching valid destination allocations.
-- Categories/items are household definitions; category participation, item plans, planned amounts, and carryover choices are month-specific.
-- Copy is limited to the immediately preceding month, requires active budget
-  structure or an expected-income plan in the source, and requires an empty
-  target. Archived definitions and soft-deleted transactions do not make an
-  otherwise empty target ineligible.
-- Copy includes structure, order, plans, expected income, and carryover settings, so the new month's outbound switch inherits the source month's choice. It never copies transactions or received-income receipts.
-- Clearing a plan preserves activity, structure, income receipts, and carryover settings.
-- Resetting a budget permanently removes the selected month's structure, plans, transactions, income activity, and note while preserving every other month and its definitions. Definitions left unused across all months by the reset are permanently deleted.
-- Archive keeps history. Hard deletion is only allowed for unused definitions.
+- `Left to budget = expected income - planned amounts`. Received income is
+  tracked separately and does not change that math.
+- `Available = planned - net spending + carry in`, where refunds and credits
+  reduce net spending.
+- Carryover is derived chronologically from history, so correcting an older
+  transaction or plan changes every later affected month. Both positive and
+  negative balances carry.
+- Every transaction owns at least one allocation, and split allocation cents
+  must equal the transaction total exactly.
 
-Changes to these rules should update `src/domain/`, server services, mutation contracts, optimistic patches, and documentation together.
+`AGENTS.md` holds all sixteen numbered financial invariants, including the
+copy, clear, reset, archive, and cross-month-move rules. Changes to any of them
+must update `src/domain/`, server services, mutation contracts, optimistic
+patches, and documentation together.
 
 ## Verification
 
-The repository intentionally has no unit, component, or end-to-end test suite. Use the static checks and focused manual verification appropriate to the change.
-
-```bash
-npm run format
-npm run format:check
-npm run typecheck
-npm run lint
-npm run build
-```
-
-`format` writes the repository's canonical Prettier formatting, and `format:check` verifies that formatting without changing files. `typecheck` runs strict TypeScript without emitting files and rejects unused local declarations or parameters. `lint` runs the repository ESLint/Next.js configuration. `build` verifies the optimized standalone production output.
-
-### Formatting and linting
-
-Prettier owns deterministic source layout: an 80-character print width, four-space indentation using spaces, single quotes in JavaScript/TypeScript and JSX, semicolons, LF endings, and no trailing commas. ESLint Stylistic complements it with structural whitespace, including import and variable grouping, blank lines before returns/throws, class-member and comment separation, one statement/declaration per line, and whitespace cleanup.
-
-Because comment separation and variable grouping are enforced together, an own-line comment cannot sit between two consecutive `const`, `let`, or `var` declarations, and `npm run lint:fix` cannot resolve that combination. Use a trailing comment, a block or object-literal start, or a position above a preceding non-declaration statement.
-
-When autofixes are needed, use this order so ESLint can make structural changes and Prettier can normalize the final layout:
+The repository intentionally has no unit, component, or end-to-end test suite.
+Use static checks plus focused manual verification appropriate to the change.
 
 ```bash
 npm run lint:fix
@@ -662,34 +622,37 @@ npm run format
 npm run format:check
 npm run typecheck
 npm run lint
-```
-
-For meaningful application or dependency changes, follow with `npm run build`. The final read-only `format:check` and `lint` commands—not merely the autofix commands—must pass before handoff.
-
-For financial changes, manually exercise the affected exact-money, carryover, split, optimistic reconciliation, retry, conflict, and authorization flows. For database changes, also verify PGlite reset/migration and PostgreSQL parity. For container changes, build the full Compose profile and check `/api/live` plus `/api/ready`.
-
-### Production build
-
-```bash
-npm run build
-npm run start
-```
-
-`npm run build` currently runs `next build --webpack` and produces the standalone output used by the Docker image. After the build, `npm run start` validates the production environment and serves the production build on port 3000.
-
-### Recommended pre-handoff check
-
-For normal application changes:
-
-```bash
-npm run format
-npm run format:check
-npm run typecheck
-npm run lint
 npm run build
 ```
 
-For database changes, also verify PGlite reset/migration and PostgreSQL parity. For container changes, build the full Compose profile and check `/api/live` plus `/api/ready`.
+Run `lint:fix` before `format`, because ESLint's structural fixes can add or
+remove blank lines that Prettier must then normalize. The read-only
+`format:check` and `lint` commands — not merely the autofix commands — must pass
+before handoff. `npm run build` produces the standalone output used by the
+Docker image; it also rewrites `next-env.d.ts` to its production form, so run
+`git checkout -- next-env.d.ts` afterward rather than committing the flip.
+
+Prettier owns deterministic source layout: an 80-character print width,
+four-space indentation using spaces, single quotes in JavaScript/TypeScript and
+JSX, semicolons, LF endings, and no trailing commas. ESLint Stylistic
+complements it with structural whitespace. Because comment separation and
+variable grouping are enforced together, an own-line comment cannot sit between
+two consecutive `const`, `let`, or `var` declarations, and `npm run lint:fix`
+cannot resolve that combination — use a trailing comment, a block or
+object-literal start, or a position above a preceding non-declaration statement.
+
+For financial changes, manually exercise the affected exact-money, carryover,
+split, optimistic reconciliation, retry, conflict, and authorization flows. For
+database changes, also verify PGlite reset/migration and PostgreSQL parity. For
+container changes, build the full Compose profile and check `/api/live` plus
+`/api/ready`.
+
+### Pre-handoff check
+
+The full pre-handoff sequence — autofix order, verification commands, the
+`next-env.d.ts` restore, and the required version bump — is the **Definition of
+done** in `AGENTS.md`. Coding agents can run it with the `/handoff` command in
+`.claude/commands/handoff.md`.
 
 ## Package scripts
 
@@ -705,10 +668,13 @@ For database changes, also verify PGlite reset/migration and PostgreSQL parity. 
 | `npm run lint`         | Run ESLint over the repository.                                                                 |
 | `npm run lint:fix`     | Apply ESLint autofixes, including structural blank-line rules.                                  |
 | `npm run typecheck`    | Run strict TypeScript checking without emit.                                                    |
+| `npm run verify`       | Read-only gate: `format:check`, then `typecheck`, then `lint`.                                  |
+| `npm run verify:fix`   | Apply ESLint autofixes and Prettier, then run the read-only gate.                               |
 | `npm run db:generate`  | Generate a new Drizzle migration from schema differences.                                       |
 | `npm run db:migrate`   | Apply migrations to the selected database.                                                      |
 | `npm run db:seed`      | Insert the deterministic development scenario; refuses production.                              |
 | `npm run db:reset`     | Guarded deletion of the local PGlite data directory.                                            |
+| `npm run db:inspect`   | Print months with planned/spent totals and transaction counts. Stop dev servers first.          |
 | `npm run db:owner`     | Idempotently create the shared owner, empty household, and membership.                          |
 
 The database CLI scripts intentionally set the `react-server` Node condition because they execute server-only modules outside a Next.js process.
@@ -719,12 +685,15 @@ The database CLI scripts intentionally set the `react-server` Node condition bec
 .
 ├── drizzle/                       Ordered SQL migrations
 ├── docs/
+│   ├── agents/                    On-demand engineering references
 │   ├── aws/                       AWS runbook and least-privilege policies
 │   └── design/                    Approved visual concepts
 ├── public/                        PWA icons and static files
 ├── scripts/
 │   ├── aws/                       Private EC2 bootstrap and deployment host
 │   ├── create-owner.ts            Shared-owner bootstrap
+│   ├── generate-ios-startup-images.mjs
+│                                  iOS launch-image generator
 │   ├── migrate.ts                 Development migration command
 │   ├── migrate-production.mjs     Advisory-lock container prestart
 │   ├── reset-local.ts             Guarded local PGlite reset
@@ -734,10 +703,12 @@ The database CLI scripts intentionally set the `react-server` Node condition bec
 ├── src/
 │   ├── app/                       App Router pages, metadata, and API routes
 │   ├── components/budget/         Responsive views, sheets, forms, query logic
+│   ├── components/ui/             Sheet, gesture, sortable, and input primitives
 │   ├── db/                        Drizzle schema, adapters, migrations, seed
 │   ├── domain/                    Exact money, calculations, and shared types
 │   ├── lib/                       Authentication and supporting libraries
 │   └── server/                    Access checks, contracts, and budget services
+├── .claude/                       Project permissions and the /handoff command
 ├── AGENTS.md                      Durable implementation guide for coding agents
 ├── compose.yaml                   PostgreSQL and full-app Compose services
 ├── Dockerfile                     Runtime and owner-bootstrap image targets
@@ -748,7 +719,30 @@ The database CLI scripts intentionally set the `react-server` Node condition bec
 
 The application installs as **Better Budget** with white-background `any` and maskable icons, white theme/background metadata, safe-area support, and standalone display configuration. To verify installation behavior, use a production build or a browser environment that permits local PWA installation; installed icon changes can remain cached by iOS and may require removing and reinstalling the home-screen app.
 
-On mobile, the app intentionally disables pinch/double-tap page zoom, text selection, touch callouts, document-level pull-to-refresh, and cancelable Safari history gestures beginning in the leftmost 20 px. Non-control touches in that strip are prevented immediately; controls retain normal taps, while every move that starts there is prevented regardless of direction. Each route scrolls inside the app content surface behind the translucent blurred bottom navigation, with bottom padding that keeps the final content reachable. The top header remains opaque. Sheets use a transparent overlay, shared entrance/exit motion, a fixed header, an independently scrolling body, and downward drag-to-dismiss on mobile. Budget-item details are the exception: they push over the Budget page from the right while the underlying page shifts left, support browser Back/Forward and a left-edge swipe to pop, and remain centered modals on desktop. Their Budget back control and editable item title remain fixed while the detail body scrolls; opening a child add/edit transaction sheet suspends the detail swipe until that sheet has fully exited.
+On mobile, the app intentionally disables pinch/double-tap page zoom, text
+selection, touch callouts, document-level pull-to-refresh, and cancelable Safari
+history gestures beginning in the leftmost 20 px. Each route scrolls inside the
+app content surface behind the translucent blurred bottom navigation. Sheets use
+a transparent overlay, shared entrance/exit motion, a fixed header, an
+independently scrolling body, and downward drag-to-dismiss on mobile.
+Budget-item and income-source details push over the page from the right on
+mobile and remain centered modals on desktop.
+
+`docs/agents/design.md` holds the exact gesture, motion, swipe, reordering, and
+navigation-detail contracts these behaviors must satisfy.
+
+The iOS launch images under `public/ios-startup/` are generated assets, not
+hand-authored ones. `scripts/generate-ios-startup-images.mjs` rebuilds them from
+`public/better-budget-icon-512-v3.png` and the viewport list in
+`src/app/ios-startup-viewports.json`:
+
+```bash
+node scripts/generate-ios-startup-images.mjs
+```
+
+It is a deliberate one-time asset command with no npm script. `sharp` is a
+declared devDependency for exactly this purpose. Regenerate and commit the
+output only when the source icon or the viewport list changes.
 
 UI changes should preserve:
 

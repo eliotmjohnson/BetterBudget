@@ -2,9 +2,9 @@ import { NextResponse } from 'next/server';
 import { getAccess } from '@/server/access';
 import {
     applyBudgetMutation,
-    getMonthSnapshot,
     getMutationStatus
 } from '@/server/budget-service';
+import { getMonthSnapshot } from '@/server/month-snapshot';
 import { mutationSchema } from '@/server/mutation-schema';
 import { monthKeySchema } from '@/domain/money';
 
