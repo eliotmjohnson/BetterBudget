@@ -1255,7 +1255,20 @@ body > .sortable-drag-overlay * {
     flex: 0 0 auto;
     margin-left: -5px;
 }
+/* An unregistered custom property animates discretely, which snapped the
+   wrapped tail away at the midpoint of a scroll-driven collapse. */
+@property --navigation-detail-title-tail {
+    syntax: '<number>';
+    inherits: false;
+    initial-value: 1;
+}
+@property --navigation-detail-title-head {
+    syntax: '<number>';
+    inherits: false;
+    initial-value: 0;
+}
 .navigation-detail-title {
+    --navigation-detail-title-head: 0;
     position: relative;
     z-index: 1;
     width: fit-content;
@@ -1337,6 +1350,15 @@ body > .sortable-drag-overlay * {
     border-bottom: 2px solid var(--blue);
     box-shadow: none;
 }
+.navigation-detail-content[data-navigation-detail-title-motion]
+    .navigation-detail-title {
+    mask-image: linear-gradient(
+        to bottom,
+        #000 var(--navigation-detail-title-line, 100%),
+        rgb(0 0 0 / var(--navigation-detail-title-tail, 1))
+            var(--navigation-detail-title-line, 100%)
+    );
+}
 .navigation-detail-content[data-navigation-detail-title-compact]
     .navigation-detail-title,
 .navigation-detail-content[data-navigation-detail-title-compact]
@@ -1347,13 +1369,30 @@ body > .sortable-drag-overlay * {
     text-overflow: ellipsis;
     white-space: nowrap;
 }
+/* The compact title is laid out at the expanded font size and scaled down, so
+   its truncation width must be divided by that scale to match what is drawn. */
+.navigation-detail-content[data-navigation-detail-title-compact]
+    .navigation-detail-title {
+    max-width: calc(
+        (100% - 104px) / var(--navigation-detail-title-compact-scale, 0.435)
+    );
+    mask-image: linear-gradient(
+        to right,
+        #000 var(--navigation-detail-title-first-line, 100%),
+        rgb(0 0 0 / var(--navigation-detail-title-head, 1))
+            var(--navigation-detail-title-first-line, 100%)
+    );
+}
 .navigation-detail-content[data-navigation-detail-title-edit-transition='true']
     .navigation-detail-header::before {
     transition: clip-path 0.36s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .navigation-detail-content[data-navigation-detail-title-edit-transition='true']
     .navigation-detail-title {
-    transition: transform 0.36s cubic-bezier(0.4, 0, 0.2, 1);
+    transition:
+        transform 0.36s cubic-bezier(0.4, 0, 0.2, 1),
+        --navigation-detail-title-tail 0.36s cubic-bezier(0.4, 0, 0.2, 1),
+        --navigation-detail-title-head 0.36s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .navigation-detail-content[data-navigation-detail-title-edit-transition='true']
     .navigation-detail-title-input {
@@ -3613,17 +3652,36 @@ body > .sortable-drag-overlay * {
         clip-path: inset(0 0 var(--navigation-detail-collapse-range, 65px) 0);
     }
 }
+/* The 65% stop is titleRevealProgress in navigation-detail.tsx: the wrapped
+   tail is gone by then, so the single-line remainder reveals across the rest
+   of the scroll instead of popping in at the end. */
 @keyframes navigation-detail-title-collapse {
     from {
         transform: translate3d(0, 0, 0) scale(1);
+        --navigation-detail-title-tail: 1;
+        --navigation-detail-title-head: 0;
+    }
+    50% {
+        --navigation-detail-title-tail: 0;
+    }
+    65% {
+        transform: translate3d(
+                calc(var(--navigation-detail-title-motion-x, 0px) * 0.65),
+                calc(var(--navigation-detail-title-compact-y, 0px) * 0.65),
+                0
+            )
+            scale(0.63261);
+        --navigation-detail-title-head: 0;
     }
     to {
         transform: translate3d(
-                var(--navigation-detail-title-compact-x, 0),
+                var(--navigation-detail-title-rest-x, 0),
                 var(--navigation-detail-title-compact-y, 0),
                 0
             )
             scale(0.43478);
+        --navigation-detail-title-tail: 0;
+        --navigation-detail-title-head: 1;
     }
 }
 @keyframes sheet-in {

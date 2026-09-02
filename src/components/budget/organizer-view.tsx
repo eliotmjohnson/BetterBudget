@@ -411,8 +411,7 @@ export function OrganizerView({
                 <>
                     <p className='organize-note'>
                         <Info size={15} />
-                        Press and hold a category or budget item, then drag to
-                        reorder.
+                        Hold a category or item, then drag to reorder.
                     </p>
                     <div
                         ref={categoryContainerRef}

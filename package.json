@@ -1,6 +1,6 @@
 {
     "name": "better-budget",
-    "version": "2.6.0",
+    "version": "2.6.1",
     "description": "A calm, shared household budget that keeps every dollar clear.",
     "private": true,
     "packageManager": "npm@11.17.0",

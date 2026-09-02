@@ -39,7 +39,10 @@ interface EdgeDragState {
 interface TitleMotionMetrics {
     compactHeaderHeight: number;
     expandedHeaderHeight: number;
+    firstLineHeight: number;
+    firstLineWidth: number;
     translateX: number;
+    restTranslateX: number;
     translateY: number;
 }
 
@@ -50,6 +53,8 @@ const dismissDuration = 500;
 const dismissOvershoot = 48;
 const motionCleanupDelay = 480;
 const titleCompactScale = 20 / 46;
+const titleTailFadeProgress = 0.5;
+const titleRevealProgress = 0.65; // Matches the 65% collapse keyframe stop.
 const titleEditTransitionCleanupDelay = 400;
 const reducedMotionExpandThreshold = 8;
 
@@ -76,9 +81,36 @@ function clearTitleMotion(content: HTMLElement | null) {
     title?.style.removeProperty('--navigation-detail-title-scale');
     title?.style.removeProperty('--navigation-detail-title-x');
     title?.style.removeProperty('--navigation-detail-title-y');
-    title?.style.removeProperty('--navigation-detail-title-compact-x');
+    title?.style.removeProperty('--navigation-detail-title-first-line');
+    title?.style.removeProperty('--navigation-detail-title-line');
+    title?.style.removeProperty('--navigation-detail-title-tail');
+    title?.style.removeProperty('--navigation-detail-title-motion-x');
     title?.style.removeProperty('--navigation-detail-title-compact-y');
+    title?.style.removeProperty('--navigation-detail-title-compact-scale');
+    title?.style.removeProperty('--navigation-detail-title-rest-x');
     content.style.removeProperty('--navigation-detail-collapse-range');
+}
+
+// The wrapped first line is where the compact single line stops matching what
+// was already on screen, so the revealed remainder fades in from that width.
+function measureFirstLineWidth(title: HTMLElement, layoutWidth: number) {
+    const content = title.querySelector('.navigation-detail-title-button');
+
+    if (!content || layoutWidth <= 0) return layoutWidth;
+
+    const range = document.createRange();
+
+    range.selectNodeContents(content);
+    const lines = range.getClientRects();
+    const firstLine = lines[0];
+
+    if (!firstLine) return layoutWidth;
+
+    const appliedScale = title.getBoundingClientRect().width / layoutWidth;
+
+    if (!(appliedScale > 0)) return layoutWidth;
+
+    return Math.min(layoutWidth, firstLine.width / appliedScale);
 }
 
 function clearBaseMotion() {
@@ -292,7 +324,17 @@ export function NavigationDetail({
 
             if (!back) return;
 
+            titleElement.style.setProperty(
+                '--navigation-detail-title-compact-scale',
+                titleCompactScale.toFixed(5)
+            );
+
+            const expandedTitleWidth = titleElement.offsetWidth;
             const expandedTitleHeight = titleElement.offsetHeight;
+            const expandedFirstLineWidth = measureFirstLineWidth(
+                titleElement,
+                expandedTitleWidth
+            );
             const expandedHeaderHeight = Math.max(
                 back.offsetTop + 92,
                 titleElement.offsetTop + expandedTitleHeight
@@ -320,11 +362,20 @@ export function NavigationDetail({
             const compactTitleLeft =
                 (header.clientWidth - compactTitleWidth * titleCompactScale) /
                 2;
+            const expandedTitleLeft =
+                (header.clientWidth - expandedTitleWidth * titleCompactScale) /
+                2;
 
             metrics = {
+                // A wrapped title travels centered on its own box; the wider
+                // single-line box only takes over once the compact layout
+                // replaces it, so both share one center across the swap.
                 compactHeaderHeight,
                 expandedHeaderHeight,
-                translateX: compactTitleLeft - titleElement.offsetLeft,
+                firstLineHeight: compactTitleHeight,
+                firstLineWidth: expandedFirstLineWidth,
+                translateX: expandedTitleLeft - titleElement.offsetLeft,
+                restTranslateX: compactTitleLeft - titleElement.offsetLeft,
                 translateY: compactTitleTop - titleElement.offsetTop
             };
             const collapseRange = Math.max(
@@ -337,12 +388,24 @@ export function NavigationDetail({
                 `${collapseRange.toFixed(3)}px`
             );
             titleElement.style.setProperty(
-                '--navigation-detail-title-compact-x',
+                '--navigation-detail-title-motion-x',
                 `${metrics.translateX.toFixed(3)}px`
+            );
+            titleElement.style.setProperty(
+                '--navigation-detail-title-rest-x',
+                `${metrics.restTranslateX.toFixed(3)}px`
             );
             titleElement.style.setProperty(
                 '--navigation-detail-title-compact-y',
                 `${metrics.translateY.toFixed(3)}px`
+            );
+            titleElement.style.setProperty(
+                '--navigation-detail-title-line',
+                `${metrics.firstLineHeight.toFixed(3)}px`
+            );
+            titleElement.style.setProperty(
+                '--navigation-detail-title-first-line',
+                `${metrics.firstLineWidth.toFixed(3)}px`
             );
             content.toggleAttribute(
                 'data-navigation-detail-scroll-driven',
@@ -398,7 +461,8 @@ export function NavigationDetail({
             );
             content.toggleAttribute(
                 'data-navigation-detail-title-compact',
-                motion.progress >= 0.999 && !titleEditingRef.current
+                motion.progress >= titleRevealProgress &&
+                    !titleEditingRef.current
             );
 
             const useDirectMotion =
@@ -431,7 +495,21 @@ export function NavigationDetail({
                 `${directCollapsedDistance.toFixed(3)}px`
             );
 
+            // The wrapped box travels to its own centered position, then
+            // slides on to the single-line resting position as the remainder
+            // reveals.
             const scale = 1 + (titleCompactScale - 1) * directProgress;
+            const reveal = Math.max(
+                0,
+                (directProgress - titleRevealProgress) /
+                    (1 - titleRevealProgress)
+            );
+            const travelX =
+                metrics.translateX *
+                    Math.min(directProgress, titleRevealProgress) +
+                (metrics.restTranslateX -
+                    metrics.translateX * titleRevealProgress) *
+                    reveal;
 
             titleElement.style.setProperty(
                 '--navigation-detail-title-scale',
@@ -439,11 +517,21 @@ export function NavigationDetail({
             );
             titleElement.style.setProperty(
                 '--navigation-detail-title-x',
-                `${(metrics.translateX * directProgress).toFixed(3)}px`
+                `${travelX.toFixed(3)}px`
             );
             titleElement.style.setProperty(
                 '--navigation-detail-title-y',
                 `${(metrics.translateY * directProgress).toFixed(3)}px`
+            );
+            titleElement.style.setProperty(
+                '--navigation-detail-title-tail',
+                (
+                    1 - Math.min(1, directProgress / titleTailFadeProgress)
+                ).toFixed(4)
+            );
+            titleElement.style.setProperty(
+                '--navigation-detail-title-head',
+                reveal.toFixed(4)
             );
             content.dataset.navigationDetailMotionDirect = 'true';
             if (titleEditHandoffProgress !== null) {

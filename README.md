@@ -652,6 +652,8 @@ npm run build
 
 Prettier owns deterministic source layout: an 80-character print width, four-space indentation using spaces, single quotes in JavaScript/TypeScript and JSX, semicolons, LF endings, and no trailing commas. ESLint Stylistic complements it with structural whitespace, including import and variable grouping, blank lines before returns/throws, class-member and comment separation, one statement/declaration per line, and whitespace cleanup.
 
+Because comment separation and variable grouping are enforced together, an own-line comment cannot sit between two consecutive `const`, `let`, or `var` declarations, and `npm run lint:fix` cannot resolve that combination. Use a trailing comment, a block or object-literal start, or a position above a preceding non-declaration statement.
+
 When autofixes are needed, use this order so ESLint can make structural changes and Prettier can normalize the final layout:
 
 ```bash
