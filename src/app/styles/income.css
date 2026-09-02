@@ -1,0 +1,182 @@
+.section-title {
+    margin: 28px 0 12px;
+    font-size: 17px;
+    font-weight: 820;
+    letter-spacing: -0.025em;
+}
+.income-row {
+    padding: 15px 0;
+    border-bottom: 1px solid var(--line);
+}
+.income-row-top {
+    display: grid;
+    grid-template-columns: 42px 1fr auto 32px;
+    align-items: center;
+    gap: 10px;
+}
+.income-meta {
+    margin: 7px 0 0 52px;
+    color: var(--muted);
+    font-size: 12px;
+}
+.income-row-button {
+    width: 100%;
+    border: 0;
+    background: white;
+    text-align: left;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+.income-progress {
+    height: 4px;
+    margin: 11px 42px 0 52px;
+    border-radius: 999px;
+    overflow: hidden;
+    background: #eef0f3;
+}
+.income-progress div {
+    height: 100%;
+    border-radius: inherit;
+    background: var(--mint);
+}
+.income-source-details {
+    display: grid;
+    gap: 18px;
+}
+.income-source-stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 16px;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    background: var(--soft);
+    text-align: center;
+}
+.income-source-stats div + div {
+    border-left: 1px solid var(--line);
+}
+.income-source-stats span,
+.income-source-stats label,
+.income-source-stats strong {
+    display: block;
+}
+.income-source-stats span,
+.income-source-stats label {
+    color: var(--muted);
+    font-size: 12px;
+}
+.income-source-stats strong {
+    margin-top: 5px;
+    font-size: 20px;
+    font-variant-numeric: tabular-nums;
+}
+.income-source-expected-input {
+    width: min(132px, 100%);
+    min-height: 36px;
+    margin: 3px auto -3px;
+    padding: 3px 8px;
+    border: 1px solid #c9d8ee;
+    border-radius: 9px;
+    background: white;
+    color: var(--ink);
+    font-size: 20px;
+    font-weight: 750;
+    text-align: center;
+    outline: none;
+}
+.income-source-expected-input:focus-visible {
+    border-color: var(--blue);
+    box-shadow: 0 0 0 3px rgb(23 105 224 / 14%);
+}
+.income-source-appearance-action {
+    color: var(--muted);
+}
+.income-source-details .section-title {
+    margin: 8px 0 -6px;
+}
+.income-receipt-list {
+    border-top: 1px solid var(--line);
+}
+.income-receipt-row {
+    min-height: 70px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 44px;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--line);
+}
+.income-receipt-copy {
+    min-width: 0;
+}
+.income-receipt-copy strong,
+.income-receipt-copy span {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.income-receipt-copy strong {
+    color: #199d67;
+    font-size: 15px;
+    font-variant-numeric: tabular-nums;
+}
+.income-receipt-copy span {
+    margin-top: 3px;
+    color: var(--muted);
+    font-size: 12px;
+}
+.income-receipt-delete {
+    color: #e3474d;
+}
+.income-receipt-empty {
+    display: grid;
+    justify-items: center;
+    gap: 5px;
+    padding: 24px 16px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    color: var(--muted);
+    text-align: center;
+}
+.income-receipt-empty strong {
+    color: var(--ink);
+    font-size: 14px;
+}
+.income-receipt-empty span {
+    font-size: 12px;
+    line-height: 1.45;
+}
+.income-source-delete {
+    display: grid;
+    justify-items: center;
+    gap: 2px;
+    margin-top: 4px;
+    padding-top: 15px;
+    border-top: 1px solid var(--line);
+}
+.income-source-delete .text-button {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    line-height: 1;
+}
+.income-source-delete .text-button svg {
+    flex: 0 0 auto;
+    margin: 0;
+    vertical-align: initial;
+}
+.income-source-delete .text-button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+.income-source-delete p {
+    max-width: 310px;
+    margin: 0;
+    color: var(--muted);
+    font-size: 11px;
+    line-height: 1.45;
+    text-align: center;
+}

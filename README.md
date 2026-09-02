@@ -702,6 +702,7 @@ The database CLI scripts intentionally set the `react-server` Node condition bec
 │                                  Production startup validation
 ├── src/
 │   ├── app/                       App Router pages, metadata, and API routes
+│   │   └── styles/                Stylesheets by area; import order = cascade order
 │   ├── components/budget/         Responsive views, sheets, forms, query logic
 │   ├── components/ui/             Sheet, gesture, sortable, and input primitives
 │   ├── db/                        Drizzle schema, adapters, migrations, seed

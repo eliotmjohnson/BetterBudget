@@ -1,0 +1,90 @@
+.sign-in-brand {
+    display: grid;
+    justify-items: center;
+    text-align: center;
+}
+.sign-in-brand .brand-symbol {
+    width: 54px;
+    height: 54px;
+}
+.sign-in-brand .brand-wordmark {
+    font-size: 34px;
+}
+.sign-in-brand p {
+    margin: 28px 0 26px;
+    color: var(--muted);
+    font-size: 17px;
+    line-height: 1.55;
+}
+.sign-in-bars {
+    height: 126px;
+    display: flex;
+    align-items: end;
+    justify-content: center;
+    gap: 34px;
+    margin-bottom: 34px;
+}
+.sign-in-bars span {
+    width: 28px;
+    height: 112px;
+    border-radius: 999px;
+    background: linear-gradient(#b8efd1, #dff9eb);
+}
+.sign-in-bars span:nth-child(2) {
+    height: 96px;
+    background: linear-gradient(#bdd3ff, #e0ebff);
+}
+.sign-in-bars span:nth-child(3) {
+    height: 82px;
+    background: linear-gradient(#ffc1c3, #ffe8e8);
+}
+.sign-in-bars i {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: #8eb6fa;
+}
+.sign-in-form {
+    display: grid;
+    gap: 12px;
+}
+.auth-field {
+    min-height: 58px;
+    display: grid;
+    grid-template-columns: 28px 1fr 40px;
+    align-items: center;
+    gap: 4px;
+    padding: 0 10px 0 14px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    color: #9299a2;
+}
+.auth-field input {
+    min-width: 0;
+    height: 54px;
+    border: 0;
+    outline: 0;
+}
+.auth-field button {
+    width: 40px;
+    height: 40px;
+    display: grid;
+    place-items: center;
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+}
+.auth-field:first-child input {
+    grid-column: span 2;
+}
+.sign-in-button {
+    margin-top: 18px;
+    min-height: 56px;
+}
+.sign-in-note {
+    margin: 30px 0 0;
+    color: var(--muted);
+    font-size: 12px;
+    text-align: center;
+}

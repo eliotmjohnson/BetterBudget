@@ -1,0 +1,229 @@
+.organize-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 7px;
+    margin: 0 0 10px;
+    color: var(--muted);
+    font-size: 11.5px;
+    line-height: 1.45;
+}
+.organize-note svg {
+    flex: 0 0 auto;
+    margin-top: 1px;
+}
+.organize-screen--detail {
+    min-width: 0;
+}
+.small-icon {
+    width: 38px;
+    height: 38px;
+}
+.organizer-category-list {
+    margin-inline: -2px;
+}
+.organizer-category-section {
+    contain-intrinsic-size: auto 96px;
+}
+.category-header.organizer-category-header {
+    position: relative;
+    z-index: 1;
+    min-height: 56px;
+    grid-template-columns: minmax(0, 1fr) 44px;
+    gap: 0;
+    padding: 0 0 0 2px;
+    overflow: visible;
+}
+.organizer-category-header .category-toggle {
+    min-height: 56px;
+    grid-template-columns: 40px minmax(0, 1fr) 18px;
+    gap: 8px;
+    padding-right: 12px;
+}
+.organizer-category-header .category-medallion {
+    position: relative;
+    z-index: 2;
+    width: 40px;
+    height: 40px;
+}
+.organizer-category-header .category-medallion svg {
+    width: 21px;
+    height: 21px;
+}
+.organizer-category-header .category-title {
+    font-size: 19px;
+}
+.organizer-category-header .category-edit-button {
+    width: 44px;
+    height: 44px;
+}
+.organizer-category-chevron {
+    transition: transform 160ms ease;
+}
+.organizer-category-chevron[data-collapsed='true'] {
+    transform: rotate(-90deg);
+}
+.organizer-item-sortable-list {
+    border-top: 1px solid var(--line);
+}
+.organizer-item-row {
+    min-height: 44px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 44px;
+    align-items: center;
+    background: white;
+    touch-action: pan-y;
+    -webkit-touch-callout: none;
+    transition:
+        background-color 0.18s ease,
+        box-shadow 0.18s ease;
+}
+.organizer-item-sortable-item + .organizer-item-sortable-item {
+    border-top: 1px solid var(--line);
+}
+.organizer-item-edit {
+    min-width: 0;
+    min-height: 44px;
+    padding: 0 8px 0 42px;
+    overflow: hidden;
+    border: 0;
+    background: transparent;
+    color: var(--ink);
+    font-size: 13.5px;
+    font-weight: 650;
+    text-align: left;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: pointer;
+}
+.organizer-item-menu {
+    width: 44px;
+    height: 44px;
+    color: #666e78;
+}
+.organizer-item-edit:disabled,
+.organizer-item-menu:disabled {
+    opacity: 0.35;
+    cursor: wait;
+}
+.organizer-empty-category {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    margin: 0;
+    padding: 0 14px 0 42px;
+    color: var(--muted);
+    font-size: 12px;
+}
+.organizer-empty-state {
+    display: grid;
+    justify-items: center;
+    gap: 10px;
+    margin: 6px 0;
+    padding: 30px 22px 24px;
+    border: 1px solid #d8e4f8;
+    border-radius: 20px;
+    background: linear-gradient(180deg, #f8fbff 0%, #fff 100%);
+    text-align: center;
+}
+.organizer-empty-icon {
+    width: 52px;
+    height: 52px;
+    display: grid;
+    place-items: center;
+    margin-bottom: 2px;
+    border-radius: 18px;
+    background: #e9f1ff;
+    color: var(--blue);
+}
+.organizer-empty-state h3 {
+    margin: 0;
+    font-size: 20px;
+    line-height: 1.2;
+    letter-spacing: -0.025em;
+}
+.organizer-empty-state p {
+    max-width: 360px;
+    margin: 0;
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.5;
+}
+.organizer-empty-state .primary-button {
+    width: 100%;
+    margin-top: 8px;
+}
+.organizer-editor-form {
+    gap: 14px;
+}
+.organizer-delete-slot {
+    height: calc(88px + env(safe-area-inset-bottom));
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: center;
+    gap: 8px;
+    margin: 2px -18px calc(-22px - env(safe-area-inset-bottom));
+    padding: 8px 12px calc(8px + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--line);
+}
+.organizer-delete-action,
+.organizer-permanent-action {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding-inline: 8px;
+    border-radius: 12px;
+    font-size: 12.5px;
+    font-weight: 750;
+    line-height: 1.15;
+    white-space: nowrap;
+}
+.organizer-delete-action {
+    border: 1px solid #f2c4c7;
+    background: #fff1f2;
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 75%);
+}
+.organizer-permanent-action {
+    color: #8f6769;
+}
+.organizer-delete-action svg {
+    flex: 0 0 auto;
+    margin: 0;
+}
+.organizer-delete-confirmation {
+    height: calc(132px + env(safe-area-inset-bottom));
+}
+.organizer-delete-confirmation .category-delete-confirmation-copy {
+    min-height: 54px;
+    align-content: center;
+}
+.organizer-delete-confirmation .category-delete-confirmation-copy strong {
+    overflow-wrap: anywhere;
+    white-space: normal;
+}
+.organizer-delete-confirmation .category-delete-confirmation-copy span {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+}
+.organizer-delete-confirmation
+    .category-delete-confirmation-actions
+    .text-button {
+    white-space: nowrap;
+}
+.organizer-delete-confirmation .text-button:disabled {
+    opacity: 0.45;
+    cursor: wait;
+}
+.text-button svg {
+    vertical-align: -3px;
+    margin-right: 6px;
+}
+
+.settings-list {
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    overflow: hidden;
+}

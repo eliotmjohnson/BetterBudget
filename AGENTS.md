@@ -148,25 +148,23 @@ High-impact files include:
 - `src/components/ui/left-edge-gesture-guard.tsx` for the global Safari left-edge history-gesture suppression contract.
 - `src/components/ui/sheet.tsx` for the shared animated, scroll-contained, drag-dismissible sheet behavior.
 - `src/components/ui/sortable-list.tsx` for long-press activation, lifted previews, placeholder movement, list reflow, keyboard reordering, and edge auto-scroll.
-- `src/app/globals.css` for the entire visual system: tokens, layout, sheets, and motion. It is the largest file in the repository and has no section headings.
+- `src/app/globals.css` for the Tailwind import and the ordered `@import` list only. The rules live in `src/app/styles/`.
+- `src/app/styles/` for the visual system, split by area: `tokens`, `app-shell`, `budget`, `navigation-detail`, `sheets-and-forms`, `transactions`, `income`, `organize`, `settings`, `sign-in`, `responsive-motion`. **The import order in `globals.css` is the cascade order.** Later files intentionally override earlier ones, so never reorder the imports, and add a new area file at the position its specificity requires — `responsive-motion.css` must stay last.
 
 ### Navigating the large files without reading them whole
 
-Four files are big enough that a full read is expensive:
-`src/app/globals.css` (~22k tokens), `budget-service.ts` (~15k),
-`budget-view.tsx` (~13k), `navigation-detail.tsx` (~11k). Most tasks need one
-region. Locate it first, then read that range with an offset:
+Three files are big enough that a full read is expensive: `budget-service.ts`
+(~15k tokens), `budget-view.tsx` (~13k), `navigation-detail.tsx` (~11k). Most
+tasks need one region. Locate it first, then read that range with an offset:
 
 ```bash
 grep -n "case '" src/server/budget-service.ts        # the 25 mutation cases
 grep -n '^export \|^async function \|^function ' src/server/budget-service.ts
 grep -n '^function \|^export function ' src/components/budget/budget-view.tsx
-grep -n '\.class-name\|^@media\|^@property' src/app/globals.css
+grep -rn '\.class-name' src/app/styles/                # which stylesheet owns it
 ```
 
-`globals.css` has no section headings; always grep it for the selector you need
-rather than reading it whole. Line numbers move, so derive them per session
-rather than trusting a stored map.
+Line numbers move, so derive them per session rather than trusting a stored map.
 
 ## Architecture
 

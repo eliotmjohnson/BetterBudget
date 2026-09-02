@@ -1,0 +1,148 @@
+.settings-row {
+    width: 100%;
+    min-height: 58px;
+    display: grid;
+    grid-template-columns: 34px 1fr auto;
+    align-items: center;
+    gap: 10px;
+    padding: 0 14px;
+    border: 0;
+    border-bottom: 1px solid var(--line);
+    background: white;
+    text-align: left;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+.settings-row:focus {
+    outline: none;
+}
+.settings-row:focus-visible {
+    box-shadow: inset 0 0 0 3px color-mix(in srgb, var(--blue) 25%, transparent);
+}
+[data-sheet-restored-focus='true']:focus-visible,
+.settings-row[data-navigation-detail-restored-focus='true']:focus-visible {
+    outline: none;
+    box-shadow: none;
+}
+.settings-row:last-child {
+    border-bottom: 0;
+}
+.settings-row span {
+    min-width: 0;
+}
+.settings-row strong,
+.settings-row small {
+    display: block;
+}
+.settings-row small {
+    margin-top: 3px;
+    overflow: hidden;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 500;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.settings-selection-indicator {
+    width: 20px;
+    min-width: 20px;
+    display: grid;
+    place-items: center;
+    color: var(--blue);
+}
+.settings-section-title {
+    margin: 26px 0 9px;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+}
+.static-row {
+    cursor: default;
+}
+.scenario-panel {
+    display: grid;
+    grid-template-columns: 30px 1fr;
+    gap: 10px;
+    padding: 15px;
+    border: 1px solid #d8e4f8;
+    border-radius: 16px;
+    background: #f6f9ff;
+}
+.scenario-panel strong {
+    font-size: 14px;
+}
+.scenario-panel p {
+    margin: 4px 0 12px;
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.4;
+}
+.scenario-panel select {
+    grid-column: 2;
+    min-height: 42px;
+    padding: 0 10px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: white;
+}
+.app-version {
+    display: grid;
+    justify-items: center;
+    gap: 3px;
+    margin: 26px auto 0;
+    color: var(--muted);
+    line-height: 1.4;
+    text-align: center;
+}
+.app-version strong {
+    color: var(--ink);
+    font-size: 12px;
+}
+.app-version span {
+    max-width: 360px;
+    font-size: 11px;
+}
+.app-version small {
+    font-size: 10px;
+}
+.empty-state {
+    display: grid;
+    justify-items: center;
+    padding: 56px 20px;
+    color: var(--muted);
+    text-align: center;
+}
+.empty-state h2 {
+    margin: 14px 0 4px;
+    color: var(--ink);
+    font-size: 18px;
+}
+.empty-state p {
+    margin: 0;
+    font-size: 13px;
+}
+
+.sign-in-screen {
+    height: 100dvh;
+    min-height: 100dvh;
+    display: grid;
+    place-items: center;
+    overflow-y: auto;
+    overscroll-behavior: none;
+    padding: 20px;
+    background: radial-gradient(circle at 50% 10%, #f4f8ff, white 46%);
+}
+.sign-in-card {
+    width: min(100%, 390px);
+    min-height: min(844px, calc(100dvh - 40px));
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 54px 20px 34px;
+    border: 1px solid var(--line);
+    border-radius: 34px;
+    background: white;
+    box-shadow: var(--shadow);
+}

@@ -1,0 +1,264 @@
+.brand-symbol {
+    width: 38px;
+    height: 38px;
+    flex: 0 0 auto;
+    overflow: visible;
+}
+.brand-wordmark {
+    font-size: 20px;
+    line-height: 1;
+    font-weight: 800;
+    letter-spacing: -0.055em;
+}
+.brand-lockup--compact .brand-symbol {
+    width: 34px;
+    height: 34px;
+}
+
+.app-frame {
+    height: 100dvh;
+    min-height: 100dvh;
+    overflow: hidden;
+    background: #fff;
+}
+.desktop-sidebar {
+    display: none;
+}
+.app-main {
+    height: 100dvh;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+.app-content {
+    width: min(100%, 820px);
+    min-height: 0;
+    flex: 1;
+    margin: 0 auto;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior-x: none;
+    overscroll-behavior-y: auto;
+    scroll-padding-bottom: calc(var(--bottom-nav-height) + 20px);
+    -webkit-overflow-scrolling: touch;
+}
+.app-content--enter > * {
+    animation: page-enter 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.mobile-header {
+    position: sticky;
+    z-index: 20;
+    top: 0;
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr) 44px;
+    align-items: center;
+    gap: 6px;
+    min-height: 62px;
+    padding: max(6px, env(safe-area-inset-top)) 12px 4px;
+    background: #fff;
+    border-bottom: 1px solid var(--line);
+}
+.mobile-header .brand-lockup {
+    min-width: 0;
+    justify-self: center;
+}
+.mobile-header .brand-symbol {
+    width: 32px;
+    height: 32px;
+}
+.mobile-header .brand-wordmark {
+    display: none;
+}
+.month-switcher {
+    width: 100%;
+    min-width: 0;
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr) 44px;
+    align-items: center;
+    gap: 2px;
+    font-size: 17px;
+    font-weight: 760;
+    letter-spacing: -0.025em;
+    white-space: nowrap;
+}
+.month-picker-shell {
+    position: relative;
+    min-width: 0;
+}
+.month-picker-control {
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    padding: 0 6px;
+    border: 0;
+    border-radius: 12px;
+    background: transparent;
+    color: var(--ink);
+    cursor: pointer;
+}
+.month-picker-control span {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    pointer-events: none;
+}
+.month-picker-popover {
+    position: absolute;
+    z-index: 50;
+    top: calc(100% + 7px);
+    left: 50%;
+    width: min(320px, calc(100vw - 24px));
+    padding: 14px;
+    border: 1px solid rgb(226 230 236 / 88%);
+    border-radius: 20px;
+    background: rgb(255 255 255 / 94%);
+    box-shadow:
+        0 20px 52px rgb(28 39 58 / 18%),
+        0 4px 12px rgb(28 39 58 / 8%);
+    backdrop-filter: blur(24px) saturate(145%);
+    -webkit-backdrop-filter: blur(24px) saturate(145%);
+    transform: translateX(-50%);
+    transform-origin: top center;
+}
+.month-picker-popover[data-state='open'] {
+    animation: month-picker-in 0.6s cubic-bezier(0.29, 1, 0.29, 1) both;
+}
+.month-picker-popover[data-state='closed'] {
+    pointer-events: none;
+    animation: month-picker-out 0.45s cubic-bezier(0.4, 1, 0.4, 1) both;
+}
+.month-picker-year {
+    min-height: 40px;
+    display: grid;
+    grid-template-columns: 40px 1fr 40px;
+    align-items: center;
+    margin-bottom: 8px;
+}
+.month-picker-year strong {
+    text-align: center;
+    font-size: 18px;
+    font-variant-numeric: tabular-nums;
+}
+.month-picker-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+}
+.month-picker-grid button {
+    position: relative;
+    min-height: 44px;
+    border: 0;
+    border-radius: 11px;
+    background: transparent;
+    color: #555d68;
+    font-size: 14px;
+    font-weight: 720;
+    cursor: pointer;
+    transition:
+        color 180ms ease,
+        background 180ms ease,
+        transform 180ms ease;
+}
+.month-picker-grid button:hover {
+    background: var(--soft);
+    color: var(--ink);
+}
+.month-picker-grid button:active {
+    transform: scale(0.95);
+}
+.month-picker-grid button.selected {
+    background: var(--blue);
+    color: white;
+    box-shadow: 0 7px 16px rgb(23 105 224 / 22%);
+}
+.month-picker-grid button[data-current='true']::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: 5px;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: currentColor;
+    transform: translateX(-50%);
+}
+.month-picker-save {
+    min-height: 44px;
+    margin-top: 12px;
+    box-shadow: none;
+}
+.month-picker-control:focus-visible,
+.month-picker-grid button:focus-visible {
+    outline: 3px solid color-mix(in srgb, var(--blue) 25%, transparent);
+    outline-offset: 2px;
+}
+.icon-button {
+    width: 44px;
+    height: 44px;
+    display: inline-grid;
+    place-items: center;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    cursor: pointer;
+    transition:
+        background 150ms ease,
+        transform 150ms ease;
+}
+@media (hover: hover) and (pointer: fine) {
+    .icon-button:hover {
+        background: var(--soft);
+    }
+}
+.icon-button:active {
+    transform: scale(0.94);
+}
+.icon-button:focus-visible,
+.primary-button:focus-visible,
+.sheet-header-submit:focus-visible,
+.soft-button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+    outline: 3px solid color-mix(in srgb, var(--blue) 25%, transparent);
+    outline-offset: 2px;
+}
+
+.screen {
+    padding: 20px 18px calc(var(--bottom-nav-height) + 28px);
+}
+.screen-heading {
+    margin: 4px 0 20px;
+    font-size: 28px;
+    line-height: 1.1;
+    letter-spacing: -0.045em;
+    font-weight: 800;
+}
+.screen-heading-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+.screen-heading-row .screen-heading {
+    margin-bottom: 0;
+}
+.eyebrow {
+    margin: 0 0 4px;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 700;
+}
+.compact-action {
+    min-height: 44px;
+    padding-inline: 14px;
+}
+.right-rail {
+    display: none;
+}
