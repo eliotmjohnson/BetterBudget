@@ -90,7 +90,7 @@
     }
     body[data-navigation-detail-state='closed'] .app-frame {
         transform: translate3d(0, 0, 0);
-        transition: transform 0.32s;
+        transition: transform 0.4s;
     }
     body[data-navigation-detail-dragging] .app-frame {
         transform: translate3d(var(--navigation-detail-base-drag-x), 0, 0);

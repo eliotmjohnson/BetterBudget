@@ -3,7 +3,7 @@
 }
 .navigation-detail-content[data-state='closed'] {
     animation: navigation-detail-out
-        var(--navigation-detail-dismiss-duration, 0.5s)
+        var(--navigation-detail-dismiss-duration, 0.62s)
         cubic-bezier(0.3, 0.84, 0.21, 1) both;
 }
 .navigation-detail-content[data-has-dragged='true'][data-state='open'] {

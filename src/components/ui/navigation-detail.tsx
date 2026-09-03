@@ -49,9 +49,9 @@ interface TitleMotionMetrics {
 const mobileMedia = '(max-width: 759.98px)';
 const directionThreshold = 8;
 const settleDuration = 410;
-const dismissDuration = 500;
+const dismissDuration = 620;
 const dismissOvershoot = 48;
-const motionCleanupDelay = 480;
+const motionCleanupDelay = 600;
 const titleCompactScale = 20 / 46;
 const titleTailFadeProgress = 0.5;
 const titleRevealProgress = 0.65; // Matches the 65% collapse keyframe stop.
