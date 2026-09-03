@@ -3,9 +3,33 @@
 Read this before changing layout, motion, gestures, sheets, swipes, reordering,
 navigation-detail behavior, or any other interaction contract.
 
-`AGENTS.md` owns the approved visual references, the reference viewports, the
-color palette, and the rule against replacing the visual language. This file
-owns the interaction contracts built on them:
+`AGENTS.md` owns the standing rule against replacing the visual language. This
+file owns the palette, the reference viewports, and the interaction contracts
+built on them.
+
+## References, viewports, and palette
+
+The approved visual references are stored in `docs/design/`:
+
+- `budget-responsive.png`: primary budget and responsive layout.
+- `brand-system.png`: wordmark and app icon.
+- `transactions.png`: transaction list, editing, and split flows.
+- `auth-income-organizer.png`: sign-in, income, month copying, and organization.
+
+Important responsive reference viewports are 390 x 844 for mobile and
+1440 x 1000 for desktop.
+
+The visual system is deliberately iOS-like and restrained: true-white surfaces,
+charcoal text, and cool-gray dividers; cornflower blue `#1769E0` as the primary
+action color; and mint `#55D49B`, sky `#9FC0FF`, yellow `#FFD977`, coral
+`#FF7E83`, and lilac `#B6A6FF` as semantic accents. Pastel category medallions,
+tactile sheets, rounded cards, lightweight CSS/SVG charts, a mobile bottom
+navigation, and bottom-sheet interactions carry the rest. Desktop uses a slim
+left navigation, a primary budget column, and a summary/activity rail.
+Interactive targets are at least 44 px, with safe-area padding, keyboard focus
+management, accessible status announcements, and reduced-motion support.
+
+## Interaction contracts
 
 - Category headers expose an edit menu; budget-item rows alone use a deliberately leftward swipe to reveal Delete. Keep the inactive swipe action fully transparent so fast vertical scrolling cannot flash its red layer.
 - The Budget page defaults its amount display to Available unless the per-device Settings preference selects Planned. Switching Planned/Available on the Budget page remains temporary and must not resize rows. A line-item progress bar represents the share of its starting available balance still remaining: it is full before any net spending and shrinks toward empty as spending consumes the balance, including carried-in funds and refunds. A negative balance replaces the regular fill with a coral striped warning bar and an accessible over-budget amount. Reordering starts after a 350 ms long-press on the category header or item row; movement beyond 8 px before activation must cancel so vertical scrolling and item swipe-delete remain reliable. A visually hidden keyboard control must continue to support Arrow Up/Arrow Down reordering. Use a transition-free rendered drag copy inside a neutral compositor shell plus animated list reflow. Never move the source clone directly with inherited row/header transitions because that creates compositor ghosting. During a pointer drag, keep the real DOM order fixed, translate the faded placeholder into the current target slot, and move neighboring rows with interruptible transforms; commit the React/server order once on drop. Edge auto-scroll is frame-based with gradual acceleration/deceleration and continues while the pointer is held near an edge. Item reordering remains within its current category. Summary and budget progress entrance animations are one-shot and must not replay when a drag preview is created or a list order is committed.

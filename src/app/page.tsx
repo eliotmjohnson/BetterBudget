@@ -1,4 +1,4 @@
-import { BudgetRoute } from '@/components/budget/budget-route';
+import { BudgetRoute } from '@/components/shell/budget-route';
 
 export default function Page({
     searchParams

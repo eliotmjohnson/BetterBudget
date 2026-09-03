@@ -12,13 +12,13 @@ import type { ActivityEntry, MonthSnapshot } from '@/domain/types';
 import { createUuid } from '@/domain/uuid';
 import type { BudgetMutation } from '@/server/mutation-schema';
 import { AppShell, type AppView } from './app-shell';
-import { BudgetView } from './budget-view';
-import { IncomeView } from './income-view';
+import { BudgetView } from '@/components/budget/budget-view';
+import { IncomeView } from '@/components/income/income-view';
 import { MonthActionsSheet } from './month-actions-sheet';
 import { optimisticSnapshot } from './optimistic';
-import { OrganizerView } from './organizer-view';
-import { SettingsView } from './settings-view';
-import { TransactionsView } from './transactions-view';
+import { OrganizerView } from '@/components/organize/organizer-view';
+import { SettingsView } from '@/components/settings/settings-view';
+import { TransactionsView } from '@/components/transactions/transactions-view';
 import {
     useBudgetMutation,
     useBudgetSnapshot,

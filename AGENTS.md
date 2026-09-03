@@ -24,6 +24,7 @@ lives alongside it and should be read when the work touches it:
 | Changing layout, motion, gestures, sheets, or navigation detail | `docs/agents/design.md`                |
 | Writing or changing any mutation                                | `docs/agents/persistence.md`           |
 | Changing deployment, infrastructure, or the production runtime  | `docs/agents/deployment.md`            |
+| Changing formatter/linter config or size budgets, or releasing  | `docs/agents/conventions.md`           |
 | Operating, rolling back, or replacing the production host       | `docs/aws/ec2-cloudfront-migration.md` |
 | Setup, environment variables, and troubleshooting               | `README.md`                            |
 
@@ -41,9 +42,7 @@ Read `docs/agents/product.md` for the complete implemented-capability inventory 
 
 ## Version 2 deployment release
 
-Version `2.0.0` changed the coordinated AWS production deployment while preserving the Version 1 product, financial model, authentication model, database schema, and provider-neutral runtime image. CloudFront is the public HTTPS origin and connects directly to a single private `t3a.micro` EC2 instance through a VPC origin. The migration completed on August 22, 2026, and there was no Version 2 data migration.
-
-Do not reintroduce ECS, an ALB, NAT, SSH, or a public EC2 address without explicit user direction. Version 2 retains every Version 1 non-goal; the infrastructure change is not authorization to add households, invitations, roles, bank syncing, recurring automation, imports/exports, currencies, notifications, realtime push, or offline financial writes.
+Version `2.0.0` changed the AWS production deployment only. The Version 1 product, financial model, authentication model, database schema, and provider-neutral runtime image are unchanged. Do not reintroduce ECS, an ALB, NAT, SSH, or a public EC2 address without explicit user direction, and do not treat the infrastructure change as authorization to relax any Version 1 boundary below.
 
 Read `docs/agents/deployment.md` before changing deployment, infrastructure, or the production runtime. `docs/aws/ec2-cloudfront-migration.md` remains the authoritative live-resource, operations, rollback, and replacement-host runbook.
 
@@ -65,20 +64,11 @@ USD and `America/Chicago` are the version 1 defaults.
 
 ## Approved product design
 
-The approved visual references are stored in `docs/design/`:
+Approved visual references live in `docs/design/`: `budget-responsive.png`, `brand-system.png`, `transactions.png`, and `auth-income-organizer.png`.
 
-- `budget-responsive.png`: primary budget and responsive layout.
-- `brand-system.png`: wordmark and app icon.
-- `transactions.png`: transaction list, editing, and split flows.
-- `auth-income-organizer.png`: sign-in, income, month copying, and organization.
+The visual system is deliberately iOS-like and restrained, built on cornflower blue `#1769E0` with pastel semantic accents, rounded cards, tactile sheets, a mobile bottom navigation, and a desktop left-nav/budget/rail layout. Interactive targets are at least 44 px, with safe-area padding, keyboard focus management, accessible status announcements, and reduced-motion support. Do not replace the established brand or visual language with a generic dashboard theme. Extend existing primitives and tokens first.
 
-Important responsive reference viewports are 390 x 844 for mobile and 1440 x 1000 for desktop.
-
-The visual system is deliberately iOS-like and restrained: true-white surfaces, charcoal text, and cool-gray dividers; cornflower blue `#1769E0` as the primary action color; and mint `#55D49B`, sky `#9FC0FF`, yellow `#FFD977`, coral `#FF7E83`, and lilac `#B6A6FF` as semantic accents. Pastel category medallions, tactile sheets, rounded cards, lightweight CSS/SVG charts, a mobile bottom navigation, and bottom-sheet interactions carry the rest. Desktop uses a slim left navigation, a primary budget column, and a summary/activity rail. Interactive targets are at least 44 px, with safe-area padding, keyboard focus management, accessible status announcements, and reduced-motion support.
-
-Do not replace the established brand or visual language with a generic dashboard theme. Extend existing primitives and tokens first.
-
-Read `docs/agents/design.md` for the full layout, motion, gesture, sheet, swipe, reordering, and navigation-detail interaction contracts before changing any of them.
+Read `docs/agents/design.md` for the palette, reference viewports, and the full layout, motion, gesture, sheet, swipe, reordering, and navigation-detail interaction contracts before changing any of them.
 
 ## Technology and runtime
 
@@ -103,66 +93,57 @@ Dependency versions are pinned by `package-lock.json`. Use npm consistently and 
 
 ## Important repository paths
 
-```text
-src/app/                         Next.js routes, layouts, metadata, and route handlers
-src/components/budget/           Budget shell, views, forms, sheets, and optimistic UI
-src/components/ui/               Shared sheet, gesture, sortable, and input primitives
-src/domain/                      Shared exact-money, budget calculations, and domain types
-src/db/                          Drizzle schema, database selection, migration, and seeding
-src/lib/                         Better Auth server/client wiring and small shared helpers
-src/server/                      Auth access, mutation contracts, and authoritative services
-scripts/                         Database commands, production prestart, and AWS host bootstrap
-runtime-environment.mjs          Shared production validation and PostgreSQL TLS configuration
-drizzle/                         Ordered SQL migrations and migration metadata
-public/                          PWA icons and static assets
-docs/agents/                     On-demand engineering references named by this guide
-docs/design/                     Approved visual references
-Dockerfile                       Multi-stage non-root standalone application image
-compose.yaml                     PostgreSQL service and optional full application profile
-.github/workflows/               GitHub Actions production deployment
-docs/aws/                        Account-scoped GitHub OIDC and deployment policies
-```
+Source lives under `src/`: `app/` routes and route handlers, `domain/` exact money and calculations, `db/` Drizzle schema and seeding, `lib/` Better Auth wiring, `server/` authoritative services. Components are grouped by view — `components/budget/`, `income/`, `organize/`, `transactions/`, `settings/` — alongside `components/shell/` (the authenticated shell, query lifecycle, and optimistic patches), `components/shared/` (primitives more than one view needs), and `components/ui/` (view-agnostic primitives). Supporting directories are `scripts/`, `drizzle/`, `public/`, `docs/agents/`, `docs/design/`, `docs/aws/`, and `.github/workflows/`, plus `Dockerfile`, `compose.yaml`, and `runtime-environment.mjs`.
 
-High-impact files include:
+High-impact files:
 
-- `src/domain/money.ts` for parsing, formatting, and exact cent operations.
-- `src/domain/uuid.ts` for client-safe UUID generation across secure production and plain-HTTP LAN development.
-- `src/domain/calendar.ts` for `APP_TIME_ZONE`, the current-month key that month-aware routes default to, and month-date helpers.
-- `src/domain/budget-calculations.ts` for authoritative and optimistic totals/carryover.
-- `src/domain/types.ts` for snapshot and domain contracts.
-- `src/db/schema.ts` for relational structure and database constraints.
-- `src/db/index.ts` for PGlite/PostgreSQL selection and initialization.
-- `src/db/household.ts` for the single-household identity and owner bootstrap membership.
-- `src/db/seed.ts` for development data seeded into the current and previous month. Merchants, amounts, and structure are fixed; only the calendar months follow today's date.
-- `src/server/mutation-schema.ts` for validated mutation contracts.
-- `src/server/budget-service.ts` for atomic server-side financial changes.
-- `src/components/budget/use-budget-data.ts` for query hydration, retry, reconciliation, and sync state.
-- `src/components/budget/optimistic.ts` for pure optimistic cache patches.
-- `src/components/budget/app-client.tsx` for the authenticated interactive shell.
-- `src/components/budget/budget-view.tsx` for Budget-page rendering, URL-backed line-item details, and the item-scoped add-transaction flow.
-- `src/components/budget/budget-item-editors.tsx` for the plan input and item edit/detail components used by the Budget page.
-- `src/server/month-snapshot.ts` for the canonical month snapshot read path.
-- `src/server/mutation-failures.ts` for the shared mutation-failure class and its not-found/conflict helpers.
-- `src/components/budget/transactions-view.tsx` for transaction-only activity scoping, search, inline filters, filter-sheet drafts, and applied-filter clearing.
-- `src/components/ui/navigation-detail.tsx` for mobile push navigation, line-item edge-swipe dismissal, fixed detail chrome, and modal fallback.
-- `src/components/ui/left-edge-gesture-guard.tsx` for the global Safari left-edge history-gesture suppression contract.
-- `src/components/ui/sheet.tsx` for the shared animated, scroll-contained, drag-dismissible sheet behavior.
-- `src/components/ui/sortable-list.tsx` for long-press activation, lifted previews, placeholder movement, list reflow, keyboard reordering, and edge auto-scroll.
-- `src/app/globals.css` for the Tailwind import and the ordered `@import` list only. The rules live in `src/app/styles/`.
-- `src/app/styles/` for the visual system, split by area: `tokens`, `app-shell`, `budget`, `navigation-detail`, `sheets-and-forms`, `transactions`, `income`, `organize`, `settings`, `sign-in`, `responsive-motion`. **The import order in `globals.css` is the cascade order.** Later files intentionally override earlier ones, so never reorder the imports, and add a new area file at the position its specificity requires — `responsive-motion.css` must stay last.
+- `src/domain/money.ts` — parsing, formatting, exact cent operations.
+- `src/domain/uuid.ts` — `createUuid()` for secure production and plain-HTTP LAN development.
+- `src/domain/calendar.ts` — `APP_TIME_ZONE`, the default current-month key, month-date helpers.
+- `src/domain/budget-calculations.ts` — authoritative and optimistic totals/carryover.
+- `src/domain/types.ts` — snapshot and domain contracts.
+- `src/db/schema.ts` — relational structure and database constraints.
+- `src/db/index.ts` — PGlite/PostgreSQL selection and initialization.
+- `src/db/household.ts` — single-household identity, owner bootstrap membership.
+- `src/db/seed.ts` — development data for the current and previous month. Merchants, amounts, and structure are fixed; only the calendar months follow today's date.
+- `src/server/mutation-schema.ts` — validated mutation contracts.
+- `src/server/budget-service.ts` — the mutation entry point: idempotency receipts, the database transaction, cross-cutting month validation, the typed dispatcher, and error mapping.
+- `src/server/budget-mutations/` — one module per mutation family, each handler taking a `MutationContext`: `plans.ts` (plan amount, carryover), `transactions.ts` (add/update/delete/undo, splits, cross-month moves), `income.ts` (plans and receipts), `structure.ts` (categories, items, archive/delete, reordering), `month-operations.ts` (note, copy, clear, reset), `context.ts` (shared `MutationContext`/`ensureMonth`). Read only the family you are changing.
+- `src/server/month-snapshot/` — canonical month snapshot read path. `index.ts` is orchestration only; `queries.ts` holds every database read, `carryover.ts` the chronological carryover chains and balance derivation, `assemble.ts` the category, activity, and receipt view assembly.
+- `src/server/mutation-failures.ts` — mutation-failure class, not-found/conflict helpers.
+- `src/components/shell/use-budget-data.ts` — hydration, retry, reconciliation, sync state.
+- `src/components/shell/optimistic.ts` — optimistic cache patches: clones the snapshot and delegates to `optimistic-patches/`, which mirrors `budget-mutations/` one file per mutation family.
+- `src/components/shell/app-client.tsx` — authenticated interactive shell; `app-shell.tsx`, `budget-route.tsx`, `month-picker.tsx`, and `month-actions-sheet.tsx` are the surrounding chrome.
+- `src/components/budget/budget-view.tsx` — Budget page layout, URL-backed line-item details, item-scoped add-transaction flow. `budget-category-section.tsx` renders a category and its items, `budget-summary-card.tsx` the arc and balance, `budget-structure-editor.ts` owns the category/item sheet state that `budget-structure-sheets.tsx` renders.
+- `src/components/budget/budget-item-editors.tsx` — plan input, item edit/detail components.
+- `src/components/income/income-view.tsx` — Income page: expected-income plans and received-income receipts. `income-source-details.tsx` is the pushed detail, `income-forms.tsx` the add-source and record-income sheets, `income-fields.tsx` the shared title, plan-amount, and appearance inputs.
+- `src/components/organize/organizer-view.tsx` — category and item structure editing, drag reordering, archive/delete; `organizer-category-section.tsx` renders one category and its items.
+- `src/components/transactions/transactions-view.tsx` — activity scoping, search, inline filters, filter-sheet drafts, applied-filter clearing; `transaction-sheet.tsx` and `transaction-allocation-picker.tsx` are the add/edit flow.
+- `src/components/shared/detail-history.ts` — the shared URL-plus-history-state contract behind every pushed detail view; Budget and Income both build one with `createDetailHistory`. `category-icon.tsx`, `category-details-fields.tsx`, `transaction-icon.tsx`, and `budget-view-helpers.ts` are the other cross-view primitives.
+- `src/components/ui/navigation-detail/` — mobile push navigation, fixed detail chrome, modal fallback. `index.tsx` is the component, `edge-drag.ts` the edge-swipe dismissal gesture, `title-motion.ts` the collapsing-title machinery.
+- `src/components/ui/left-edge-gesture-guard.tsx` — global Safari left-edge history-gesture suppression.
+- `src/components/ui/sheet.tsx` — animated, scroll-contained, drag-dismissible sheets.
+- `src/components/ui/sortable-list/` — `index.tsx` holds long-press activation, keyboard reordering, and the hook surface; `drag.ts` the pointer drag, list reflow, and edge auto-scroll.
+- `src/app/globals.css` — the Tailwind import and the ordered `@import` list only.
+- `src/app/styles/` — the rules, split by area (`tokens`, `app-shell`, `budget`, `navigation-detail`, `sheets-and-forms`, `transactions`, `income`, `organize`, `settings`, `sign-in`, `responsive-motion`). **The import order in `globals.css` is the cascade order.** Later files intentionally override earlier ones, so never reorder the imports, and add a new area file at the position its specificity requires — `responsive-motion.css` must stay last.
 
-### Navigating the large files without reading them whole
+### Navigating without reading whole files
 
-Three files are big enough that a full read is expensive: `budget-service.ts`
-(~15k tokens), `budget-view.tsx` (~13k), `navigation-detail.tsx` (~11k). Most
-tasks need one region. Locate it first, then read that range with an offset:
+No source file exceeds the 500-line budget, so a full read is affordable — but
+most tasks still need one region. Locate it first, then read that range with an
+offset:
 
 ```bash
-grep -n "case '" src/server/budget-service.ts        # the 25 mutation cases
-grep -n '^export \|^async function \|^function ' src/server/budget-service.ts
 grep -n '^function \|^export function ' src/components/budget/budget-view.tsx
 grep -rn '\.class-name' src/app/styles/                # which stylesheet owns it
 ```
+
+Two surfaces are split by family rather than by size, so read only the file you
+are changing: `budget-service.ts` dispatches into `src/server/budget-mutations/`,
+and `optimistic.ts` into `src/components/shell/optimistic-patches/`. The two
+directories mirror each other — a mutation's server handler and its optimistic
+patch live in the same-named file on both sides, and a change to one usually
+needs the other.
 
 Line numbers move, so derive them per session rather than trusting a stored map.
 
@@ -182,20 +163,13 @@ The database adapter is selected through `DATABASE_KIND`:
 The default PGlite path is automatically migrated and deterministically seeded.
 Production initialization never invokes the development seed. Production startup requires PostgreSQL, migration prestart, verified TLS with a trusted CA bundle, an HTTPS Better Auth origin, a non-placeholder auth secret, and disabled auth-bypass guards. `runtime-environment.mjs` is the shared validation and PostgreSQL connection source for the application, migrations, and owner bootstrap; do not duplicate or weaken those rules.
 
-Pushes to `main` deploy the regular runtime target through GitHub Actions. The workflow assumes the account-scoped `better-budget-github-deploy` IAM role through GitHub OIDC, tags the ECR image with the immutable commit SHA, discovers exactly one running instance with the `Application=better-budget` and `Environment=production` tags, and invokes `better-budget-deploy` through Systems Manager. The host pulls the candidate before restarting, checks liveness and readiness, and restores the preceding tag on failure. Keep the OIDC trust restricted to the immutable BetterBudget repository identity and `main`; keep its permissions limited to the production ECR repository and SSM commands on the tagged production instance. Do not add long-lived AWS credentials or production application secrets to GitHub.
-The workflow verifies that the production ECR repository uses immutable tags,
-and its external actions plus the Docker base image are pinned to immutable
-digests. The Docker build receives `github.sha` as `APP_BUILD_SHA`; Next.js
-embeds it as public, non-secret build metadata for the Settings page.
-
-The private EC2 host is initialized by `scripts/aws/bootstrap-ec2.sh`. The
-self-installing script owns the systemd application service, one-minute
-liveness watchdog, memory-backed runtime secret files, dual-stack AWS service
-endpoints, current/previous image tags, and automatic rollback. It reads the
-existing JSON secret at every application start and passes only its three
-runtime values into the container process. `BETTER_AUTH_URL` and deployment
-identifiers live in root-owned non-secret host configuration. Do not persist
-secret values, add SSH access, or bypass the host deployment helper.
+Pushes to `main` deploy the regular runtime target through GitHub Actions and
+Systems Manager, and the private EC2 host is initialized by
+`scripts/aws/bootstrap-ec2.sh`. Never add long-lived AWS credentials or
+production application secrets to GitHub, persist secret values on the host,
+add SSH access, or bypass the host deployment helper. `docs/agents/deployment.md`
+holds the pipeline, OIDC trust, and host contracts; read it before changing any
+of them.
 
 ## Financial invariants
 
@@ -297,19 +271,9 @@ bump once. Do not bump for read-only investigation or changes limited to
 documentation, comments, formatting, or generated development state. The
 Settings page receives the version from `package.json` at build time.
 
-Every major release must add a new, clearly labeled version section to both
-`README.md` and this guide. Preserve earlier version sections as a historical
-record instead of rewriting them around the new release. At minimum, each new
-major-version section must document:
-
-- The release's new user-facing capabilities and important improvements.
-- Changed or removed behavior and other breaking changes.
-- Required data, configuration, authentication, deployment, or workflow
-  migrations.
-- Compatibility boundaries, retained non-goals, and any superseded guidance.
-
-The Version 2 sections in `README.md` and this guide are the worked example of
-that requirement; follow their shape for any future major release.
+A major release must also add a new version section to both `README.md` and this
+guide, preserving earlier sections as a historical record.
+`docs/agents/conventions.md` lists what that section must document.
 
 ## Traps that produce wrong conclusions
 
@@ -353,10 +317,9 @@ The acceptance target for safe actions is a visible update in under 100 ms witho
 
 ## Code conventions
 
-- Prettier is the formatting source of truth for all supported code, configuration, stylesheets, and Markdown. The required style uses an 80-character print width, four-space indentation using spaces, single quotes in JavaScript/TypeScript and JSX, semicolons, LF endings, and no trailing commas. Run `npm run format` after edits and before verification; never hand-format around Prettier or introduce a conflicting formatter without explicit user approval.
-- ESLint Stylistic owns structural whitespace that Prettier intentionally preserves: import/directive separation, variable-group separation, blank lines before returns and throws, class-member separation, block padding, meaningful comment separation, comment spacing, one statement/declaration per line, Unix line endings, file endings, and prevention of tabs, trailing whitespace, mixed spacing, or excessive empty lines. Do not add ESLint rules for indentation width, quotes, commas, semicolons, or line wrapping because those belong to Prettier.
-- `lines-around-comment` requires a blank line before an own-line comment while `padding-line-between-statements` forbids a blank line between consecutive `const`/`let`/`var` declarations, so an own-line comment cannot sit between two declarations and `lint:fix` cannot resolve it. Use a trailing comment on the declaration, start the comment at a block or object-literal start, or place it above a preceding non-declaration statement.
-- Keep `.prettierrc.json`, `.prettierignore`, and the pinned Prettier version synchronized with any future formatting-workflow change. Generated files and ignored static assets must not be pulled into formatting runs accidentally.
+- Prettier owns formatting and ESLint Stylistic owns structural whitespace. Run `npm run verify:fix` rather than hand-formatting, and never introduce a conflicting formatter without explicit user approval. `docs/agents/conventions.md` has the full split and the rules each tool owns; read it before changing formatter or linter configuration.
+- Size and complexity budgets are enforced by ESLint: 500 lines per file, plus 150 lines per function and complexity 30 in `.ts`. `crypto.randomUUID()` is banned in `src/components/**` (use `createUuid()`) and `parseFloat` in the money modules. When a limit is hit, split the file or extract the function — do not raise the cap and do not add a per-file override; there are none, and the budgets stop being budgets the moment one is added. `docs/agents/conventions.md` has the full table and the two splitting patterns this codebase uses.
+- An own-line comment cannot sit between two consecutive `const`/`let` declarations — `lines-around-comment` and `padding-line-between-statements` conflict there and `lint:fix` cannot resolve it. Use a trailing comment on the declaration instead.
 - Keep TypeScript strict. `noUnusedLocals` and `noUnusedParameters` are enabled so dead local declarations and parameters fail type checking. Avoid `any`; narrow `unknown` at boundaries, keep exports limited to real module consumers, and remove obsolete helpers instead of preserving speculative APIs.
 - Prefer small pure functions, discriminated unions, branded identifiers, and exhaustive switches.
 - Validate environment variables and every untrusted request payload.
@@ -372,13 +335,14 @@ The acceptance target for safe actions is a visible update in under 100 ms witho
 
 ## Docker constraints
 
-The regular production image must remain multi-stage, standalone, non-root, and health-checkable. `/api/live` is process-only and is the container and host-watchdog liveness target; `/api/ready` verifies database connectivity and is the deployment-readiness target; `/api/health` remains a compatibility alias for readiness. Keep the production connection pool small and retain the advisory-lock migration prestart. Keep the separate `owner-bootstrap` target non-root and limited to the one-time owner command.
+The regular production image must remain multi-stage, standalone, non-root, and health-checkable, with a small connection pool and the advisory-lock migration prestart retained. `/api/live` is process-only (container and watchdog liveness), `/api/ready` verifies database connectivity (deployment readiness), and `/api/health` is a compatibility alias for readiness. `docs/agents/deployment.md` holds the image and `owner-bootstrap` target details.
 
 ## Definition of done
 
-Steps 6 through 9 are mechanical and are automated by the `/handoff` command in
-`.claude/commands/handoff.md`. Run it rather than performing the sequence from
-memory.
+Step 6 is mechanical and is automated by the `/handoff` command in
+`.claude/commands/handoff.md`, which owns the verification sequence, the
+`next-env.d.ts` restore, and the version-bump classification. Run it rather than
+performing that sequence from memory.
 
 Before handing off a meaningful change:
 
@@ -387,9 +351,7 @@ Before handing off a meaningful change:
 3. Confirm optimistic behavior has a deterministic rollback and canonical reconciliation path.
 4. Confirm authorization and household scoping are server-enforced.
 5. Manually exercise affected financial and failure paths in proportion to risk, and read [Traps that produce wrong conclusions](#traps-that-produce-wrong-conclusions) before trusting a local verification result.
-6. Run `npm run verify:fix`, which applies ESLint autofixes and Prettier, then confirms `format:check`, `typecheck`, and `lint` all pass.
-7. Confirm `npm run build` passes for meaningful application, dependency, or build-configuration changes, then restore `next-env.d.ts`.
-8. Use the [Release versioning](#release-versioning) guide to classify the completed change set, apply exactly one Semantic Versioning bump, and confirm `package.json` and the root package versions in `package-lock.json` match. Skip the bump only for the exceptions named in that guide.
-9. Update `README.md`, this guide, or the relevant `docs/agents/` reference when workflows, environment variables, architecture, or product behavior change. Update whichever file owns the behavior instead of restating it in several.
-10. Report exactly which verification commands and manual flows ran, and say plainly what was skipped or left unverified.
-11. Do not publish externally unless explicitly requested.
+6. Run `/handoff`. It runs `verify:fix`, runs `build` when the change warrants it, restores `next-env.d.ts`, applies exactly one Semantic Versioning bump per [Release versioning](#release-versioning), and checks the documentation contract.
+7. Update `README.md`, this guide, or the relevant `docs/agents/` reference when workflows, environment variables, architecture, or product behavior change. Update whichever file owns the behavior instead of restating it in several.
+8. Report exactly which verification commands and manual flows ran, and say plainly what was skipped or left unverified.
+9. Do not publish externally unless explicitly requested.

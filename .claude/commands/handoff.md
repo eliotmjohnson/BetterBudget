@@ -78,8 +78,12 @@ All three must print the same value.
 ## 5. Check the documentation contract
 
 If this change set altered workflows, environment variables, architecture,
-commands, or product behavior, update `README.md` and `AGENTS.md` in the same
-change set. State explicitly whether documentation needed updating.
+commands, or product behavior, update `README.md`, `AGENTS.md`, or the relevant
+`docs/agents/` reference in the same change set — whichever one actually owns
+the behavior, rather than restating it in several. Moving or renaming a source
+file counts: `AGENTS.md` names specific paths, and the `README.md` directory
+tree lists every component folder. State explicitly whether documentation
+needed updating.
 
 ## 6. Report
 

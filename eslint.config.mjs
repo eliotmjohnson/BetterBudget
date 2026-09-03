@@ -83,5 +83,66 @@ export default defineConfig([
             ]
         }
     },
+
+    // Size and complexity budgets. These apply to every source file with no
+    // per-file exemptions; when a limit is hit, split the file or extract the
+    // function rather than raising the cap.
+    {
+        files: ['**/*.ts', '**/*.tsx'],
+        rules: {
+            'max-lines': [
+                'error',
+                { max: 500, skipBlankLines: true, skipComments: true }
+            ],
+            'max-depth': ['error', 3],
+            'max-params': ['error', 4],
+            'max-nested-callbacks': ['error', 3],
+            'no-console': ['error', { allow: ['error', 'warn'] }],
+            eqeqeq: ['error', 'always']
+        }
+    },
+    {
+        files: ['**/*.ts'],
+        rules: {
+            'max-lines-per-function': [
+                'error',
+                { max: 150, skipBlankLines: true, skipComments: true }
+            ],
+            complexity: ['error', 30]
+        }
+    },
+    {
+        files: ['scripts/**'],
+        rules: {
+            'no-console': 'off'
+        }
+    },
+    {
+        files: ['src/components/**'],
+        rules: {
+            'no-restricted-syntax': [
+                'error',
+                {
+                    selector:
+                        "MemberExpression[object.name='crypto'][property.name='randomUUID']",
+                    message:
+                        'Use createUuid() from @/domain/uuid. Mobile browsers withhold secure-context crypto over plain-HTTP LAN addresses.'
+                }
+            ]
+        }
+    },
+    {
+        files: ['src/domain/**/*.ts', 'src/server/**/*.ts', 'src/db/**/*.ts'],
+        rules: {
+            'no-restricted-globals': [
+                'error',
+                {
+                    name: 'parseFloat',
+                    message:
+                        'Money is exact signed bigint cents. Use the helpers in src/domain/money.ts.'
+                }
+            ]
+        }
+    },
     globalIgnores(['.next/**'])
 ]);

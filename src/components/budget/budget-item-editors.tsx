@@ -12,9 +12,9 @@ import type {
     MonthSnapshot
 } from '@/domain/types';
 import { createUuid } from '@/domain/uuid';
-import { TransactionIcon } from './transaction-icon';
-import { TransactionSheet } from './transaction-sheet';
-import { money, type Mutate } from './budget-view-helpers';
+import { TransactionIcon } from '@/components/shared/transaction-icon';
+import { TransactionSheet } from '@/components/transactions/transaction-sheet';
+import { money, type Mutate } from '@/components/shared/budget-view-helpers';
 
 type TransactionActivityEntry = ActivityEntry & {
     type: Exclude<ActivityEntry['type'], 'income'>;

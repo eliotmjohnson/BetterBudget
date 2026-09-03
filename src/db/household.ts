@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm';
-import type { AppDb } from './index';
+import type { AppDb } from '@/db';
 import { householdMembers, households } from './schema';
 
 export const DEFAULT_HOUSEHOLD_ID = '10000000-0000-4000-8000-000000000001';

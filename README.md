@@ -11,7 +11,7 @@ start, environment variables, database workflows, deployment, troubleshooting,
 and package scripts.
 
 `AGENTS.md` is the engineering contract for anyone — person or coding agent —
-changing application code, and it names four on-demand references:
+changing application code, and it names these on-demand references:
 
 | Topic                                        | File                                   |
 | -------------------------------------------- | -------------------------------------- |
@@ -19,6 +19,7 @@ changing application code, and it names four on-demand references:
 | Layout, motion, gesture, and sheet contracts | `docs/agents/design.md`                |
 | Mutation lifecycle and optimistic rules      | `docs/agents/persistence.md`           |
 | Version 2 deployment model                   | `docs/agents/deployment.md`            |
+| Formatting, size budgets, and major releases | `docs/agents/conventions.md`           |
 | Live AWS resources, operations, and rollback | `docs/aws/ec2-cloudfront-migration.md` |
 
 When behavior changes, update whichever file actually documents it rather than
@@ -703,7 +704,14 @@ The database CLI scripts intentionally set the `react-server` Node condition bec
 ├── src/
 │   ├── app/                       App Router pages, metadata, and API routes
 │   │   └── styles/                Stylesheets by area; import order = cascade order
-│   ├── components/budget/         Responsive views, sheets, forms, query logic
+│   ├── components/auth/           Sign-in form
+│   ├── components/budget/         Budget page views and sheets
+│   ├── components/income/         Income page views, forms, and detail
+│   ├── components/organize/       Category/item organizer
+│   ├── components/transactions/   Activity list and add/edit flow
+│   ├── components/settings/       Settings page
+│   ├── components/shell/          App shell, query lifecycle, optimistic patches
+│   ├── components/shared/         Primitives more than one view needs
 │   ├── components/ui/             Sheet, gesture, sortable, and input primitives
 │   ├── db/                        Drizzle schema, adapters, migrations, seed
 │   ├── domain/                    Exact money, calculations, and shared types

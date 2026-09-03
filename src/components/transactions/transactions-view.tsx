@@ -6,7 +6,7 @@ import { Sheet } from '@/components/ui/sheet';
 import { formatCurrency } from '@/domain/money';
 import type { ActivityEntry, MonthSnapshot } from '@/domain/types';
 import type { BudgetMutation } from '@/server/mutation-schema';
-import { TransactionIcon } from './transaction-icon';
+import { TransactionIcon } from '@/components/shared/transaction-icon';
 import { TransactionSheet } from './transaction-sheet';
 
 type Mutate = (input: BudgetMutation) => void;
