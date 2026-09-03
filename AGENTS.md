@@ -24,7 +24,7 @@ lives alongside it and should be read when the work touches it:
 | Changing layout, motion, gestures, sheets, or navigation detail | `docs/agents/design.md`                |
 | Writing or changing any mutation                                | `docs/agents/persistence.md`           |
 | Changing deployment, infrastructure, or the production runtime  | `docs/agents/deployment.md`            |
-| Changing formatter/linter config or size budgets, or releasing  | `docs/agents/conventions.md`           |
+| Formatter/linter config, size budgets, comments, or releasing   | `docs/agents/conventions.md`           |
 | Operating, rolling back, or replacing the production host       | `docs/aws/ec2-cloudfront-migration.md` |
 | Setup, environment variables, and troubleshooting               | `README.md`                            |
 
@@ -329,7 +329,7 @@ The acceptance target for safe actions is a visible update in under 100 ms witho
 - Keep query keys, invalidation, and optimistic patches narrow enough that one failed mutation cannot roll back unrelated changes.
 - Use stable error codes in contracts and translate them into concise user-facing copy at the UI edge.
 - Preserve accessibility semantics when composing Radix primitives and custom sheets.
-- Avoid routine comments. Add a comment only when a non-obvious financial invariant, concurrency guarantee, or framework workaround cannot be expressed clearly in code.
+- Comments are a last resort. Rename, extract, or restructure until the code says it; write a comment only when something a reader still could not derive from the code has to be recorded — a financial invariant, a concurrency or ordering guarantee, a browser or framework workaround, a cross-file coupling, or the justification for a lint suppression. A comment that describes _what_ the next lines do is the signal that the code needs the fix instead. `docs/agents/conventions.md` holds the admissible cases, the shape a comment must take, and the rule for JSDoc.
 - Do not perform broad mechanical rewrites or unrelated restyling while fixing a focused issue.
 - Preserve user data and existing migrations. Never make reset/seed behavior available in production.
 

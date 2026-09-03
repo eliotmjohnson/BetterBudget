@@ -214,8 +214,8 @@ export function NavigationDetail({
             if (dragFrameRef.current === dragFrame) dragFrameRef.current = null;
             dragRef.current?.stopRawUpdates?.();
 
-            // Reading the pending timer at teardown is the point: whatever the
-            // dismissal scheduled last is what has to be cancelled.
+            // Reading the ref at teardown is the point: the timer the
+            // dismissal scheduled last is the one that has to be cancelled.
             // eslint-disable-next-line react-hooks/exhaustive-deps
             if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
             if (motionCleanupTimerRef.current)

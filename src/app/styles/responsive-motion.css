@@ -496,9 +496,10 @@
         clip-path: inset(0 0 var(--navigation-detail-collapse-range, 65px) 0);
     }
 }
-/* The 65% stop is titleRevealProgress in navigation-detail.tsx: the wrapped
-   tail is gone by then, so the single-line remainder reveals across the rest
-   of the scroll instead of popping in at the end. */
+/* The 65% stop is titleRevealProgress in
+   components/ui/navigation-detail/title-motion.ts: the wrapped tail is gone by
+   then, so the single-line remainder reveals across the rest of the scroll
+   instead of popping in at the end. */
 @keyframes navigation-detail-title-collapse {
     from {
         transform: translate3d(0, 0, 0) scale(1);

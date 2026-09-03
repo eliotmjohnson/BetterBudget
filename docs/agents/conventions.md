@@ -1,8 +1,8 @@
-# Formatting and release-documentation reference
+# Formatting, comment, and release-documentation reference
 
-Read this before changing formatter or linter configuration, and before
-preparing a major release. `AGENTS.md` owns the day-to-day conventions; this
-file holds the detail behind them.
+Read this before changing formatter or linter configuration, before adding a
+comment to any file, and before preparing a major release. `AGENTS.md` owns the
+day-to-day conventions; this file holds the detail behind them.
 
 Nothing here needs to be recalled by hand during normal work: `npm run verify:fix`
 applies both tools, and the `Write|Edit` hook in `.claude/settings.json` runs
@@ -27,16 +27,90 @@ spacing, or excessive empty lines. Do not add ESLint rules for indentation
 width, quotes, commas, semicolons, or line wrapping because those belong to
 Prettier.
 
+Keep `.prettierrc.json`, `.prettierignore`, and the pinned Prettier version
+synchronized with any future formatting-workflow change. Generated files and
+ignored static assets must not be pulled into formatting runs accidentally.
+
+## Comments
+
+The codebase is deliberately almost comment-free. Every comment that survives
+in `src/` records something a competent reader could not have derived from the
+code, and the same bar applies to anything new. A comment is the last resort,
+reached only after renaming, extracting, and restructuring have failed.
+
+### Before writing one
+
+Work through this in order. Most candidate comments die at the first or second
+step:
+
+1. **Rename.** A comment explaining what a value is usually means the
+   identifier is wrong. `titleRevealProgress` needs no gloss; `p` does.
+2. **Extract.** A comment introducing a block ("// build the carryover chain")
+   is the name of a function that has not been extracted yet.
+3. **Encode it in the type.** A comment about which states are legal is a
+   discriminated union, a branded identifier, or an exhaustive switch that has
+   not been written.
+4. **Delete it.** If it restates the line below, it is noise that will go stale.
+
+Only if the fact still has nowhere to live does it become a comment.
+
+### The admissible cases
+
+A comment is justified when, and only when, it records one of these:
+
+- **A financial invariant** that the arithmetic implements but does not state —
+  the carryover-chain rule in `server/month-snapshot/carryover.ts` is the
+  worked example.
+- **A concurrency, ordering, or lifecycle guarantee** that the surrounding code
+  depends on and cannot express.
+- **A browser or framework workaround**, with the behavior being worked around
+  named. `@property` registration in `styles/navigation-detail.css` is the
+  worked example.
+- **A cross-file coupling** a reader cannot follow from either side alone —
+  a TypeScript constant that must match a CSS keyframe stop, or the reverse.
+  Name the other file and symbol, and keep both ends pointing at each other.
+- **The justification for a lint suppression.** An `eslint-disable` line
+  without a reason above it is not acceptable.
+- **A policy that the configuration cannot enforce on itself**, such as the
+  no-exemptions note above the size budgets in `eslint.config.mjs`.
+
+Everything else — section banners, restatements, changelog notes, commented-out
+code, `TODO`/`FIXME` markers, and authorship or date stamps — does not belong in
+the source. Version control and this documentation set already hold them.
+
+### The shape
+
+- Explain **why**, never **what**. A reader can see what the code does; they
+  cannot see what forced it.
+- Put it where the constraint bites — beside the line that would otherwise look
+  wrong or arbitrary — not at the top of the file.
+- Keep it to the fewest lines that carry the reason, and prefer a trailing
+  comment on the declaration it qualifies.
+- Write it so it stays true. A comment naming a mechanism survives; one naming
+  line numbers, current values, or a work-in-progress does not.
+- When the code it explains is changed or moved, the comment is part of that
+  change: update it or delete it in the same edit. A comment that has drifted
+  out of date is worse than no comment.
+
+### JSDoc
+
+JSDoc is the one form that may document an API rather than a constraint, and it
+is still not automatic. Add it to an exported function, type, or field when a
+consumer needs a fact the signature does not carry: a unit, a null meaning, a
+precondition, or the reason a module was split out. Do not restate the name,
+the parameter list, or the return type in prose. Field-level JSDoc in
+`domain/types.ts` and the module-purpose blocks in `shared/detail-history.ts`
+and `budget/budget-structure-editor.ts` are the intended level. Internal
+helpers do not get JSDoc; if one needs explaining, its name is wrong.
+
+### Stylistic constraint
+
 `lines-around-comment` requires a blank line before an own-line comment while
 `padding-line-between-statements` forbids a blank line between consecutive
 `const`/`let`/`var` declarations, so an own-line comment cannot sit between two
 declarations and `lint:fix` cannot resolve it. Use a trailing comment on the
 declaration, start the comment at a block or object-literal start, or place it
 above a preceding non-declaration statement.
-
-Keep `.prettierrc.json`, `.prettierignore`, and the pinned Prettier version
-synchronized with any future formatting-workflow change. Generated files and
-ignored static assets must not be pulled into formatting runs accidentally.
 
 ## Size and complexity budgets
 

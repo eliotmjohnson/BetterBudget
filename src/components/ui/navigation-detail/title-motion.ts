@@ -162,9 +162,6 @@ function measureTitleMotion(rt: TitleMotionRuntime) {
         (header.clientWidth - expandedTitleWidth * titleCompactScale) / 2;
 
     rt.metrics = {
-        // A wrapped title travels centered on its own box; the wider
-        // single-line box only takes over once the compact layout
-        // replaces it, so both share one center across the swap.
         compactHeaderHeight,
         expandedHeaderHeight,
         firstLineHeight: compactTitleHeight,
@@ -299,9 +296,10 @@ function applyTitleMotion(rt: TitleMotionRuntime) {
         `${directCollapsedDistance.toFixed(3)}px`
     );
 
-    // The wrapped box travels to its own centered position, then
-    // slides on to the single-line resting position as the remainder
-    // reveals.
+    // A wrapped title is centered on its own box and the wider single-line box
+    // only takes over once the compact layout replaces it, so travel runs to
+    // translateX first and blends on to restTranslateX as the remainder
+    // reveals, keeping one center across the swap.
     const scale = 1 + (titleCompactScale - 1) * directProgress;
     const reveal = Math.max(
         0,
@@ -343,8 +341,8 @@ function applyTitleMotion(rt: TitleMotionRuntime) {
 }
 
 /**
- * Drives the collapsing detail title. Returns the teardown for the effect that
- * called it, or undefined when the detail chrome is not mounted yet.
+ * Drives the collapsing detail title. Undefined when the detail chrome is not
+ * mounted yet; otherwise the teardown for the effect that called it.
  */
 export function setupTitleMotion(
     ctx: TitleMotionContext
