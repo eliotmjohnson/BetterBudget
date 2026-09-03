@@ -10,10 +10,15 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import type { MouseEvent, ReactNode } from 'react';
+import { useRef, type MouseEvent, type ReactNode } from 'react';
 import { BrandMark } from '@/components/brand-mark';
 import { shiftMonth, type MonthKey } from '@/domain/money';
 import { MonthPicker } from './month-picker';
+import {
+    beginArrowMonthChange,
+    beginPickerMonthChange,
+    usePageTransition
+} from './page-transition';
 
 export type AppView =
     'budget' | 'transactions' | 'income' | 'settings' | 'organize';
@@ -64,6 +69,10 @@ export function AppShell({
     const router = useRouter();
     const path = view === 'budget' ? '/' : `/${view}`;
     const contentView = view === 'organize' ? 'settings' : view;
+    const contentRef = useRef<HTMLDivElement>(null);
+
+    usePageTransition(contentRef, contentView, monthKey);
+
     const monthHref = (month: MonthKey) => `${path}?month=${month}`;
     const navigate = (
         event: MouseEvent<HTMLAnchorElement>,
@@ -114,18 +123,23 @@ export function AppShell({
                             className='icon-button'
                             href={monthHref(shiftMonth(monthKey, -1))}
                             aria-label='Previous month'
+                            onClick={() => beginArrowMonthChange(monthKey)}
                         >
                             <ChevronLeft size={20} />
                         </Link>
                         <MonthPicker
                             monthKey={monthKey}
                             monthLabel={monthLabel}
-                            onSelect={(month) => router.push(monthHref(month))}
+                            onSelect={(month) => {
+                                beginPickerMonthChange();
+                                router.push(monthHref(month));
+                            }}
                         />
                         <Link
                             className='icon-button'
                             href={monthHref(shiftMonth(monthKey, 1))}
                             aria-label='Next month'
+                            onClick={() => beginArrowMonthChange(monthKey)}
                         >
                             <ChevronRight size={20} />
                         </Link>
@@ -159,6 +173,7 @@ export function AppShell({
                 ) : null}
                 <div
                     key={`${contentView}-${monthKey}`}
+                    ref={contentRef}
                     className='app-content app-content--enter'
                 >
                     {children}

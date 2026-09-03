@@ -46,6 +46,33 @@
 .app-content--enter > * {
     animation: page-enter 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
+.app-content--slide-forward > *,
+.app-content--slide-back > * {
+    animation: page-slide-in var(--page-slide-motion) both;
+}
+.app-content--slide-back > * {
+    --page-slide-offset: -100%;
+}
+.page-slide-layer {
+    position: fixed;
+    z-index: 10;
+    overflow: hidden;
+    pointer-events: none;
+}
+.page-slide-layer--back {
+    --page-slide-offset: 100%;
+}
+.page-slide-out {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    animation: page-slide-out var(--page-slide-motion) both;
+    will-change: transform;
+}
+.page-slide-out * {
+    animation: none !important;
+    transition: none !important;
+}
 .mobile-header {
     position: sticky;
     z-index: 20;

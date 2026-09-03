@@ -628,6 +628,22 @@
         transform: translate(-50%, -6px) scale(0.97);
     }
 }
+@keyframes page-slide-in {
+    from {
+        transform: translate3d(var(--page-slide-offset, 100%), 0, 0);
+    }
+    to {
+        transform: translate3d(0, 0, 0);
+    }
+}
+@keyframes page-slide-out {
+    from {
+        transform: translate3d(0, 0, 0);
+    }
+    to {
+        transform: translate3d(var(--page-slide-offset, -100%), 0, 0);
+    }
+}
 @keyframes page-enter {
     from {
         opacity: 0;
