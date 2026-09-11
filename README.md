@@ -65,6 +65,12 @@ PGlite is WebAssembly, and `pg` is pure JavaScript.
 - The deployment helper prunes dangling images before pulling, because
   decompressing a new image beside a running container is the memory peak of the
   whole deployment.
+- The deployment helper refuses an image whose architecture does not match the
+  host, before it writes the image tag or restarts anything. A wrong-architecture
+  image pulls successfully and only fails when the container execs.
+- The ECR repository has a lifecycle policy. It expires untagged images after a
+  day, keeps the two most recent owner-bootstrap images, and keeps the twenty
+  most recent overall.
 - The instance uses Unlimited CPU credits. Standard credits throttle a
   `t4g.nano` partway through a deployment and roll back a working image.
 - The existing production data was not migrated. The new cluster started empty

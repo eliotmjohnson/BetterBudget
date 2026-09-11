@@ -100,16 +100,21 @@ The production secret holds eight fields, six of them read at runtime. The
 application service reads `database_url`, `database_ssl_ca`, and
 `better_auth_secret`. The database service reads `postgres_password`,
 `postgres_server_cert`, and `postgres_server_key`. `owner_email` and
-`owner_password` are used only by the one-time owner bootstrap. Do not rerun owner bootstrap, development seeding, or
-a database reset against a populated database.
+`owner_password` are used only by the one-time owner bootstrap. Do not rerun
+owner bootstrap, development seeding, or a database reset against a populated
+database.
 
 `database_ssl_ca` is a private certificate authority generated for this
 deployment, not an Amazon bundle. It signs one server certificate whose subject
 alternative names are `better-budget-db`, `localhost`, `127.0.0.1`, and the
-host's IPv6 address. Both expire in September 2036. Storing the server
-certificate and key in the secret is what makes host replacement reproducible:
-a new host fetches the same material and the application's trusted CA still
-matches.
+IPv6 address of the host that first issued it. Both expire in September 2036.
+Storing the server certificate and key in the secret is what makes host
+replacement reproducible: a new host fetches the same material and the
+application's trusted CA still matches.
+
+Because the certificate is reused rather than reissued, its `IP Address` name
+does not follow a host replacement and is stale on the current host. Only the
+`better-budget-db` name is durable, which is why operator connections use it.
 
 ## VPC resource names
 
@@ -199,6 +204,9 @@ version-controlled host definition. On a fresh Amazon Linux 2023 arm64 host it:
 - Enables dual-stack AWS and Systems Manager endpoints.
 - Installs and starts Docker and installs `jq`.
 - Creates or grows a 2 GiB swap file, sized for two containers on 512 MiB of RAM.
+  Amazon Linux 2023 also enables a compressed `zram` device sized to RAM, at a
+  higher priority than the swap file, so `free` reports more total swap than the
+  script creates and the disk-backed file is only reached once `zram` fills.
 - Caps journald at 64 MiB on disk and 16 MiB in `/run`, and raises
   `vm.swappiness` to 80 so cold pages leave RAM sooner.
 - Creates the `better-budget` Docker network and the database data directory.

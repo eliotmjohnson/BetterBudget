@@ -185,3 +185,13 @@ is the deployment-readiness target; `/api/health` remains a compatibility alias
 for readiness. Keep the production connection pool small and retain the
 advisory-lock migration prestart. Keep the separate `owner-bootstrap` target
 non-root and limited to the one-time owner command.
+
+[`ecr-lifecycle-policy.json`](../aws/ecr-lifecycle-policy.json) is the retention
+policy on `better-budget/app`: untagged images expire after a day, the two most
+recent `owner-*` images are kept, and the twenty most recent images are kept
+overall. Without it the repository grows by roughly 80 MiB per deployment
+forever. ECR cannot mark an image as protected, so the policy cannot exempt the
+image that `bootstrap_host()` names as its seed tag; the replacement procedure
+verifies that image exists before a host launches, which is what catches a
+pruned one. A running host is unaffected either way, because it holds its image
+locally.
