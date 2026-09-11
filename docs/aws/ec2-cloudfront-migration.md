@@ -70,35 +70,36 @@ sudo docker exec better-budget-db \
 All resources are in AWS account `563692880710` and region `us-east-2` unless
 otherwise noted.
 
-| Resource                | Name or identifier                                 | Purpose                                         |
-| ----------------------- | -------------------------------------------------- | ----------------------------------------------- |
-| CloudFront distribution | `E13RII40P7L8EE`                                   | Public HTTPS application endpoint               |
-| CloudFront hostname     | `ddz00reob9ubc.cloudfront.net`                     | `BETTER_AUTH_URL` and `PRODUCTION_URL`          |
-| CloudFront VPC origin   | `vo_HPi66ME94UUGDNvG59gBcn`                        | Private connection to EC2 on port 80            |
-| EC2 instance            | `better-budget-production` / `i-03455a55b281dbde0` | Single application host                         |
-| EC2 instance type       | `t4g.nano`                                         | Low-cost arm64 production compute               |
-| EC2 private IPv4        | `172.31.32.45`                                     | CloudFront VPC-origin traffic                   |
-| EC2 IPv6                | `2600:1f16:1049:6a00:cdcb:76c8:fe1d:cea2`          | AWS service traffic and database access         |
-| EC2 root volume         | `vol-034582146e2ccaad7`                            | 8 GiB encrypted gp3 host volume                 |
-| Database container      | `better-budget-db`                                 | PostgreSQL 17 on the application host           |
-| Database image          | `postgres:17-alpine`, digest-pinned                | Pulled from Docker Hub, runs as uid 70          |
-| Database data directory | `/var/lib/better-budget/postgres`                  | Persistent application data on EBS              |
-| Database TLS material   | `/run/better-budget/postgres-tls`                  | Memory-backed server certificate and key        |
-| Docker network          | `better-budget`                                    | Private application-to-database bridge          |
-| ECR repository          | `better-budget/app`                                | Immutable runtime images, lifecycle-pruned      |
-| Secrets Manager secret  | `better-budget/prod-zALPFC`                        | Database URL, CA, auth, and TLS material        |
-| EC2 IAM role/profile    | `better-budget-ec2-runtime`                        | SSM, secret read, ECR pull, and log write       |
-| EC2 inline IAM policy   | `better-budget-ec2-runtime-access`                 | Account-scoped runtime permissions              |
-| GitHub deployment role  | `better-budget-github-deploy`                      | OIDC image push and SSM deployment              |
-| CloudWatch log group    | `/better-budget/production`                        | Container output with 14-day retention          |
-| CloudWatch alarm        | `better-budget-ec2-system-recovery`                | Recovers the host on AWS hardware failure       |
-| CloudWatch alarm        | `better-budget-ec2-instance-reboot`                | Reboots the host on OS-level check failure      |
-| CloudWatch alarm        | `better-budget-host-memory-low`                    | Available memory under 15 percent for 15 min    |
-| CloudWatch alarm        | `better-budget-host-disk-high`                     | Root volume above 80 percent for 10 minutes     |
-| CloudWatch alarm        | `better-budget-database-unresponsive`              | Database failed `select 1` for 10 minutes       |
-| CloudWatch metrics      | `BetterBudget/Host`                                | Memory, disk, and database health every 5 min   |
-| Backup policy           | `policy-0814a8ef0cb72ddd5`                         | Daily root-volume snapshots, 7-day retention    |
-| Backup service role     | `AWSDataLifecycleManagerDefaultRole`               | Lets Data Lifecycle Manager snapshot the volume |
+| Resource                 | Name or identifier                                 | Purpose                                         |
+| ------------------------ | -------------------------------------------------- | ----------------------------------------------- |
+| CloudFront distribution  | `E13RII40P7L8EE`                                   | Public HTTPS application endpoint               |
+| CloudFront hostname      | `ddz00reob9ubc.cloudfront.net`                     | `BETTER_AUTH_URL` and `PRODUCTION_URL`          |
+| CloudFront VPC origin    | `vo_HPi66ME94UUGDNvG59gBcn`                        | Private connection to EC2 on port 80            |
+| EC2 instance             | `better-budget-production` / `i-03455a55b281dbde0` | Single application host                         |
+| EC2 instance type        | `t4g.nano`                                         | Low-cost arm64 production compute               |
+| EC2 private IPv4         | `172.31.32.45`                                     | CloudFront VPC-origin traffic                   |
+| EC2 IPv6                 | `2600:1f16:1049:6a00:cdcb:76c8:fe1d:cea2`          | AWS service traffic and database access         |
+| EC2 root volume          | `vol-034582146e2ccaad7`                            | 8 GiB encrypted gp3 host volume                 |
+| Database container       | `better-budget-db`                                 | PostgreSQL 17 on the application host           |
+| Database image           | `postgres:17-alpine`, digest-pinned                | Pulled from Docker Hub, runs as uid 70          |
+| Database data directory  | `/var/lib/better-budget/postgres`                  | Persistent application data on EBS              |
+| Database TLS material    | `/run/better-budget/postgres-tls`                  | Memory-backed server certificate and key        |
+| Docker network           | `better-budget`                                    | Private application-to-database bridge          |
+| ECR repository           | `better-budget/app`                                | Immutable runtime images, lifecycle-pruned      |
+| Secrets Manager secret   | `better-budget/prod-zALPFC`                        | Database URL, CA, auth, and TLS material        |
+| EC2 IAM role/profile     | `better-budget-ec2-runtime`                        | SSM, secret read, ECR pull, and log write       |
+| EC2 inline IAM policy    | `better-budget-ec2-runtime-access`                 | Account-scoped runtime permissions              |
+| GitHub deployment role   | `better-budget-github-deploy`                      | OIDC image push and SSM deployment              |
+| CloudWatch log group     | `/better-budget/production`                        | Container output with 14-day retention          |
+| CloudWatch alarm         | `better-budget-ec2-system-recovery`                | Recovers the host on AWS hardware failure       |
+| CloudWatch alarm         | `better-budget-ec2-instance-reboot`                | Reboots the host on OS-level check failure      |
+| CloudWatch alarm         | `better-budget-host-memory-low`                    | Available memory under 15 percent for 15 min    |
+| CloudWatch alarm         | `better-budget-host-disk-high`                     | Root volume above 80 percent for 10 minutes     |
+| CloudWatch alarm         | `better-budget-database-unresponsive`              | Database failed `select 1` for 10 minutes       |
+| CloudWatch metrics       | `BetterBudget/Host`                                | Memory, disk, and database health every 5 min   |
+| Alarm notification topic | `better-budget-alarms`                             | Email delivery for every alarm and recovery     |
+| Backup policy            | `policy-0814a8ef0cb72ddd5`                         | Daily root-volume snapshots, 7-day retention    |
+| Backup service role      | `AWSDataLifecycleManagerDefaultRole`               | Lets Data Lifecycle Manager snapshot the volume |
 
 The production secret holds eight fields, six of them read at runtime. The
 application service reads `database_url`, `database_ssl_ca`, and
@@ -372,8 +373,15 @@ compute, none of them protect data, and `/api/live` is deliberately
 process-only, so none of them can see a database that is running but not
 answering.
 
-The alarms have no notification action. They change state and are visible in the
-console, but nothing is delivered anywhere until an SNS topic is attached.
+Every alarm publishes to the SNS topic `better-budget-alarms` on both entry and
+exit, so a recovery is reported as well as a failure. The two status-check alarms
+keep their EC2 reboot and recover actions alongside it. The topic policy grants
+`SNS:Publish` to `cloudwatch.amazonaws.com`, scoped by `AWS:SourceAccount`.
+
+The email subscription must be confirmed from the delivery address before
+anything is sent; an unconfirmed subscription silently drops every notification.
+Check it with `aws sns list-subscriptions-by-topic`, which reports
+`PendingConfirmation` until the link in the confirmation mail is opened.
 
 ## Database access
 

@@ -44,8 +44,10 @@ TLS, IPv6, and backup rule is retained.
   alarm. It is a `oneshot` timer rather than the CloudWatch agent because the
   agent is a resident daemon of roughly 50 to 80 MiB on a host with about 150
   MiB spare. `DatabaseReady` runs `select 1`, not `pg_isready`, because a wedged
-  database still accepts connections. The alarms have no notification action
-  yet.
+  database still accepts connections. Every alarm publishes to the
+  `better-budget-alarms` SNS topic on both entry and exit. An email subscription
+  delivers nothing until it is confirmed from the address itself, so check for
+  `PendingConfirmation` before trusting the alarms to reach anyone.
 - Deployment requires exactly one _running_ instance carrying both production
   tags, so a cutover stops the outgoing host rather than leaving it running.
 - The host was replaced rather than resized, because architecture cannot change

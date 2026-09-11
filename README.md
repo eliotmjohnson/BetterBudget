@@ -74,7 +74,8 @@ PGlite is WebAssembly, and `pg` is pure JavaScript.
 - `better-budget-metrics.timer` publishes available memory, root-volume usage,
   and a database `select 1` result to CloudWatch every five minutes, with an
   alarm on each. No CloudWatch agent is installed; a resident agent would cost a
-  quarter of what a 512 MiB host has spare.
+  quarter of what a 512 MiB host has spare. Every alarm emails through the
+  `better-budget-alarms` SNS topic on both failure and recovery.
 - The instance uses Unlimited CPU credits. Standard credits throttle a
   `t4g.nano` partway through a deployment and roll back a working image.
 - The existing production data was not migrated. The new cluster started empty
