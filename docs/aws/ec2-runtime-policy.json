@@ -38,6 +38,17 @@
             "Effect": "Allow",
             "Action": ["logs:CreateLogStream", "logs:PutLogEvents"],
             "Resource": "arn:aws:logs:us-east-2:563692880710:log-group:/better-budget/production:*"
+        },
+        {
+            "Sid": "PublishHostMetrics",
+            "Effect": "Allow",
+            "Action": "cloudwatch:PutMetricData",
+            "Resource": "*",
+            "Condition": {
+                "StringEquals": {
+                    "cloudwatch:namespace": "BetterBudget/Host"
+                }
+            }
         }
     ]
 }

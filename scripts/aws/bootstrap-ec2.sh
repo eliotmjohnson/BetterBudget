@@ -26,6 +26,7 @@ readonly DATABASE_TLS_DIRECTORY='/run/better-budget/postgres-tls'
 readonly DATABASE_RUNTIME_UID='70'
 readonly OWNER_IMAGE_TAG_PREFIX='owner-'
 readonly OWNER_SECRET_DIRECTORY='/run/better-budget/owner'
+readonly METRIC_NAMESPACE='BetterBudget/Host'
 readonly POSTGRES_IMAGE='postgres:17-alpine@sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73'
 
 log() {
@@ -79,6 +80,7 @@ load_host_config() {
     ECR_API_ENDPOINT="https://ecr.${AWS_REGION}.api.aws"
     SECRETS_ENDPOINT="https://secretsmanager.${AWS_REGION}.amazonaws.com"
     LOGS_ENDPOINT="https://logs.${AWS_REGION}.api.aws"
+    MONITORING_ENDPOINT="https://monitoring.${AWS_REGION}.api.aws"
 
     export AWS_USE_DUALSTACK_ENDPOINT=true
 }
@@ -604,6 +606,37 @@ set_auth_url() {
     fail 'The Better Auth origin update failed and was rolled back.'
 }
 
+publish_metrics() {
+    require_root
+    load_host_config
+
+    local memory_available_percent
+    local disk_used_percent
+    local database_ready=0
+
+    memory_available_percent=$(
+        awk '/^MemTotal:/ { total = $2 }
+             /^MemAvailable:/ { available = $2 }
+             END { printf "%.1f", available * 100 / total }' /proc/meminfo
+    )
+    disk_used_percent=$(df --output=pcent / | tail -1 | tr -dc '0-9')
+
+    if timeout 10 docker exec "${DATABASE_CONTAINER_NAME}" \
+        psql --username "${POSTGRES_ROLE}" --dbname "${POSTGRES_DATABASE}" \
+        --tuples-only --no-align --command 'select 1' >/dev/null 2>&1; then
+        database_ready=1
+    fi
+
+    aws cloudwatch put-metric-data \
+        --namespace "${METRIC_NAMESPACE}" \
+        --region "${AWS_REGION}" \
+        --endpoint-url "${MONITORING_ENDPOINT}" \
+        --metric-data \
+        "MetricName=MemoryAvailablePercent,Unit=Percent,Value=${memory_available_percent}" \
+        "MetricName=DiskUsedPercent,Unit=Percent,Value=${disk_used_percent}" \
+        "MetricName=DatabaseReady,Unit=None,Value=${database_ready}"
+}
+
 check_liveness() {
     require_root
 
@@ -744,6 +777,29 @@ Type=oneshot
 ExecStart=/usr/local/libexec/better-budget-host healthcheck
 UNIT
 
+    tee /etc/systemd/system/better-budget-metrics.service >/dev/null <<'UNIT'
+[Unit]
+Description=Publish Better Budget host metrics to CloudWatch
+After=better-budget.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/libexec/better-budget-host metrics
+UNIT
+
+    tee /etc/systemd/system/better-budget-metrics.timer >/dev/null <<'UNIT'
+[Unit]
+Description=Publish Better Budget host metrics every five minutes
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=5min
+AccuracySec=30s
+
+[Install]
+WantedBy=timers.target
+UNIT
+
     tee /etc/systemd/system/better-budget-healthcheck.timer >/dev/null <<'UNIT'
 [Unit]
 Description=Run the Better Budget liveness check every minute
@@ -761,7 +817,8 @@ UNIT
     systemctl enable \
         better-budget-db.service \
         better-budget.service \
-        better-budget-healthcheck.timer
+        better-budget-healthcheck.timer \
+        better-budget-metrics.timer
 }
 
 ensure_log_group() {
@@ -833,6 +890,7 @@ CONFIG
     systemctl restart better-budget-db.service
     systemctl restart better-budget.service
     systemctl start better-budget-healthcheck.timer
+    systemctl start better-budget-metrics.timer
 
     log 'Bootstrap completed. Check better-budget.service in systemd.'
 }
@@ -877,6 +935,9 @@ main() {
             ;;
         healthcheck)
             check_liveness
+            ;;
+        metrics)
+            publish_metrics
             ;;
         '')
             bootstrap_host

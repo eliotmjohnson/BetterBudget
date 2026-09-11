@@ -39,6 +39,13 @@ TLS, IPv6, and backup rule is retained.
 - A fresh host pulls the seed image tag in `bootstrap_host()` before any
   deployment runs, so that tag must name a commit whose image includes an arm64
   manifest.
+- `better-budget-metrics.timer` publishes memory, disk, and database health to
+  the `BetterBudget/Host` CloudWatch namespace every five minutes, each with an
+  alarm. It is a `oneshot` timer rather than the CloudWatch agent because the
+  agent is a resident daemon of roughly 50 to 80 MiB on a host with about 150
+  MiB spare. `DatabaseReady` runs `select 1`, not `pg_isready`, because a wedged
+  database still accepts connections. The alarms have no notification action
+  yet.
 - Deployment requires exactly one _running_ instance carrying both production
   tags, so a cutover stops the outgoing host rather than leaving it running.
 - The host was replaced rather than resized, because architecture cannot change

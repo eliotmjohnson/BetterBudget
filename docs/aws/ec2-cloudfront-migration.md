@@ -93,6 +93,10 @@ otherwise noted.
 | CloudWatch log group    | `/better-budget/production`                        | Container output with 14-day retention          |
 | CloudWatch alarm        | `better-budget-ec2-system-recovery`                | Recovers the host on AWS hardware failure       |
 | CloudWatch alarm        | `better-budget-ec2-instance-reboot`                | Reboots the host on OS-level check failure      |
+| CloudWatch alarm        | `better-budget-host-memory-low`                    | Available memory under 15 percent for 15 min    |
+| CloudWatch alarm        | `better-budget-host-disk-high`                     | Root volume above 80 percent for 10 minutes     |
+| CloudWatch alarm        | `better-budget-database-unresponsive`              | Database failed `select 1` for 10 minutes       |
+| CloudWatch metrics      | `BetterBudget/Host`                                | Memory, disk, and database health every 5 min   |
 | Backup policy           | `policy-0814a8ef0cb72ddd5`                         | Daily root-volume snapshots, 7-day retention    |
 | Backup service role     | `AWSDataLifecycleManagerDefaultRole`               | Lets Data Lifecycle Manager snapshot the volume |
 
@@ -232,6 +236,9 @@ version-controlled host definition. On a fresh Amazon Linux 2023 arm64 host it:
   and orders after `better-budget-db.service`, but does not restart with it, so
   the connection pool reconnects across a database restart instead of cycling
   the application.
+- Publishes `MemoryAvailablePercent`, `DiskUsedPercent`, and `DatabaseReady` to
+  the `BetterBudget/Host` namespace every five minutes over the dual-stack
+  CloudWatch endpoint, as a `oneshot` timer rather than a resident agent.
 - Checks only `/api/live` every minute and restarts after three consecutive
   liveness failures. A readiness-only database outage does not cause a restart
   loop.
@@ -349,13 +356,24 @@ the live setting.
 Missing data is not breaching on either, so a stopped instance does not trip
 them.
 
-Neither alarm watches disk space, memory, or database health, because no
-CloudWatch agent is installed and no custom metrics are published. A filling
-disk gives no warning. Four layers already restart compute — systemd
-`Restart=always` on both services, the one-minute `/api/live` watchdog, the
-container health check, and these alarms — but none of them protect data, and a
-wedged-but-running database is invisible to all of them because `/api/live` is
-deliberately process-only.
+Those two alarms watch only the EC2 status checks. Memory, disk, and database
+health come from `better-budget-metrics.timer`, which publishes three custom
+metrics to the `BetterBudget/Host` namespace every five minutes and is alarmed
+separately. No CloudWatch agent is installed: the agent is a persistent daemon
+of roughly 50 to 80 MiB, which is a quarter of what a 512 MiB host has spare, so
+a `oneshot` timer running the host script publishes the same values without a
+resident process.
+
+`DatabaseReady` runs an actual `select 1` rather than `pg_isready`, because a
+wedged database can still accept connections. That is what closes the blind spot
+left by the restart layers: systemd `Restart=always`, the one-minute `/api/live`
+watchdog, the container health check, and the status-check alarms all restart
+compute, none of them protect data, and `/api/live` is deliberately
+process-only, so none of them can see a database that is running but not
+answering.
+
+The alarms have no notification action. They change state and are visible in the
+console, but nothing is delivered anywhere until an SNS topic is attached.
 
 ## Database access
 

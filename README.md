@@ -71,6 +71,10 @@ PGlite is WebAssembly, and `pg` is pure JavaScript.
 - The ECR repository has a lifecycle policy. It expires untagged images after a
   day, keeps the two most recent owner-bootstrap images, and keeps the twenty
   most recent overall.
+- `better-budget-metrics.timer` publishes available memory, root-volume usage,
+  and a database `select 1` result to CloudWatch every five minutes, with an
+  alarm on each. No CloudWatch agent is installed; a resident agent would cost a
+  quarter of what a 512 MiB host has spare.
 - The instance uses Unlimited CPU credits. Standard credits throttle a
   `t4g.nano` partway through a deployment and roll back a working image.
 - The existing production data was not migrated. The new cluster started empty
