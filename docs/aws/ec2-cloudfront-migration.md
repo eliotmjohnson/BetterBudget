@@ -85,7 +85,7 @@ otherwise noted.
 | Database data directory | `/var/lib/better-budget/postgres`                  | Persistent application data on EBS              |
 | Database TLS material   | `/run/better-budget/postgres-tls`                  | Memory-backed server certificate and key        |
 | Docker network          | `better-budget`                                    | Private application-to-database bridge          |
-| ECR repository          | `better-budget/app`                                | Immutable runtime images                        |
+| ECR repository          | `better-budget/app`                                | Immutable runtime images, lifecycle-pruned      |
 | Secrets Manager secret  | `better-budget/prod-zALPFC`                        | Database URL, CA, auth, and TLS material        |
 | EC2 IAM role/profile    | `better-budget-ec2-runtime`                        | SSM, secret read, ECR pull, and log write       |
 | EC2 inline IAM policy   | `better-budget-ec2-runtime-access`                 | Account-scoped runtime permissions              |
@@ -174,6 +174,22 @@ traffic is redirected to HTTPS at CloudFront. The default behavior permits all
 application methods, uses managed `CachingDisabled` and `AllViewer` policies,
 forwards cookies and query strings, and has IPv6 and compression enabled. WAF,
 Origin Shield, and access logging are disabled for this low-traffic deployment.
+
+## Image retention
+
+[`ecr-lifecycle-policy.json`](./ecr-lifecycle-policy.json) is the lifecycle
+policy on `better-budget/app`. It expires untagged images after a day, keeps the
+two most recent `owner-*` images, and keeps the twenty most recent images
+overall. Without it the repository grows by roughly 80 MiB per deployment
+forever.
+
+ECR has no way to mark one image as protected, so the policy cannot exempt the
+image that `bootstrap_host()` names as its seed tag. Twenty deployments after
+that tag is set, the policy will expire it. That is why the first step of the
+replacement procedure is to confirm the seed image still exists before launching
+a host: a pruned seed image costs nothing until a rebuild, and the check catches
+it before it matters. Refresh the seed tag to a recent commit whenever you
+replace a host.
 
 ## Runtime behavior
 
@@ -366,9 +382,15 @@ Then configure DBeaver with:
 - Root certificate: the `database_ssl_ca` PEM from the production secret
 
 Using the hostname rather than the IPv6 literal means replacing the EC2 host is
-a one-line local edit instead of reissuing the certificate. The IPv6 address is
-also in the certificate's subject alternative names, so connecting by literal
-address works without the `/etc/hosts` entry.
+a one-line local edit instead of reissuing the certificate.
+
+Connect by the `better-budget-db` name, never by the IPv6 literal. The
+certificate is reused across host replacements, so its `IP Address` subject
+alternative name still holds the address of whichever host first issued it and
+does not follow a replacement. Under `verify-full` a literal-address connection
+therefore fails hostname verification, while the `DNS:better-budget-db` name
+stays valid. Reissuing the certificate is the only way to make the literal work
+again, and it is not worth doing for this.
 
 If the connection stops working, the home IPv6 prefix has almost certainly
 rotated. Read the current address, take its `/64`, then revoke the existing rule
@@ -532,9 +554,13 @@ first if the current database is still readable.
     the new instance's private DNS name, wait for the distribution to deploy, and
     only then delete the old origin. Ensure EC2 port 80 accepts only the
     CloudFront-managed security group.
-13. Point the `/etc/hosts` entry for `better-budget-db` at the new instance's
-    IPv6 address. The certificate is reused from the secret and does not need
-    reissuing unless you connect by IPv6 literal.
+13. Update the `better-budget-db` line in `/etc/hosts` on **each operator
+    workstation** that connects with DBeaver or `psql`, pointing it at the new
+    instance's IPv6 address. Nothing on the host itself needs this: the
+    application resolves the database by container name over the private Docker
+    network. The certificate is reused from the secret and needs no reissuing,
+    but its `IP Address` subject alternative name still names the previous host,
+    so a literal-address connection fails `verify-full` after a replacement.
 14. Repoint both CloudWatch alarms at the replacement instance.
     `better-budget-ec2-instance-reboot` and `better-budget-ec2-system-recovery`
     carry an `InstanceId` dimension, so they keep watching the old instance and
