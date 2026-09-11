@@ -35,7 +35,7 @@ env:
 jobs:
     deploy:
         name: Build and deploy
-        runs-on: ubuntu-24.04
+        runs-on: ubuntu-24.04-arm
         timeout-minutes: 60
 
         steps:
@@ -137,12 +137,6 @@ jobs:
               id: login-ecr
               uses: aws-actions/amazon-ecr-login@aded0d722166a37980e030aa969dda0bfe6b6947 # v2.1.7
 
-            - name: Set up QEMU for arm64 emulation
-              if: (steps.release.outputs.build_image == 'true' && steps.release_image.outputs.exists != 'true') || inputs.build_owner_image
-              uses: docker/setup-qemu-action@1f40c72289eff860ee54a304f1438e3cff362e0a # v4.3.0
-              with:
-                  platforms: arm64
-
             - name: Set up Docker Buildx
               if: (steps.release.outputs.build_image == 'true' && steps.release_image.outputs.exists != 'true') || inputs.build_owner_image
               uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
@@ -154,7 +148,7 @@ jobs:
                   context: .
                   file: ./Dockerfile
                   target: runtime
-                  platforms: linux/amd64,linux/arm64
+                  platforms: linux/arm64
                   push: true
                   provenance: false
                   build-args: |
@@ -170,7 +164,7 @@ jobs:
                   context: .
                   file: ./Dockerfile
                   target: owner-bootstrap
-                  platforms: linux/amd64,linux/arm64
+                  platforms: linux/arm64
                   push: true
                   provenance: false
                   tags: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:owner-${{ steps.release.outputs.image_tag }}

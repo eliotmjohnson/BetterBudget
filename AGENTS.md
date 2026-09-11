@@ -44,7 +44,7 @@ Read `docs/agents/product.md` for the complete implemented-capability inventory 
 
 Version `4.0.0` moved the production host from an x86_64 `t3a.micro` to an arm64 `t4g.nano`. There is no application-source change. The Version 1 product, financial model, authentication model, database schema, and provider-neutral runtime image are unchanged, as is every Version 3 database, TLS, IPv6, and backup rule.
 
-GitHub Actions builds `linux/arm64`. The `linux/amd64` half was retained only while the outgoing x86 host was still receiving deployments, and was dropped once it was terminated. Restore it only if an x86 host becomes a real rollback target again; on an arm64-only fleet it is build time spent on an image nothing can run.
+GitHub Actions builds `linux/arm64` only, natively on a GitHub-hosted `ubuntu-24.04-arm` runner. Do not reintroduce `linux/amd64` or QEMU emulation: nothing in the fleet can run an amd64 image, and the emulated build was slow enough to be abandoned during the migration. If an x86 host ever becomes a real rollback target again, add a second native job rather than emulating.
 
 `scripts/aws/bootstrap-ec2.sh` is sized for 512 MiB. PostgreSQL runs with `shared_buffers=32MB`, `max_connections=10`, and a 192 MiB container limit; the application container has a 320 MiB limit and a 256 MiB V8 old-space limit. If the application restarts under memory pressure, lower `shared_buffers` further or resize the instance to `t4g.micro` — a stop, change-type, and start, since the architecture is unchanged. Do not remove the container limits.
 

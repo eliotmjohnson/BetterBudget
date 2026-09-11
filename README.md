@@ -54,10 +54,9 @@ PGlite is WebAssembly, and `pg` is pure JavaScript.
 
 **What changed:**
 
-- GitHub Actions builds `linux/arm64`, with QEMU emulation providing the build
-  on the x86 runner, so builds take longer than before. `linux/amd64` was built
-  alongside it only during the cutover and dropped once the x86 host was
-  terminated.
+- GitHub Actions builds `linux/arm64` only, natively on a GitHub-hosted
+  `ubuntu-24.04-arm` runner. `linux/amd64` is no longer built, because no host
+  can run it.
 - `scripts/aws/bootstrap-ec2.sh` resizes both containers for 512 MiB of RAM.
   PostgreSQL drops to `shared_buffers=32MB`, `max_connections=10`, and a 192 MiB
   container limit. The application container gains a 320 MiB limit and a 256 MiB
@@ -555,8 +554,8 @@ Keep `DATABASE_URL`, `DATABASE_SSL_CA`, and `BETTER_AUTH_SECRET` in the deployme
 
 Pushes to `main` run `.github/workflows/deploy-production.yml`. The workflow
 uses GitHub OIDC to obtain temporary AWS credentials, builds the `runtime`
-Docker target for `linux/amd64` and `linux/arm64`, pushes a multi-platform image
-index tagged with the Git commit SHA, finds the one running EC2 instance tagged
+Docker target for `linux/arm64` on a native arm runner, pushes an image tagged
+with the Git commit SHA, finds the one running EC2 instance tagged
 `Application=better-budget` and `Environment=production`, and invokes its
 deployment helper through Systems Manager. The helper pulls before stopping the current container, waits for
 `/api/live` and `/api/ready`, and restores the prior image automatically if the

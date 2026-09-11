@@ -9,11 +9,12 @@ Version `4.0.0` moves the production host from an x86_64 `t3a.micro` to an arm64
 `t4g.nano`. There is no application-source change, and every Version 3 database,
 TLS, IPv6, and backup rule is retained.
 
-- GitHub Actions builds `linux/arm64`, with QEMU supplying the build on the x86
-  runner. `linux/amd64` was built alongside it only during the cutover, while the
-  outgoing x86 host was still receiving deployments, and was dropped once that
-  host was terminated. An arm64-only fleet has nothing that can run an amd64
-  image.
+- GitHub Actions builds `linux/arm64` only, natively on a GitHub-hosted
+  `ubuntu-24.04-arm` runner. These runners are free because the repository is
+  public. Do not reintroduce `linux/amd64` or QEMU emulation: nothing in the
+  fleet can run an amd64 image, and the emulated build proved too slow to keep.
+  If an x86 host ever becomes a rollback target again, add a second native job
+  and merge the two with `docker buildx imagetools create`.
 - Both containers are resized for 512 MiB. PostgreSQL runs with
   `shared_buffers=32MB`, `max_connections=10`, `work_mem=2MB`, and a 192 MiB
   container limit. The application container gains a 320 MiB limit and a 256 MiB
