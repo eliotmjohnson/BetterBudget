@@ -25,6 +25,7 @@ readonly DATABASE_DATA_DIRECTORY='/var/lib/better-budget/postgres'
 readonly DATABASE_TLS_DIRECTORY='/run/better-budget/postgres-tls'
 readonly DATABASE_RUNTIME_UID='70'
 readonly OWNER_IMAGE_TAG_PREFIX='owner-'
+readonly OWNER_SECRET_DIRECTORY='/run/better-budget/owner'
 readonly POSTGRES_IMAGE='postgres:17-alpine@sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73'
 
 log() {
@@ -420,6 +421,15 @@ run_owner_bootstrap() {
     fetch_application_secrets
     unset secret_json
 
+    trap 'rm -rf "${OWNER_SECRET_DIRECTORY}"' EXIT
+    install -d -o 1001 -g 1001 -m 0700 "${OWNER_SECRET_DIRECTORY}"
+    printf '%s' "${owner_email}" >"${OWNER_SECRET_DIRECTORY}/owner-email"
+    printf '%s' "${owner_password}" >"${OWNER_SECRET_DIRECTORY}/owner-password"
+    chown 1001:1001 "${OWNER_SECRET_DIRECTORY}"/*
+    chmod 0400 "${OWNER_SECRET_DIRECTORY}"/*
+    unset owner_email
+    unset owner_password
+
     log "Running owner bootstrap from ${owner_image}."
 
     docker run \
@@ -427,6 +437,7 @@ run_owner_bootstrap() {
         --init \
         --network "${DATABASE_NETWORK}" \
         --mount "type=bind,source=${RUNTIME_SECRET_DIRECTORY},target=/run/better-budget-secrets,readonly" \
+        --mount "type=bind,source=${OWNER_SECRET_DIRECTORY},target=/run/better-budget-owner,readonly" \
         --env DATABASE_KIND=postgres \
         --env DATABASE_POOL_SIZE=3 \
         --env DATABASE_SSL=verify-full \
@@ -434,18 +445,17 @@ run_owner_bootstrap() {
         --env "BETTER_AUTH_URL=${BETTER_AUTH_URL}" \
         --env AUTH_BYPASS=false \
         --env ALLOW_INSECURE_LOCAL_AUTH=false \
-        --env "BOOTSTRAP_OWNER_EMAIL=${owner_email}" \
-        --env "BOOTSTRAP_OWNER_PASSWORD=${owner_password}" \
         --entrypoint sh \
         "${owner_image}" \
         -c 'DATABASE_URL=$(cat /run/better-budget-secrets/database-url)
 DATABASE_SSL_CA=$(cat /run/better-budget-secrets/database-ssl-ca)
 BETTER_AUTH_SECRET=$(cat /run/better-budget-secrets/better-auth-secret)
+BOOTSTRAP_OWNER_EMAIL=$(cat /run/better-budget-owner/owner-email)
+BOOTSTRAP_OWNER_PASSWORD=$(cat /run/better-budget-owner/owner-password)
 export DATABASE_URL DATABASE_SSL_CA BETTER_AUTH_SECRET
+export BOOTSTRAP_OWNER_EMAIL BOOTSTRAP_OWNER_PASSWORD
 exec npm run db:owner'
 
-    unset owner_email
-    unset owner_password
     docker image rm "${owner_image}" >/dev/null 2>&1 || true
 }
 

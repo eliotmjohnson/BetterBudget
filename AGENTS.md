@@ -48,7 +48,7 @@ The verified-TLS contract is unchanged and must stay that way: production still 
 
 The database is reachable from outside AWS over IPv6 only, gated by a security-group rule scoped to one personal `/64`. This one inbound port is deliberate and user-directed — it replaced a billed public IPv4 endpoint with an unbilled one — and is not drift to be corrected. No Better Budget resource has a public IPv4 address.
 
-There are no automated database backups. The EBS root volume holds the only copy of the data, so the host is no longer disposable.
+Backups are daily crash-consistent EBS snapshots of the root volume, retained seven days. There is no logical dump on a schedule and no point-in-time recovery, so take a manual `pg_dump` before anything destructive.
 
 Do not reintroduce ECS, an ALB, NAT, SSH, RDS, or a public IPv4 address without explicit user direction, and do not treat the infrastructure change as authorization to relax any Version 1 boundary below.
 

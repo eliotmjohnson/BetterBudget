@@ -54,7 +54,7 @@ The only application-source change is a guard in `src/db/index.ts` that never ru
 This was a cost decision. RDS was about $20 of a $26.78 monthly bill — instance,
 storage, a billed public IPv4 address, and backups — for a few megabytes of
 single-household data. The co-located container adds nothing to the bill, which
-now runs around $9 per month.
+now runs around $9 per month including daily snapshots.
 
 **Breaking changes and required migration:**
 
@@ -81,9 +81,10 @@ now runs around $9 per month.
   security group to one personal `/64`. No Better Budget resource has a public
   IPv4 address. The Version 2 guidance about RDS public access no longer
   applies.
-- There are no automated backups. The EBS root volume holds the only copy of the
-  data, so the host is no longer disposable. The runbook carries the manual
-  `pg_dump` command.
+- Backups are daily EBS snapshots of the root volume, retained seven days. They
+  are crash-consistent rather than transactionally clean, and there is no
+  point-in-time recovery, so the runbook still carries a manual `pg_dump`
+  command for anything destructive.
 - Every Version 1 non-goal still stands.
 
 The migration completed on September 11, 2026. RDS, its public address, its
@@ -477,11 +478,15 @@ Run that image once with the same production database, TLS, Better Auth, and mig
 
 The production EC2 host has no source checkout, so it cannot build the target above. Instead the deployment workflow publishes that image to ECR on request, and the host runs it with one command. Nothing is exported by hand and no production secret reaches a workstation.
 
-1. Let the application start first. Migration prestart creates the schema; the owner-bootstrap image will not, because production requires `MIGRATIONS_PRESTART=true` and `src/db/index.ts` skips its own migration when that is set.
-2. In **GitHub**, then **Actions**, run **Deploy production to Amazon EC2** with **build_owner_image** enabled and `image_tag` left empty. That pushes `better-budget/app:owner-<commit-sha>` alongside the normal runtime image. It cannot be combined with a rollback tag, because the checkout would not match the tag being deployed.
-3. On the host, run `sudo better-budget-owner`. It waits for the database, pulls the owner image for the currently deployed commit, reads `owner_email` and `owner_password` from the production secret, runs the bootstrap against the same database URL and CA the application uses, and deletes the image afterwards. It prints `Shared owner <email> is ready.` and is safe to repeat.
+In **GitHub**, then **Actions**, run **Deploy production to Amazon EC2** with **build_owner_image** enabled and `image_tag` left empty. That is the whole procedure; the workflow does the rest:
 
-Pass an explicit commit SHA as `sudo better-budget-owner <sha>` only when bootstrapping against an image other than the one currently deployed.
+1. Builds and pushes `better-budget/app:owner-<commit-sha>` alongside the normal runtime image.
+2. Deploys and health-checks the application as usual. This is what creates the schema, through migration prestart.
+3. Invokes `better-budget-owner` on the host through Systems Manager, which pulls the owner image, reads `owner_email` and `owner_password` from the production secret, runs the bootstrap against the same database URL and CA the application uses, and deletes the image afterwards.
+
+The ordering matters: the bootstrap image never creates the schema, because production requires `MIGRATIONS_PRESTART=true` and `src/db/index.ts` skips its own migration when that is set. Running it before a successful deployment would fail against missing tables, which is why it is the workflow's last step.
+
+The input cannot be combined with a rollback `image_tag`, because the checkout would not match the tag being deployed. Running `sudo better-budget-owner [sha]` on the host directly is still available, for retrying without a rebuild or bootstrapping from a different image.
 
 Because the command reuses the application's own secret files, it cannot target a different database by accident. The Docker build target remains the right path for Compose and other provider-neutral deployments.
 

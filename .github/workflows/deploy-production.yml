@@ -133,12 +133,12 @@ jobs:
                   echo "exists=$image_exists" >> "$GITHUB_OUTPUT"
 
             - name: Log in to Amazon ECR
-              if: steps.release.outputs.build_image == 'true' && steps.release_image.outputs.exists != 'true'
+              if: (steps.release.outputs.build_image == 'true' && steps.release_image.outputs.exists != 'true') || inputs.build_owner_image
               id: login-ecr
               uses: aws-actions/amazon-ecr-login@aded0d722166a37980e030aa969dda0bfe6b6947 # v2.1.7
 
             - name: Set up Docker Buildx
-              if: steps.release.outputs.build_image == 'true' && steps.release_image.outputs.exists != 'true'
+              if: (steps.release.outputs.build_image == 'true' && steps.release_image.outputs.exists != 'true') || inputs.build_owner_image
               uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
 
             - name: Build and push runtime image
@@ -275,3 +275,60 @@ jobs:
 
                   verify_endpoint "$PRODUCTION_URL/api/live"
                   verify_endpoint "$PRODUCTION_URL/api/ready"
+
+            - name: Bootstrap the shared owner
+              if: inputs.build_owner_image
+              env:
+                  IMAGE_TAG: ${{ steps.release.outputs.image_tag }}
+                  INSTANCE_ID: ${{ steps.instance.outputs.instance_id }}
+              run: |
+                  command_id=$(aws ssm send-command \
+                      --instance-ids "$INSTANCE_ID" \
+                      --document-name AWS-RunShellScript \
+                      --timeout-seconds 600 \
+                      --parameters "commands=[\"sudo /usr/local/sbin/better-budget-owner $IMAGE_TAG\"],executionTimeout=[\"1200\"]" \
+                      --comment "Bootstrap Better Budget owner $IMAGE_TAG" \
+                      --query 'Command.CommandId' \
+                      --output text)
+
+                  status=Pending
+                  for _ in {1..120}; do
+                      status=$(aws ssm get-command-invocation \
+                          --command-id "$command_id" \
+                          --instance-id "$INSTANCE_ID" \
+                          --query Status \
+                          --output text 2>/dev/null || true)
+
+                      case "$status" in
+                          Pending|InProgress|Delayed|'')
+                              sleep 5
+                              ;;
+                          *)
+                              break
+                              ;;
+                      esac
+                  done
+
+                  standard_output=$(aws ssm get-command-invocation \
+                      --command-id "$command_id" \
+                      --instance-id "$INSTANCE_ID" \
+                      --query StandardOutputContent \
+                      --output text || true)
+                  standard_error=$(aws ssm get-command-invocation \
+                      --command-id "$command_id" \
+                      --instance-id "$INSTANCE_ID" \
+                      --query StandardErrorContent \
+                      --output text || true)
+
+                  echo "Systems Manager command status: $status"
+                  if [[ -n "$standard_output" && "$standard_output" != "None" ]]; then
+                      printf '%s\n' "$standard_output"
+                  fi
+                  if [[ -n "$standard_error" && "$standard_error" != "None" ]]; then
+                      printf '%s\n' "$standard_error" >&2
+                  fi
+
+                  if [[ "$status" != "Success" ]]; then
+                      echo "The owner bootstrap did not succeed." >&2
+                      exit 1
+                  fi

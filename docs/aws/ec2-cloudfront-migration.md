@@ -45,8 +45,20 @@ personal IPv6 prefix on the PostgreSQL port.
 There is no ECS fallback. ECR, Secrets Manager, the host data directory, and the
 production data must not be deleted during host recovery.
 
-**There are no automated database backups.** The EBS root volume is the only
-copy of the data. Take a manual dump before anything risky:
+**Backups are daily EBS snapshots of the root volume, retained seven days.**
+Data Lifecycle Manager policy `policy-0814a8ef0cb72ddd5` snapshots every volume
+tagged `Backup=daily` at 08:00 UTC, which is 03:00 in `America/Chicago`. Only
+`vol-09117bfc959d79d71` carries that tag.
+
+Those snapshots are **crash-consistent, not transactionally clean**: they are
+taken while PostgreSQL is running, so a restore replays write-ahead log the way
+it would after a power loss. That is normally fine and is how PostgreSQL is
+designed to recover, but it is a weaker guarantee than a logical dump, and the
+seven-day window means a problem discovered late is unrecoverable.
+
+Restoring is a manual procedure documented under "Restore the root volume from a
+snapshot"; no alarm or automation performs it. The recovery point is up to 24
+hours. Take a dump before anything risky:
 
 ```bash
 sudo docker exec better-budget-db \
@@ -58,28 +70,31 @@ sudo docker exec better-budget-db \
 All resources are in AWS account `563692880710` and region `us-east-2` unless
 otherwise noted.
 
-| Resource                | Name or identifier                                 | Purpose                                   |
-| ----------------------- | -------------------------------------------------- | ----------------------------------------- |
-| CloudFront distribution | `E13RII40P7L8EE`                                   | Public HTTPS application endpoint         |
-| CloudFront hostname     | `ddz00reob9ubc.cloudfront.net`                     | `BETTER_AUTH_URL` and `PRODUCTION_URL`    |
-| CloudFront VPC origin   | `vo_GKXJkQDSOGRChpUS3Ha7rz`                        | Private connection to EC2 on port 80      |
-| EC2 instance            | `better-budget-production` / `i-058062ec86ebb26ae` | Single application host                   |
-| EC2 instance type       | `t3a.micro`                                        | Low-cost production compute               |
-| EC2 private IPv4        | `172.31.32.120`                                    | CloudFront VPC-origin traffic             |
-| EC2 IPv6                | `2600:1f16:1049:6a00:d18f:1b07:59a2:447e`          | AWS service traffic and database access   |
-| EC2 root volume         | `vol-09117bfc959d79d71`                            | 8 GiB encrypted gp3 host volume           |
-| Database container      | `better-budget-db`                                 | PostgreSQL 17 on the application host     |
-| Database image          | `postgres:17-alpine`, digest-pinned                | Pulled from Docker Hub, runs as uid 70    |
-| Database data directory | `/var/lib/better-budget/postgres`                  | Persistent application data on EBS        |
-| Database TLS material   | `/run/better-budget/postgres-tls`                  | Memory-backed server certificate and key  |
-| Docker network          | `better-budget`                                    | Private application-to-database bridge    |
-| ECR repository          | `better-budget/app`                                | Immutable runtime images                  |
-| Secrets Manager secret  | `better-budget/prod-zALPFC`                        | Database URL, CA, auth, and TLS material  |
-| EC2 IAM role/profile    | `better-budget-ec2-runtime`                        | SSM, secret read, ECR pull, and log write |
-| EC2 inline IAM policy   | `better-budget-ec2-runtime-access`                 | Account-scoped runtime permissions        |
-| GitHub deployment role  | `better-budget-github-deploy`                      | OIDC image push and SSM deployment        |
-| CloudWatch log group    | `/better-budget/production`                        | Container output with 14-day retention    |
-| CloudWatch alarm        | `better-budget-ec2-system-recovery`                | Automatic EC2 system recovery             |
+| Resource                | Name or identifier                                 | Purpose                                         |
+| ----------------------- | -------------------------------------------------- | ----------------------------------------------- |
+| CloudFront distribution | `E13RII40P7L8EE`                                   | Public HTTPS application endpoint               |
+| CloudFront hostname     | `ddz00reob9ubc.cloudfront.net`                     | `BETTER_AUTH_URL` and `PRODUCTION_URL`          |
+| CloudFront VPC origin   | `vo_GKXJkQDSOGRChpUS3Ha7rz`                        | Private connection to EC2 on port 80            |
+| EC2 instance            | `better-budget-production` / `i-058062ec86ebb26ae` | Single application host                         |
+| EC2 instance type       | `t3a.micro`                                        | Low-cost production compute                     |
+| EC2 private IPv4        | `172.31.32.120`                                    | CloudFront VPC-origin traffic                   |
+| EC2 IPv6                | `2600:1f16:1049:6a00:d18f:1b07:59a2:447e`          | AWS service traffic and database access         |
+| EC2 root volume         | `vol-09117bfc959d79d71`                            | 8 GiB encrypted gp3 host volume                 |
+| Database container      | `better-budget-db`                                 | PostgreSQL 17 on the application host           |
+| Database image          | `postgres:17-alpine`, digest-pinned                | Pulled from Docker Hub, runs as uid 70          |
+| Database data directory | `/var/lib/better-budget/postgres`                  | Persistent application data on EBS              |
+| Database TLS material   | `/run/better-budget/postgres-tls`                  | Memory-backed server certificate and key        |
+| Docker network          | `better-budget`                                    | Private application-to-database bridge          |
+| ECR repository          | `better-budget/app`                                | Immutable runtime images                        |
+| Secrets Manager secret  | `better-budget/prod-zALPFC`                        | Database URL, CA, auth, and TLS material        |
+| EC2 IAM role/profile    | `better-budget-ec2-runtime`                        | SSM, secret read, ECR pull, and log write       |
+| EC2 inline IAM policy   | `better-budget-ec2-runtime-access`                 | Account-scoped runtime permissions              |
+| GitHub deployment role  | `better-budget-github-deploy`                      | OIDC image push and SSM deployment              |
+| CloudWatch log group    | `/better-budget/production`                        | Container output with 14-day retention          |
+| CloudWatch alarm        | `better-budget-ec2-system-recovery`                | Recovers the host on AWS hardware failure       |
+| CloudWatch alarm        | `better-budget-ec2-instance-reboot`                | Reboots the host on OS-level check failure      |
+| Backup policy           | `policy-0814a8ef0cb72ddd5`                         | Daily root-volume snapshots, 7-day retention    |
+| Backup service role     | `AWSDataLifecycleManagerDefaultRole`               | Lets Data Lifecycle Manager snapshot the volume |
 
 The production secret holds eight fields, six of them read at runtime. The
 application service reads `database_url`, `database_ssl_ca`, and
@@ -241,7 +256,7 @@ builds an image or changes the host.
 
 A deployment restarts only `better-budget.service`. The database container keeps
 running across deploys, so a deploy never interrupts the data layer. It does
-depend on it: `run_application` waits up to 60 seconds for `pg_isready` and
+depend on it: `run_application` waits up to two minutes for `pg_isready` and
 fails with `The database container did not become ready.` if the database is
 down, which triggers the normal rollback rather than a crash-looping container.
 Check `better-budget-db.service` first when a deploy fails for that reason.
@@ -262,7 +277,9 @@ migration.
 2. Select **Deploy production to Amazon EC2**.
 3. Choose **Run workflow**.
 4. Enter an existing full 40-character ECR commit SHA in `image_tag`.
-5. Run the workflow.
+5. Leave `build_owner_image` unchecked. The workflow rejects the combination,
+   because the checkout would not match the tag being deployed.
+6. Run the workflow.
 
 The workflow skips the build and redeploys that existing immutable image. A
 normal failed deployment also restores the previous local image automatically
@@ -286,11 +303,29 @@ curl --fail http://127.0.0.1/api/ready
 Application output is in CloudWatch Logs. The systemd journal contains host
 startup, image pull, and service lifecycle messages.
 
-The recovery alarm uses `StatusCheckFailed_System`, statistic `Minimum`, a
-threshold of at least `0.99`, and two consecutive one-minute periods. Missing
-data is not breaching, and the configured action recovers the instance. With
-one metric sample per minute, `Minimum` and `Maximum` have the same practical
-result; this documents the live setting.
+Two alarms watch the host, both using statistic `Minimum`, a threshold of at
+least `0.99`, and two consecutive one-minute periods. With one metric sample per
+minute, `Minimum` and `Maximum` have the same practical result; this documents
+the live setting.
+
+- `better-budget-ec2-system-recovery` watches `StatusCheckFailed_System`, which
+  is AWS infrastructure only — host hardware, network, or power. Its action
+  recovers the instance onto healthy hardware, preserving the instance ID,
+  private IP, and EBS volumes.
+- `better-budget-ec2-instance-reboot` watches `StatusCheckFailed_Instance`, the
+  OS-level check, and reboots. This covers kernel panics, an unresponsive
+  operating system, and a filesystem too broken to serve.
+
+Missing data is not breaching on either, so a stopped instance does not trip
+them.
+
+Neither alarm watches disk space, memory, or database health, because no
+CloudWatch agent is installed and no custom metrics are published. A filling
+disk gives no warning. Four layers already restart compute — systemd
+`Restart=always` on both services, the one-minute `/api/live` watchdog, the
+container health check, and these alarms — but none of them protect data, and a
+wedged-but-running database is invisible to all of them because `/api/live` is
+deliberately process-only.
 
 ## Database access
 
@@ -358,17 +393,25 @@ Only needed on a fresh database: a new deployment, or a host rebuild that was
 not restored from a dump. Public sign-up is disabled and `AUTH_BYPASS=false`, so
 until this runs there is no way to sign in.
 
-1. Run the deployment workflow with **build_owner_image** enabled and
-   `image_tag` empty. It pushes `better-budget/app:owner-<commit-sha>` next to
-   the runtime image. The workflow refuses to combine that input with a rollback
-   tag, because the checkout would not match the tag being deployed.
-2. Run `sudo better-budget-owner` on the host.
+Run the deployment workflow with **build_owner_image** enabled and `image_tag`
+empty. That is the whole procedure. The workflow refuses to combine that input
+with a rollback tag, because the checkout would not match the tag being
+deployed.
 
-The command waits for the database, pulls the owner image for the currently
-deployed commit, reads `owner_email` and `owner_password` from the production
-secret, and runs the bootstrap on the `better-budget` Docker network using the
-application's own secret files. It removes the image afterwards. It is
-idempotent and refuses to attach a second owner to a claimed household.
+The workflow pushes `better-budget/app:owner-<commit-sha>` next to the runtime
+image, deploys and health-checks the application as usual, and then invokes
+`better-budget-owner` on the host through Systems Manager. The bootstrap runs
+last on purpose: it needs the schema, and the schema is created by the
+application's migration prestart during the deployment it follows.
+
+On the host, that command waits for the database, pulls the owner image, reads
+`owner_email` and `owner_password` from the production secret, and runs the
+bootstrap on the `better-budget` Docker network using the application's own
+secret files. It removes the image afterwards. It is idempotent and refuses to
+attach a second owner to a claimed household.
+
+Run `sudo better-budget-owner` directly on the host only to retry without
+rebuilding, or to bootstrap from an image other than the deployed one.
 
 Because it reuses the application's secret files rather than accepting a
 connection string, it cannot target the wrong database. Pass an explicit SHA as
@@ -388,11 +431,48 @@ To confirm the application's own connection is encrypted rather than merely
 permitted, join `pg_stat_ssl` to `pg_stat_activity` and read the `ssl`,
 `version`, and `cipher` columns for the client backend.
 
+## Restore the root volume from a snapshot
+
+Use this when the root volume is impaired or its data is corrupt, and when the
+last daily snapshot is an acceptable recovery point. Nothing about this is
+automatic: the alarms restart compute, and a reboot cannot help an instance
+whose root volume is gone. Snapshots are inert until a volume is created from
+one.
+
+**Expect to lose up to 24 hours of data.** Snapshots run daily at 08:00 UTC, so
+a failure just before that window loses nearly a full day of budget entries.
+They are also crash-consistent, so PostgreSQL replays write-ahead log on first
+boot exactly as it would after a power loss.
+
+1. Pick the snapshot. `aws ec2 describe-snapshots --owner-ids self` and take the
+   newest `completed` one for `vol-09117bfc959d79d71`.
+2. Create a volume from it in `us-east-2a`, matching the instance's availability
+   zone, as 8 GiB `gp3`, encrypted.
+3. Stop `i-058062ec86ebb26ae`. Termination protection prevents accidental
+   termination but does not prevent stopping.
+4. Detach the impaired root volume, then attach the restored volume as
+   `/dev/xvda`, the instance's root device name.
+5. Confirm the new volume's delete-on-termination setting matches the intent in
+   the replacement procedure below.
+6. Start the instance. Both systemd services come up in order, and PostgreSQL
+   recovers using its write-ahead log.
+7. Verify `/api/live`, `/api/ready`, owner sign-in, and recent data, then delete
+   the impaired volume once you are satisfied.
+
+Because this restores the whole root volume, the operating system, Docker
+images, host configuration, `/var/lib/better-budget/postgres`, and the image tag
+files all return to their state at snapshot time. Nothing needs reinstalling and
+the owner does not need rebootstrapping.
+
+Prefer this over a rebuild when the instance itself is healthy. Use the
+replacement procedure below when the instance is the problem.
+
 ## Replace an unhealthy EC2 host
 
-The host is no longer disposable: its EBS root volume holds the only copy of
-the database. Replace it only after taking a manual dump, and treat that dump as
-the source of truth during the rebuild.
+The host is no longer disposable: its EBS root volume holds the database. When
+the volume is intact, restoring it onto a new instance is usually faster than
+rebuilding. Rebuild only when you need a fresh host, and take a manual dump
+first if the current database is still readable.
 
 1. Launch the current Amazon Linux 2023 x86_64 AMI as a `t3a.micro` in
    `better-budget-ec2-private-us-east-2a`.
@@ -454,7 +534,8 @@ container on the application host. RDS was costing roughly $20 per month —
 $13.93 instance, $2.30 storage, $3.60 for the public IPv4 address, and $0.13
 backups — against a dataset of a few megabytes on a single-household
 application. The co-located container costs nothing beyond the existing
-instance, taking the monthly bill from about $26.78 to about $9.
+instance, taking the monthly bill from about $26.78 to about $9. The daily
+snapshot policy added afterwards costs roughly $0.25 per month on top of that.
 
 The existing production data was explicitly declared disposable, so there was no
 dump, no restore, and no final snapshot. The new cluster started empty,

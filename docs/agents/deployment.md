@@ -7,8 +7,9 @@ operations, rollback, and replacement-host runbook.
 
 Version `3.0.0` replaces the managed RDS database with a PostgreSQL container on
 the existing application host. The product, financial model, authentication
-model, database schema, and provider-neutral runtime image are unchanged, and no
-file under `src/` changed.
+model, database schema, and provider-neutral runtime image are unchanged. The
+only application-source change is `shouldSeed()` in `src/db/index.ts`, which
+excludes owner bootstrap from development seeding.
 
 - PostgreSQL 17 runs as `better-budget-db.service` beside the application
   container on the same EC2 instance, with its data directory on the EBS root
@@ -30,9 +31,11 @@ file under `src/` changed.
 - RDS, its public address, its security group, and its automated backups were
   deleted on September 11, 2026. Do not reintroduce RDS without explicit user
   direction.
-- **There are no automated backups.** The EBS root volume holds the only copy of
-  the data. The runbook carries the manual `pg_dump` command; run it before any
-  risky host change. Revisit this once real budget data accumulates.
+- Backups are daily EBS snapshots of the root volume with seven-day retention,
+  driven by Data Lifecycle Manager. They are crash-consistent rather than
+  transactionally clean, so they restore the whole host but give a weaker
+  guarantee than a logical dump. The runbook carries the manual `pg_dump`
+  command; run it before any risky host change.
 - Co-location is a deliberate cost trade: it removed roughly $20/month from a
   $26.78 bill, at the cost of making the host a single point of failure and
   leaving roughly 400 MiB of RAM available on a 917 MiB instance. If the
@@ -109,7 +112,10 @@ Owner bootstrap is a host command, `better-budget-owner`, not a workstation
 procedure. The workflow publishes the `owner-bootstrap` target to ECR as
 `owner-<commit-sha>` only when its `build_owner_image` input is set, because the
 bootstrap runs at most once per database and building it on every push would be
-waste. The host command reuses the application's own secret files, so it cannot
+waste. That same input also makes the workflow invoke the host command through
+Systems Manager as its final step, after the deployment has been health-checked,
+because the bootstrap depends on the schema that migration prestart creates.
+Keep it last for that reason. The host command reuses the application's own secret files, so it cannot
 be pointed at a different database, and no production secret reaches a
 workstation. Seeding is additionally blocked during bootstrap by `shouldSeed()`
 in `src/db/index.ts`, independently of `NODE_ENV`.
