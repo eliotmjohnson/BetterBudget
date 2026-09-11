@@ -10,6 +10,14 @@ on:
                 description: Existing 40-character ECR image tag to roll back to
                 required: false
                 type: string
+            build_owner_image:
+                description: >-
+                    Also build and push the one-time owner-bootstrap image, so
+                    `sudo better-budget-owner` can run on the host. Only needed
+                    when claiming the owner on an empty database.
+                required: false
+                default: false
+                type: boolean
 
 permissions:
     contents: read
@@ -35,6 +43,7 @@ jobs:
               id: release
               env:
                   REQUESTED_IMAGE_TAG: ${{ inputs.image_tag }}
+                  BUILD_OWNER_IMAGE: ${{ inputs.build_owner_image }}
               run: |
                   if [[ -n "$REQUESTED_IMAGE_TAG" ]]; then
                       image_tag="$REQUESTED_IMAGE_TAG"
@@ -42,6 +51,11 @@ jobs:
                   else
                       image_tag="$GITHUB_SHA"
                       build_image=true
+                  fi
+
+                  if [[ "$BUILD_OWNER_IMAGE" == "true" && "$build_image" != "true" ]]; then
+                      echo "build_owner_image cannot be combined with image_tag; run it without a rollback tag." >&2
+                      exit 1
                   fi
 
                   if [[ ! "$image_tag" =~ ^[0-9a-f]{40}$ ]]; then
@@ -142,6 +156,20 @@ jobs:
                   tags: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ steps.release.outputs.image_tag }}
                   cache-from: type=gha,scope=better-budget-runtime
                   cache-to: type=gha,mode=max,scope=better-budget-runtime
+
+            - name: Build and push owner-bootstrap image
+              if: inputs.build_owner_image
+              uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+              with:
+                  context: .
+                  file: ./Dockerfile
+                  target: owner-bootstrap
+                  platforms: linux/amd64
+                  push: true
+                  provenance: false
+                  tags: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:owner-${{ steps.release.outputs.image_tag }}
+                  cache-from: type=gha,scope=better-budget-owner
+                  cache-to: type=gha,mode=max,scope=better-budget-owner
 
             - name: Find the production instance
               id: instance

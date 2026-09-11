@@ -18,7 +18,7 @@ changing application code, and it names these on-demand references:
 | Implemented product capabilities             | `docs/agents/product.md`               |
 | Layout, motion, gesture, and sheet contracts | `docs/agents/design.md`                |
 | Mutation lifecycle and optimistic rules      | `docs/agents/persistence.md`           |
-| Version 2 deployment model                   | `docs/agents/deployment.md`            |
+| Deployment model and host contracts          | `docs/agents/deployment.md`            |
 | Formatting, size budgets, and major releases | `docs/agents/conventions.md`           |
 | Live AWS resources, operations, and rollback | `docs/aws/ec2-cloudfront-migration.md` |
 
@@ -43,6 +43,52 @@ development paths.
 `docs/agents/product.md` holds the complete implemented-capability inventory.
 Approved design references live in [`docs/design`](./docs/design).
 
+## Version 3 deployment release
+
+Version `3.0.0` kept the Version 1 budgeting product and database model while
+moving the database off Amazon RDS. PostgreSQL 17 now runs as a second container
+on the same EC2 host that serves the application, with its data directory on the
+host's EBS root volume and a private Docker network between the two containers.
+The only application-source change is a guard in `src/db/index.ts` that never runs the development seed during owner bootstrap, regardless of `NODE_ENV`.
+
+This was a cost decision. RDS was about $20 of a $26.78 monthly bill — instance,
+storage, a billed public IPv4 address, and backups — for a few megabytes of
+single-household data. The co-located container adds nothing to the bill, which
+now runs around $9 per month.
+
+**Breaking changes and required migration:**
+
+- The production Secrets Manager entry gained `postgres_password`,
+  `postgres_server_cert`, and `postgres_server_key`, and its `database_url` and
+  `database_ssl_ca` were replaced. It now holds eight fields, six of which are
+  read at runtime; a deployment missing any of those six will not start.
+- `DATABASE_SSL_CA` is now a private certificate authority generated for the
+  deployment rather than the Amazon RDS bundle. The `verify-full` requirement is
+  unchanged.
+- `scripts/aws/bootstrap-ec2.sh` installs a second systemd unit,
+  `better-budget-db.service`. GitHub Actions deploys only the application image,
+  so an existing host must have the updated script installed over Systems
+  Manager before it can serve.
+- The existing production data was not migrated. The new cluster started empty
+  and the owner was recreated from the secret.
+
+**Retained boundaries and superseded guidance:**
+
+- Verified TLS with a trusted CA bundle is still mandatory in production.
+  `runtime-environment.mjs` is unchanged and must not be weakened for a
+  host-local database.
+- The database is reachable from outside AWS over IPv6 only, restricted by a
+  security group to one personal `/64`. No Better Budget resource has a public
+  IPv4 address. The Version 2 guidance about RDS public access no longer
+  applies.
+- There are no automated backups. The EBS root volume holds the only copy of the
+  data, so the host is no longer disposable. The runbook carries the manual
+  `pg_dump` command.
+- Every Version 1 non-goal still stands.
+
+The migration completed on September 11, 2026. RDS, its public address, its
+security group, and its automated backups have been deleted.
+
 ## Version 2 deployment release
 
 Version `2.0.0` kept the Version 1 budgeting product and database model while
@@ -54,9 +100,8 @@ failed liveness or readiness check restores the previous image tag.
 
 The migration completed on August 22, 2026 with no data migration. Production is
 [`https://ddz00reob9ubc.cloudfront.net`](https://ddz00reob9ubc.cloudfront.net).
-RDS remains publicly accessible by deliberate operator choice, with private EC2
-access and restricted PostgreSQL ingress; making it private is an optional later
-hardening step, not a pending cutover task.
+Its RDS database was publicly accessible by deliberate operator choice; Version 3
+replaced RDS entirely.
 
 The [EC2 and CloudFront production runbook](docs/aws/ec2-cloudfront-migration.md)
 records the live resources, VPC names, routine operations, rollback process, and
@@ -214,7 +259,7 @@ The example values are in `.env.example`.
 | `DATABASE_NAME`             | `better_budget`             | PostgreSQL database when `DATABASE_URL` is absent.                                                 |
 | `DATABASE_POOL_SIZE`        | `5`                         | Maximum PostgreSQL connection-pool size. Keep it small for lightweight deployments.                |
 | `DATABASE_SSL`              | `disable` locally           | `disable`, `require`, or `verify-full`. Production requires `verify-full`.                         |
-| `DATABASE_SSL_CA`           | unset                       | Trusted PostgreSQL CA bundle. Production requires the RDS/global PEM bundle.                       |
+| `DATABASE_SSL_CA`           | unset                       | Trusted PostgreSQL CA bundle. Production requires the PEM that signed the server certificate.      |
 | `MIGRATIONS_PRESTART`       | unset                       | Set to `true` when the container prestart already applies migrations.                              |
 | `BETTER_AUTH_SECRET`        | development placeholder     | Better Auth signing secret. Production requires a strong random value of at least 32 characters.   |
 | `BETTER_AUTH_URL`           | `http://localhost:3000`     | Public application origin used by Better Auth. Must match the origin being used.                   |
@@ -428,6 +473,18 @@ docker build \
 
 Run that image once with the same production database, TLS, Better Auth, and migration-prestart values as the application plus `BOOTSTRAP_OWNER_EMAIL` and `BOOTSTRAP_OWNER_PASSWORD`. The `db:owner` command sets its internal bootstrap guard itself. Do not set `BETTER_BUDGET_BOOTSTRAP` on the long-running application task. The database must already be migrated.
 
+#### Bootstrapping the current AWS deployment
+
+The production EC2 host has no source checkout, so it cannot build the target above. Instead the deployment workflow publishes that image to ECR on request, and the host runs it with one command. Nothing is exported by hand and no production secret reaches a workstation.
+
+1. Let the application start first. Migration prestart creates the schema; the owner-bootstrap image will not, because production requires `MIGRATIONS_PRESTART=true` and `src/db/index.ts` skips its own migration when that is set.
+2. In **GitHub**, then **Actions**, run **Deploy production to Amazon EC2** with **build_owner_image** enabled and `image_tag` left empty. That pushes `better-budget/app:owner-<commit-sha>` alongside the normal runtime image. It cannot be combined with a rollback tag, because the checkout would not match the tag being deployed.
+3. On the host, run `sudo better-budget-owner`. It waits for the database, pulls the owner image for the currently deployed commit, reads `owner_email` and `owner_password` from the production secret, runs the bootstrap against the same database URL and CA the application uses, and deletes the image afterwards. It prints `Shared owner <email> is ready.` and is safe to repeat.
+
+Pass an explicit commit SHA as `sudo better-budget-owner <sha>` only when bootstrapping against an image other than the one currently deployed.
+
+Because the command reuses the application's own secret files, it cannot target a different database by accident. The Docker build target remains the right path for Compose and other provider-neutral deployments.
+
 The long-running production task must provide:
 
 ```dotenv
@@ -499,7 +556,8 @@ controlled JSON changes.
 This configuration is the required production state. For a replacement account
 or disaster recovery, recreate it exactly and validate one manual deployment
 before relying on pushes to `main`. Production startup applies only missing
-migrations before serving traffic; it does not seed, reset, or bootstrap RDS.
+migrations before serving traffic; it does not seed, reset, or recreate the
+owner.
 
 Each deployment keeps the current and preceding image locally and leaves the
 commit-tagged ECR images available for rollback. Run the workflow manually with
@@ -691,7 +749,7 @@ The database CLI scripts intentionally set the `react-server` Node condition bec
 │   └── design/                    Approved visual concepts
 ├── public/                        PWA icons and static files
 ├── scripts/
-│   ├── aws/                       Private EC2 bootstrap and deployment host
+│   ├── aws/                       EC2 bootstrap, app and database services
 │   ├── create-owner.ts            Shared-owner bootstrap
 │   ├── generate-ios-startup-images.mjs
 │                                  iOS launch-image generator
@@ -795,6 +853,18 @@ docker compose logs postgres
 ```
 
 Then verify `DATABASE_KIND=postgres` and that `DATABASE_URL` points to `localhost:5432` when Next.js runs on the host. Inside Compose, the application uses the `postgres` service hostname instead.
+
+### Production reports a degraded database
+
+In production the database is a second container on the same EC2 host. Check it over Systems Manager:
+
+```bash
+sudo systemctl status better-budget-db.service --no-pager
+sudo docker logs --tail 50 better-budget-db
+sudo docker exec better-budget-db pg_isready -U better_budget
+```
+
+A TLS handshake failure surfaces as an opaque `/api/ready` 503, so read the application container log for the real cause. The usual causes are a `postgres_server_key` whose file mode is not `0600` owned by uid 70, which makes PostgreSQL refuse to start, and a `database_url` host that does not match a subject alternative name on the server certificate, which fails `verify-full` hostname verification. The [production operations runbook](docs/aws/ec2-cloudfront-migration.md) has the full database-access section.
 
 ### Sign-in redirects back to sign-in
 

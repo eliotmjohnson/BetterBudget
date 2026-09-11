@@ -40,11 +40,23 @@ Each calendar month holds its own budget built from household-scoped category an
 
 Read `docs/agents/product.md` for the complete implemented-capability inventory before adding, removing, or reshaping a user-facing capability.
 
-## Version 2 deployment release
+## Version 3 deployment release
 
-Version `2.0.0` changed the AWS production deployment only. The Version 1 product, financial model, authentication model, database schema, and provider-neutral runtime image are unchanged. Do not reintroduce ECS, an ALB, NAT, SSH, or a public EC2 address without explicit user direction, and do not treat the infrastructure change as authorization to relax any Version 1 boundary below.
+Version `3.0.0` replaced the managed RDS database with a PostgreSQL 17 container on the existing EC2 host. The Version 1 product, financial model, authentication model, database schema, and provider-neutral runtime image are unchanged. The only application-source change is a guard in `src/db/index.ts` that skips development seeding during owner bootstrap.
+
+The verified-TLS contract is unchanged and must stay that way: production still requires `DATABASE_SSL=verify-full` and a trusted CA bundle. The CA is now a private authority generated for this deployment instead of an Amazon bundle, which is precisely why `runtime-environment.mjs` needed no change. Do not weaken it to `require` or `disable` for a host-local database.
+
+The database is reachable from outside AWS over IPv6 only, gated by a security-group rule scoped to one personal `/64`. This one inbound port is deliberate and user-directed — it replaced a billed public IPv4 endpoint with an unbilled one — and is not drift to be corrected. No Better Budget resource has a public IPv4 address.
+
+There are no automated database backups. The EBS root volume holds the only copy of the data, so the host is no longer disposable.
+
+Do not reintroduce ECS, an ALB, NAT, SSH, RDS, or a public IPv4 address without explicit user direction, and do not treat the infrastructure change as authorization to relax any Version 1 boundary below.
 
 Read `docs/agents/deployment.md` before changing deployment, infrastructure, or the production runtime. `docs/aws/ec2-cloudfront-migration.md` remains the authoritative live-resource, operations, rollback, and replacement-host runbook.
+
+## Version 2 deployment release
+
+Version `2.0.0` changed the AWS production deployment only, moving from ECS Express to a private EC2 host behind a CloudFront VPC origin. The Version 1 product, financial model, authentication model, database schema, and provider-neutral runtime image were unchanged. Version 3 superseded its RDS database.
 
 ## Version 1 boundaries
 
@@ -164,8 +176,10 @@ The default PGlite path is automatically migrated and deterministically seeded.
 Production initialization never invokes the development seed. Production startup requires PostgreSQL, migration prestart, verified TLS with a trusted CA bundle, an HTTPS Better Auth origin, a non-placeholder auth secret, and disabled auth-bypass guards. `runtime-environment.mjs` is the shared validation and PostgreSQL connection source for the application, migrations, and owner bootstrap; do not duplicate or weaken those rules.
 
 Pushes to `main` deploy the regular runtime target through GitHub Actions and
-Systems Manager, and the private EC2 host is initialized by
-`scripts/aws/bootstrap-ec2.sh`. Never add long-lived AWS credentials or
+Systems Manager. The EC2 host, its application service, and its PostgreSQL
+service are all initialized by `scripts/aws/bootstrap-ec2.sh`, which GitHub
+Actions never deploys: host-script changes must be installed over Systems
+Manager separately. Never add long-lived AWS credentials or
 production application secrets to GitHub, persist secret values on the host,
 add SSH access, or bypass the host deployment helper. `docs/agents/deployment.md`
 holds the pipeline, OIDC trust, and host contracts; read it before changing any

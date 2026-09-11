@@ -11,12 +11,17 @@ import { migrate as migrateNodePg } from 'drizzle-orm/node-postgres/migrator';
 import { Pool } from 'pg';
 import {
     assertValidRuntimeEnvironment,
+    isOwnerBootstrap,
     postgresConnectionConfig
 } from '../../runtime-environment.mjs';
 import * as tables from './schema';
 import { seedDatabase } from './seed';
 
 export type AppDb = PgliteDatabase<typeof tables>;
+
+function shouldSeed() {
+    return process.env.NODE_ENV !== 'production' && !isOwnerBootstrap();
+}
 
 interface DbContext {
     db: AppDb;
@@ -42,7 +47,7 @@ async function createDatabase(): Promise<DbContext> {
             await migrateNodePg(nodeDb, { migrationsFolder: 'drizzle' });
         const db = nodeDb as unknown as AppDb;
 
-        if (process.env.NODE_ENV !== 'production') await seedDatabase(db);
+        if (shouldSeed()) await seedDatabase(db);
 
         return { db, close: () => pool.end() };
     }
@@ -55,7 +60,7 @@ async function createDatabase(): Promise<DbContext> {
     const db = drizzlePglite(client, { schema: tables });
 
     await migratePglite(db, { migrationsFolder: 'drizzle' });
-    if (process.env.NODE_ENV !== 'production') await seedDatabase(db);
+    if (shouldSeed()) await seedDatabase(db);
 
     return { db, close: () => client.close() };
 }

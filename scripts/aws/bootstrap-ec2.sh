@@ -6,6 +6,7 @@ umask 077
 readonly HOST_PROGRAM='/usr/local/libexec/better-budget-host'
 readonly DEPLOY_COMMAND='/usr/local/sbin/better-budget-deploy'
 readonly SET_URL_COMMAND='/usr/local/sbin/better-budget-set-url'
+readonly OWNER_COMMAND='/usr/local/sbin/better-budget-owner'
 readonly CONFIG_DIRECTORY='/etc/better-budget'
 readonly HOST_CONFIG="${CONFIG_DIRECTORY}/host.conf"
 readonly IMAGE_TAG_FILE="${CONFIG_DIRECTORY}/image-tag"
@@ -16,6 +17,15 @@ readonly LOCK_FILE='/run/better-budget-deploy.lock'
 readonly HEALTH_FAILURE_FILE='/run/better-budget-liveness-failures'
 readonly DOCKER_CONFIG_DIRECTORY='/run/better-budget/docker'
 readonly RUNTIME_SECRET_DIRECTORY='/run/better-budget/secrets'
+readonly DATABASE_CONTAINER_NAME='better-budget-db'
+readonly DATABASE_NETWORK='better-budget'
+readonly POSTGRES_ROLE='better_budget'
+readonly POSTGRES_DATABASE='better_budget'
+readonly DATABASE_DATA_DIRECTORY='/var/lib/better-budget/postgres'
+readonly DATABASE_TLS_DIRECTORY='/run/better-budget/postgres-tls'
+readonly DATABASE_RUNTIME_UID='70'
+readonly OWNER_IMAGE_TAG_PREFIX='owner-'
+readonly POSTGRES_IMAGE='postgres:17-alpine@sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73'
 
 log() {
     printf '[better-budget-host] %s\n' "$*"
@@ -83,6 +93,28 @@ instance_id() {
     curl --fail --silent --show-error --max-time 2 \
         --header "X-aws-ec2-metadata-token: ${token}" \
         http://169.254.169.254/latest/meta-data/instance-id
+}
+
+instance_ipv6() {
+    local address
+    local token
+
+    token=$(curl --fail --silent --show-error --max-time 2 \
+        --request PUT \
+        --header 'X-aws-ec2-metadata-token-ttl-seconds: 60' \
+        http://169.254.169.254/latest/api/token) ||
+        fail 'Unable to read the instance metadata token.'
+
+    address=$(curl --fail --silent --show-error --max-time 2 \
+        --header "X-aws-ec2-metadata-token: ${token}" \
+        http://169.254.169.254/latest/meta-data/ipv6) ||
+        fail 'The instance has no IPv6 address; the database cannot be published.'
+
+    if [[ ! ${address} =~ ^[0-9a-fA-F:]+$ ]]; then
+        fail "Instance metadata returned an invalid IPv6 address: ${address}"
+    fi
+
+    printf '%s' "${address}"
 }
 
 pull_image() {
@@ -162,6 +194,132 @@ ENTRYPOINT
     unset auth_secret
 }
 
+ensure_database_network() {
+    if ! docker network inspect "${DATABASE_NETWORK}" >/dev/null 2>&1; then
+        log "Creating the ${DATABASE_NETWORK} Docker network."
+        docker network create "${DATABASE_NETWORK}" >/dev/null
+    fi
+}
+
+ensure_database_directories() {
+    install -d -o "${DATABASE_RUNTIME_UID}" -g "${DATABASE_RUNTIME_UID}" -m 0700 \
+        "${DATABASE_DATA_DIRECTORY}"
+}
+
+fetch_database_secrets() {
+    local database_password
+    local secret_json
+    local server_certificate
+    local server_key
+
+    secret_json=$(aws secretsmanager get-secret-value \
+        --secret-id "${SECRET_ID}" \
+        --region "${AWS_REGION}" \
+        --endpoint-url "${SECRETS_ENDPOINT}" \
+        --query SecretString \
+        --output text)
+
+    database_password=$(jq --exit-status --raw-output '.postgres_password' <<<"${secret_json}")
+    server_certificate=$(jq --exit-status --raw-output '.postgres_server_cert' <<<"${secret_json}")
+    server_key=$(jq --exit-status --raw-output '.postgres_server_key' <<<"${secret_json}")
+    unset secret_json
+
+    if [[ -z ${database_password} || -z ${server_certificate} || -z ${server_key} ]]; then
+        fail 'The production secret is missing a required database value.'
+    fi
+    if [[ ${server_certificate} != *'BEGIN CERTIFICATE'* ]]; then
+        fail 'postgres_server_cert does not contain a PEM certificate.'
+    fi
+    if [[ ${server_key} != *'PRIVATE KEY'* ]]; then
+        fail 'postgres_server_key does not contain a PEM private key.'
+    fi
+
+    install -d -o "${DATABASE_RUNTIME_UID}" -g "${DATABASE_RUNTIME_UID}" -m 0700 \
+        "${DATABASE_TLS_DIRECTORY}"
+    printf '%s' "${database_password}" >"${DATABASE_TLS_DIRECTORY}/password"
+    printf '%s\n' "${server_certificate}" >"${DATABASE_TLS_DIRECTORY}/server.crt"
+    printf '%s\n' "${server_key}" >"${DATABASE_TLS_DIRECTORY}/server.key"
+
+    chown "${DATABASE_RUNTIME_UID}:${DATABASE_RUNTIME_UID}" "${DATABASE_TLS_DIRECTORY}"/*
+    chmod 0400 "${DATABASE_TLS_DIRECTORY}/password"
+    chmod 0644 "${DATABASE_TLS_DIRECTORY}/server.crt"
+    chmod 0600 "${DATABASE_TLS_DIRECTORY}/server.key"
+
+    unset database_password
+    unset server_certificate
+    unset server_key
+}
+
+run_database() {
+    require_root
+    load_host_config
+
+    local host_ipv6
+    local log_instance_id
+
+    ensure_database_network
+    ensure_database_directories
+    fetch_database_secrets
+
+    host_ipv6=$(instance_ipv6)
+    log_instance_id=$(instance_id || printf 'unknown-instance')
+
+    docker rm --force "${DATABASE_CONTAINER_NAME}" >/dev/null 2>&1 || true
+    log "Starting ${POSTGRES_IMAGE%%@*} published on [${host_ipv6}]:5432."
+
+    exec docker run \
+        --name "${DATABASE_CONTAINER_NAME}" \
+        --rm \
+        --init \
+        --network "${DATABASE_NETWORK}" \
+        --publish "[${host_ipv6}]:5432:5432" \
+        --publish 127.0.0.1:5432:5432 \
+        --stop-timeout 30 \
+        --memory 448m \
+        --memory-swap 1024m \
+        --mount "type=bind,source=${DATABASE_DATA_DIRECTORY},target=/var/lib/postgresql/data" \
+        --mount "type=bind,source=${DATABASE_TLS_DIRECTORY},target=/run/postgres-tls,readonly" \
+        --env "POSTGRES_USER=${POSTGRES_ROLE}" \
+        --env "POSTGRES_DB=${POSTGRES_DATABASE}" \
+        --env POSTGRES_PASSWORD_FILE=/run/postgres-tls/password \
+        --label app=better-budget \
+        --label environment=production \
+        --log-driver awslogs \
+        --log-opt "awslogs-region=${AWS_REGION}" \
+        --log-opt 'awslogs-group=/better-budget/production' \
+        --log-opt "awslogs-stream=database/${log_instance_id}" \
+        "${POSTGRES_IMAGE}" \
+        -c ssl=on \
+        -c ssl_cert_file=/run/postgres-tls/server.crt \
+        -c ssl_key_file=/run/postgres-tls/server.key \
+        -c shared_buffers=96MB \
+        -c max_connections=20 \
+        -c work_mem=4MB \
+        -c maintenance_work_mem=32MB \
+        -c effective_cache_size=256MB
+}
+
+database_is_ready() {
+    docker exec "${DATABASE_CONTAINER_NAME}" \
+        pg_isready --username "${POSTGRES_ROLE}" --dbname "${POSTGRES_DATABASE}" \
+        >/dev/null 2>&1
+}
+
+await_database_ready() {
+    local attempts=${1:-60}
+    local attempt
+
+    for ((attempt = 1; attempt <= attempts; attempt += 1)); do
+        if database_is_ready; then
+            return 0
+        fi
+
+        sleep 2
+    done
+
+    return 1
+}
+
 run_application() {
     require_root
     load_host_config
@@ -172,7 +330,12 @@ run_application() {
     image_tag=$(<"${IMAGE_TAG_FILE}")
     require_commit_sha "${image_tag}"
     ensure_image_present "${image_tag}"
+    ensure_database_network
     fetch_application_secrets
+
+    if ! await_database_ready 60; then
+        fail 'The database container did not become ready.'
+    fi
 
     log_instance_id=$(instance_id || printf 'unknown-instance')
 
@@ -183,6 +346,7 @@ run_application() {
         --name "${CONTAINER_NAME}" \
         --rm \
         --init \
+        --network "${DATABASE_NETWORK}" \
         --publish 80:3000 \
         --stop-timeout 30 \
         --mount "type=bind,source=${RUNTIME_SECRET_DIRECTORY},target=/run/better-budget-secrets,readonly" \
@@ -201,6 +365,88 @@ run_application() {
         --log-opt 'awslogs-group=/better-budget/production' \
         --log-opt "awslogs-stream=application/${log_instance_id}" \
         "${ECR_IMAGE}:${image_tag}"
+}
+
+run_owner_bootstrap() {
+    require_root
+    load_host_config
+
+    local image_tag=${1:-}
+    local owner_email
+    local owner_password
+    local secret_json
+
+    if [[ -z ${image_tag} ]]; then
+        image_tag=$(<"${IMAGE_TAG_FILE}")
+    fi
+    require_commit_sha "${image_tag}"
+
+    if ! await_database_ready 30; then
+        fail 'The database container is not ready; start better-budget-db.service first.'
+    fi
+
+    local owner_image="${ECR_IMAGE}:${OWNER_IMAGE_TAG_PREFIX}${image_tag}"
+
+    install -d -m 0700 "${DOCKER_CONFIG_DIRECTORY}"
+    export DOCKER_CONFIG="${DOCKER_CONFIG_DIRECTORY}"
+    log "Authenticating to ${ECR_REGISTRY}."
+    aws ecr get-login-password \
+        --region "${AWS_REGION}" \
+        --endpoint-url "${ECR_API_ENDPOINT}" |
+        docker login \
+            --username AWS \
+            --password-stdin \
+            "${ECR_REGISTRY}" >/dev/null
+
+    if ! docker pull "${owner_image}"; then
+        fail "No owner-bootstrap image ${owner_image}. Run the deployment workflow with build_owner_image enabled."
+    fi
+
+    secret_json=$(aws secretsmanager get-secret-value \
+        --secret-id "${SECRET_ID}" \
+        --region "${AWS_REGION}" \
+        --endpoint-url "${SECRETS_ENDPOINT}" \
+        --query SecretString \
+        --output text)
+
+    owner_email=$(jq --exit-status --raw-output '.owner_email' <<<"${secret_json}")
+    owner_password=$(jq --exit-status --raw-output '.owner_password' <<<"${secret_json}")
+
+    if [[ -z ${owner_email} || -z ${owner_password} ]]; then
+        unset secret_json
+        fail 'The production secret is missing owner_email or owner_password.'
+    fi
+
+    fetch_application_secrets
+    unset secret_json
+
+    log "Running owner bootstrap from ${owner_image}."
+
+    docker run \
+        --rm \
+        --init \
+        --network "${DATABASE_NETWORK}" \
+        --mount "type=bind,source=${RUNTIME_SECRET_DIRECTORY},target=/run/better-budget-secrets,readonly" \
+        --env DATABASE_KIND=postgres \
+        --env DATABASE_POOL_SIZE=3 \
+        --env DATABASE_SSL=verify-full \
+        --env MIGRATIONS_PRESTART=true \
+        --env "BETTER_AUTH_URL=${BETTER_AUTH_URL}" \
+        --env AUTH_BYPASS=false \
+        --env ALLOW_INSECURE_LOCAL_AUTH=false \
+        --env "BOOTSTRAP_OWNER_EMAIL=${owner_email}" \
+        --env "BOOTSTRAP_OWNER_PASSWORD=${owner_password}" \
+        --entrypoint sh \
+        "${owner_image}" \
+        -c 'DATABASE_URL=$(cat /run/better-budget-secrets/database-url)
+DATABASE_SSL_CA=$(cat /run/better-budget-secrets/database-ssl-ca)
+BETTER_AUTH_SECRET=$(cat /run/better-budget-secrets/better-auth-secret)
+export DATABASE_URL DATABASE_SSL_CA BETTER_AUTH_SECRET
+exec npm run db:owner'
+
+    unset owner_email
+    unset owner_password
+    docker image rm "${owner_image}" >/dev/null 2>&1 || true
 }
 
 application_is_healthy() {
@@ -370,8 +616,19 @@ configure_ssm_dual_stack() {
 }
 
 create_swap() {
-    if [[ ! -e /swapfile ]]; then
-        fallocate --length 1G /swapfile
+    local target_bytes=$((2 * 1024 * 1024 * 1024))
+    local current_bytes=0
+
+    if [[ -e /swapfile ]]; then
+        current_bytes=$(stat --format '%s' /swapfile)
+    fi
+
+    if ((current_bytes < target_bytes)); then
+        if swapon --show=NAME --noheadings | grep --fixed-strings --quiet /swapfile; then
+            swapoff /swapfile
+        fi
+        rm -f /swapfile
+        fallocate --length "${target_bytes}" /swapfile
         chmod 0600 /swapfile
         mkswap /swapfile >/dev/null
     fi
@@ -388,12 +645,32 @@ create_swap() {
 install_systemd_units() {
     install -d -m 0755 /etc/systemd/system
 
+    tee /etc/systemd/system/better-budget-db.service >/dev/null <<'UNIT'
+[Unit]
+Description=Better Budget production PostgreSQL container
+Wants=network-online.target
+After=network-online.target docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/libexec/better-budget-host run-database
+ExecStop=-/usr/bin/docker stop --time 30 better-budget-db
+Restart=always
+RestartSec=5
+TimeoutStartSec=0
+TimeoutStopSec=45
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+
     tee /etc/systemd/system/better-budget.service >/dev/null <<'UNIT'
 [Unit]
 Description=Better Budget production container
 Wants=network-online.target
-After=network-online.target docker.service
-Requires=docker.service
+After=network-online.target docker.service better-budget-db.service
+Requires=docker.service better-budget-db.service
 
 [Service]
 Type=simple
@@ -432,7 +709,10 @@ WantedBy=timers.target
 UNIT
 
     systemctl daemon-reload
-    systemctl enable better-budget.service better-budget-healthcheck.timer
+    systemctl enable \
+        better-budget-db.service \
+        better-budget.service \
+        better-budget-healthcheck.timer
 }
 
 ensure_log_group() {
@@ -476,6 +756,7 @@ bootstrap_host() {
     install -m 0755 "${script_source}" "${HOST_PROGRAM}"
     ln -sfn "${HOST_PROGRAM}" "${DEPLOY_COMMAND}"
     ln -sfn "${HOST_PROGRAM}" "${SET_URL_COMMAND}"
+    ln -sfn "${HOST_PROGRAM}" "${OWNER_COMMAND}"
     install -d -m 0700 "${CONFIG_DIRECTORY}"
 
     if [[ ! -e ${HOST_CONFIG} ]]; then
@@ -497,6 +778,9 @@ CONFIG
     install_systemd_units
     load_host_config
     ensure_log_group
+    ensure_database_network
+    ensure_database_directories
+    systemctl restart better-budget-db.service
     systemctl restart better-budget.service
     systemctl start better-budget-healthcheck.timer
 
@@ -516,10 +800,18 @@ main() {
         set_auth_url "$@"
         return
     fi
+    if [[ ${invoked_as} == 'better-budget-owner' ]]; then
+        shift || true
+        run_owner_bootstrap "$@"
+        return
+    fi
 
     case ${command} in
         run)
             run_application
+            ;;
+        run-database)
+            run_database
             ;;
         deploy)
             shift
@@ -528,6 +820,10 @@ main() {
         set-url)
             shift
             set_auth_url "$@"
+            ;;
+        owner)
+            shift
+            run_owner_bootstrap "$@"
             ;;
         healthcheck)
             check_liveness

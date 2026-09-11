@@ -1,22 +1,24 @@
 # AWS EC2 and CloudFront production operations
 
 The Better Budget production migration from ECS Express to a private EC2 host
-was completed on August 22, 2026. This file retains its original path so
-existing links continue to work, but it is now the current-state inventory,
-operations runbook, and replacement-host guide.
+was completed on August 22, 2026, and the RDS database was replaced by a
+co-located PostgreSQL container on September 11, 2026. This file retains its
+original path so existing links continue to work, but it is now the
+current-state inventory, operations runbook, and replacement-host guide.
 
 The production request path is:
 
 ```text
-Browser -> CloudFront HTTPS -> private EC2 port 80 -> container port 3000
-                                                   -> RDS port 5432
+Browser -> CloudFront HTTPS -> EC2 port 80 -> application container port 3000
+                                           -> database container port 5432
 ```
 
 The public application is
 [`https://ddz00reob9ubc.cloudfront.net`](https://ddz00reob9ubc.cloudfront.net).
-The EC2 instance has private IPv4 connectivity inside the VPC and outbound-only
-IPv6 connectivity for AWS services. It has no public IP address, SSH key, NAT
-gateway, or load balancer.
+The EC2 instance has private IPv4 connectivity inside the VPC and dual-stack
+IPv6 connectivity. It has no public IPv4 address, SSH key, NAT gateway, or load
+balancer. Its only inbound rules are CloudFront on port 80 and the approved
+personal IPv6 prefix on the PostgreSQL port.
 
 ## Current production status
 
@@ -27,79 +29,97 @@ gateway, or load balancer.
 - Pushes to `main` verify ECR tag immutability, then build and deploy immutable
   commit-SHA images through GitHub OIDC and Systems Manager.
 - Public `/api/live` and `/api/ready` checks pass, owner authentication works,
-  existing data is present, and deployment rollback has been exercised.
+  and deployment rollback has been exercised.
+- PostgreSQL 17 runs as `better-budget-db.service` on the same host. The
+  application reaches it by container name over a private Docker network with
+  verified TLS.
 - The old ECS service, cluster, tasks, load balancer, target groups, ECS
   security group, task definitions, ECS IAM roles, and `/ecs/` log groups have
   been removed.
-- RDS public access is intentionally still enabled. Its EC2 security-group
-  ingress remains required, and the approved personal-IP ingress remains until
-  the database is deliberately made private.
+- The RDS instance, its public Elastic IP, its security group, and its automated
+  backups have been removed. Do not reintroduce RDS without explicit direction.
+- Database access from outside AWS is deliberately retained over IPv6, scoped to
+  a single approved personal prefix. IPv6 addresses are unbilled; the former
+  public IPv4 path was not.
 
-There is no ECS fallback. RDS, ECR, Secrets Manager, and the production data
-remain in place and must not be deleted during host recovery.
+There is no ECS fallback. ECR, Secrets Manager, the host data directory, and the
+production data must not be deleted during host recovery.
+
+**There are no automated database backups.** The EBS root volume is the only
+copy of the data. Take a manual dump before anything risky:
+
+```bash
+sudo docker exec better-budget-db \
+    pg_dump -U better_budget -Fc better_budget >better-budget-$(date +%F).dump
+```
 
 ## Core resource inventory
 
 All resources are in AWS account `563692880710` and region `us-east-2` unless
 otherwise noted.
 
-| Resource                | Name or identifier                                          | Purpose                                   |
-| ----------------------- | ----------------------------------------------------------- | ----------------------------------------- |
-| CloudFront distribution | `E13RII40P7L8EE`                                            | Public HTTPS application endpoint         |
-| CloudFront hostname     | `ddz00reob9ubc.cloudfront.net`                              | `BETTER_AUTH_URL` and `PRODUCTION_URL`    |
-| CloudFront VPC origin   | `vo_GKXJkQDSOGRChpUS3Ha7rz`                                 | Private connection to EC2 on port 80      |
-| EC2 instance            | `better-budget-production` / `i-058062ec86ebb26ae`          | Single application host                   |
-| EC2 instance type       | `t3a.micro`                                                 | Low-cost production compute               |
-| EC2 private IPv4        | `172.31.32.120`                                             | CloudFront and RDS VPC traffic            |
-| EC2 IPv6                | `2600:1f16:1049:6a00:d18f:1b07:59a2:447e`                   | Outbound AWS service traffic              |
-| EC2 root volume         | `vol-09117bfc959d79d71`                                     | 8 GiB encrypted gp3 host volume           |
-| RDS instance            | `better-budget-db`                                          | Persistent PostgreSQL database            |
-| RDS endpoint            | `better-budget-db.czvyzz9gwvpl.us-east-2.rds.amazonaws.com` | Application database host                 |
-| RDS database            | `better_budget` on port `5432`                              | Persistent application data               |
-| ECR repository          | `better-budget/app`                                         | Immutable runtime images                  |
-| Secrets Manager secret  | `better-budget/prod-zALPFC`                                 | Database URL, RDS CA, and auth secret     |
-| EC2 IAM role/profile    | `better-budget-ec2-runtime`                                 | SSM, secret read, ECR pull, and log write |
-| EC2 inline IAM policy   | `better-budget-ec2-runtime-access`                          | Account-scoped runtime permissions        |
-| GitHub deployment role  | `better-budget-github-deploy`                               | OIDC image push and SSM deployment        |
-| CloudWatch log group    | `/better-budget/production`                                 | Container output with 14-day retention    |
-| CloudWatch alarm        | `better-budget-ec2-system-recovery`                         | Automatic EC2 system recovery             |
+| Resource                | Name or identifier                                 | Purpose                                   |
+| ----------------------- | -------------------------------------------------- | ----------------------------------------- |
+| CloudFront distribution | `E13RII40P7L8EE`                                   | Public HTTPS application endpoint         |
+| CloudFront hostname     | `ddz00reob9ubc.cloudfront.net`                     | `BETTER_AUTH_URL` and `PRODUCTION_URL`    |
+| CloudFront VPC origin   | `vo_GKXJkQDSOGRChpUS3Ha7rz`                        | Private connection to EC2 on port 80      |
+| EC2 instance            | `better-budget-production` / `i-058062ec86ebb26ae` | Single application host                   |
+| EC2 instance type       | `t3a.micro`                                        | Low-cost production compute               |
+| EC2 private IPv4        | `172.31.32.120`                                    | CloudFront VPC-origin traffic             |
+| EC2 IPv6                | `2600:1f16:1049:6a00:d18f:1b07:59a2:447e`          | AWS service traffic and database access   |
+| EC2 root volume         | `vol-09117bfc959d79d71`                            | 8 GiB encrypted gp3 host volume           |
+| Database container      | `better-budget-db`                                 | PostgreSQL 17 on the application host     |
+| Database image          | `postgres:17-alpine`, digest-pinned                | Pulled from Docker Hub, runs as uid 70    |
+| Database data directory | `/var/lib/better-budget/postgres`                  | Persistent application data on EBS        |
+| Database TLS material   | `/run/better-budget/postgres-tls`                  | Memory-backed server certificate and key  |
+| Docker network          | `better-budget`                                    | Private application-to-database bridge    |
+| ECR repository          | `better-budget/app`                                | Immutable runtime images                  |
+| Secrets Manager secret  | `better-budget/prod-zALPFC`                        | Database URL, CA, auth, and TLS material  |
+| EC2 IAM role/profile    | `better-budget-ec2-runtime`                        | SSM, secret read, ECR pull, and log write |
+| EC2 inline IAM policy   | `better-budget-ec2-runtime-access`                 | Account-scoped runtime permissions        |
+| GitHub deployment role  | `better-budget-github-deploy`                      | OIDC image push and SSM deployment        |
+| CloudWatch log group    | `/better-budget/production`                        | Container output with 14-day retention    |
+| CloudWatch alarm        | `better-budget-ec2-system-recovery`                | Automatic EC2 system recovery             |
 
-The production secret may retain the one-time owner-bootstrap fields, but the
-long-running service and routine deployments read only `database_url`,
-`database_ssl_ca`, and `better_auth_secret`. Do not rerun owner bootstrap,
-development seeding, or a database reset.
+The production secret holds eight fields, six of them read at runtime. The
+application service reads `database_url`, `database_ssl_ca`, and
+`better_auth_secret`. The database service reads `postgres_password`,
+`postgres_server_cert`, and `postgres_server_key`. `owner_email` and
+`owner_password` are used only by the one-time owner bootstrap. Do not rerun owner bootstrap, development seeding, or
+a database reset against a populated database.
+
+`database_ssl_ca` is a private certificate authority generated for this
+deployment, not an Amazon bundle. It signs one server certificate whose subject
+alternative names are `better-budget-db`, `localhost`, `127.0.0.1`, and the
+host's IPv6 address. Both expire in September 2036. Storing the server
+certificate and key in the secret is what makes host replacement reproducible:
+a new host fetches the same material and the application's trusted CA still
+matches.
 
 ## VPC resource names
 
 These `Name` tags are the console-friendly labels for every Better Budget VPC
-resource reviewed during the completed cleanup. Some resources predate the
-EC2 migration but remain because RDS or the current EC2 architecture uses
-them.
+resource. Some predate the EC2 migration but remain in use. Entries removed
+during the RDS decommission are listed in the record at the end of this file.
 
-| Resource type                | Name tag                                     | Identifier                   | Current use                                        |
-| ---------------------------- | -------------------------------------------- | ---------------------------- | -------------------------------------------------- |
-| VPC                          | `better-budget-default-vpc`                  | `vpc-014bc408e55f0fc9d`      | EC2, CloudFront VPC origin, and RDS                |
-| DHCP options                 | `better-budget-default-dhcp-options`         | `dopt-069d544077844207b`     | VPC DNS and DHCP settings                          |
-| Network ACL                  | `better-budget-default-network-acl`          | `acl-06975c1cd3d888fd9`      | Default subnet network ACL                         |
-| Private EC2 subnet           | `better-budget-ec2-private-us-east-2a`       | `subnet-0195a562e735ef996`   | Private dual-stack EC2 host                        |
-| Public RDS subnet            | `better-budget-rds-public-us-east-2a`        | `subnet-04a0a88ce2cbbc5a0`   | RDS subnet group and current public access         |
-| Public RDS subnet            | `better-budget-rds-public-us-east-2b`        | `subnet-070941edb58234eab`   | RDS subnet group and current public access         |
-| Public route table           | `better-budget-rds-public-route-table`       | `rtb-05da4f6a04eeacb65`      | Internet route for the RDS public subnets          |
-| Private route table          | `better-budget-ec2-private-ipv6-route-table` | `rtb-0af2b29f9635f4c0f`      | EC2 outbound-only IPv6 route                       |
-| Internet gateway             | `better-budget-public-internet-gateway`      | `igw-0f1a928227d93c855`      | Required for public RDS and CloudFront VPC origins |
-| Egress-only gateway          | `better-budget-ec2-ipv6-egress-only-gateway` | `eigw-0df0ec04a5bc336df`     | EC2 outbound IPv6 without inbound internet access  |
-| EC2 security group           | `better-budget-ec2-origin-sg`                | `sg-03e2360c7d24e5ae6`       | CloudFront ingress and application egress          |
-| CloudFront security group    | `better-budget-cloudfront-vpc-origin-sg`     | `sg-02cc3cd5ec4a45c3c`       | Service-managed VPC-origin source                  |
-| RDS security group           | `better-budget-rds-postgres-sg`              | `sg-0691f597eb48f57c1`       | PostgreSQL ingress control                         |
-| Default security group       | `better-budget-default-sg-unused`            | `sg-0b2e5f1322599735a`       | Unused default group; retain with the VPC          |
-| EC2 network interface        | `better-budget-ec2-primary-eni`              | `eni-08866f26d457b4cf3`      | Primary EC2 interface                              |
-| RDS network interface        | `better-budget-rds-public-eni`               | `eni-0bfaca485e025cae9`      | RDS-managed public interface                       |
-| CloudFront network interface | `better-budget-cloudfront-vpc-origin-eni`    | `eni-0a1e56f87c3438dcb`      | CloudFront-managed VPC-origin interface            |
-| Elastic IP allocation        | `better-budget-rds-public-ip`                | `eipalloc-05d964a2c6fc3b885` | Current RDS public IPv4 access                     |
+| Resource type                | Name tag                                     | Identifier                 | Current use                                     |
+| ---------------------------- | -------------------------------------------- | -------------------------- | ----------------------------------------------- |
+| VPC                          | `better-budget-default-vpc`                  | `vpc-014bc408e55f0fc9d`    | EC2 host and CloudFront VPC origin              |
+| DHCP options                 | `better-budget-default-dhcp-options`         | `dopt-069d544077844207b`   | VPC DNS and DHCP settings                       |
+| Network ACL                  | `better-budget-default-network-acl`          | `acl-06975c1cd3d888fd9`    | Default subnet network ACL                      |
+| EC2 subnet                   | `better-budget-ec2-private-us-east-2a`       | `subnet-0195a562e735ef996` | Dual-stack EC2 host; no public IPv4             |
+| Main route table             | `better-budget-vpc-main-route-table-unused`  | `rtb-05da4f6a04eeacb65`    | VPC main table; no subnets, nothing uses it     |
+| EC2 route table              | `better-budget-ec2-private-ipv6-route-table` | `rtb-0af2b29f9635f4c0f`    | Local routes and `::/0` to the internet gateway |
+| Internet gateway             | `better-budget-public-internet-gateway`      | `igw-0f1a928227d93c855`    | EC2 inbound and outbound IPv6; do not delete    |
+| EC2 security group           | `better-budget-ec2-origin-sg`                | `sg-03e2360c7d24e5ae6`     | CloudFront and database ingress; HTTPS egress   |
+| CloudFront security group    | `better-budget-cloudfront-vpc-origin-sg`     | `sg-02cc3cd5ec4a45c3c`     | Service-managed VPC-origin source               |
+| Default security group       | `better-budget-default-sg-unused`            | `sg-0b2e5f1322599735a`     | Unused default group; retain with the VPC       |
+| EC2 network interface        | `better-budget-ec2-primary-eni`              | `eni-08866f26d457b4cf3`    | Primary EC2 interface                           |
+| CloudFront network interface | `better-budget-cloudfront-vpc-origin-eni`    | `eni-0a1e56f87c3438dcb`    | CloudFront-managed VPC-origin interface         |
 
 The VPC has a second Amazon-provided IPv6 block,
 `2600:1f16:1049:6a00::/56`, associated as
-`vpc-cidr-assoc-0b65010795c1fcf25`. The private EC2 subnet uses
+`vpc-cidr-assoc-0b65010795c1fcf25`. The EC2 subnet uses
 `2600:1f16:1049:6a00::/64`, associated as
 `subnet-cidr-assoc-028df4b68efe93bd8`.
 
@@ -109,26 +129,30 @@ from this table first.
 
 ## Network and security contract
 
-The private EC2 subnet automatically assigns IPv6 but not public IPv4. Its
-dedicated route table contains local VPC routes and `::/0` to the egress-only
-internet gateway. It must not receive a `0.0.0.0/0` route.
+The EC2 subnet automatically assigns IPv6 but not public IPv4. Its route table
+contains local VPC routes and `::/0` to the internet gateway. It must not
+receive a `0.0.0.0/0` route, which is what keeps IPv4 entirely private and
+unbilled.
 
-The regular internet gateway remains attached. CloudFront VPC origins require
-it, and the public RDS subnets currently use it, but the EC2 subnet does not
-route application traffic through it.
+That `::/0` route previously pointed at an egress-only gateway, which by
+definition permits no inbound connections. It was changed to the internet
+gateway so the database port can be reached over IPv6. The security group, not
+the route table, is the access control. Do not delete the internet gateway: it
+now carries EC2 IPv6 in both directions, and CloudFront VPC origins also
+require it.
 
 Security-group intent is:
 
 - EC2 inbound: TCP `80` from `sg-02cc3cd5ec4a45c3c` only.
-- EC2 outbound: TCP `443` to `::/0` for AWS dual-stack endpoints.
-- EC2 outbound: TCP `5432` to RDS security group
-  `sg-0691f597eb48f57c1`.
-- RDS inbound: TCP `5432` from EC2 security group
-  `sg-03e2360c7d24e5ae6`.
-- RDS inbound: only the deliberately approved personal public IP while public
-  database access remains enabled.
-- No SSH, public EC2 IPv4, public EC2 IPv6 ingress, NAT gateway, ALB, or ECS
-  rule.
+- EC2 inbound: TCP `5432` from the approved personal IPv6 prefix only, rule
+  `sgr-0f493058eaa0239f7` for `2600:1702:7489:ae10::/64`.
+- EC2 outbound: TCP `443` to `::/0` for AWS dual-stack endpoints and Docker Hub.
+- No SSH, public EC2 IPv4, NAT gateway, ALB, or ECS rule.
+
+Never widen the database rule to `::/0`, a `/56`, or any IPv4 range. When the
+home prefix rotates, replace the single `/64` rule rather than adding to it. The
+database is additionally protected by verified TLS and a 32-character password,
+but the prefix rule is the first gate and must stay narrow.
 
 CloudFront uses HTTP on port 80 only on the private VPC-origin hop. Browser
 traffic is redirected to HTTPS at CloudFront. The default behavior permits all
@@ -143,20 +167,31 @@ version-controlled host definition. On a fresh Amazon Linux 2023 x86_64 host it:
 
 - Enables dual-stack AWS and Systems Manager endpoints.
 - Installs and starts Docker and installs `jq`.
-- Creates a 1 GiB swap file.
-- Installs `better-budget.service`, `better-budget-healthcheck.timer`,
-  `better-budget-deploy`, and `better-budget-set-url`.
+- Creates or grows a 2 GiB swap file, sized for two containers on 917 MiB of RAM.
+- Creates the `better-budget` Docker network and the database data directory.
+- Installs `better-budget-db.service`, `better-budget.service`,
+  `better-budget-healthcheck.timer`, `better-budget-deploy`,
+  `better-budget-set-url`, and `better-budget-owner`.
 - Reads the production Secrets Manager JSON on every service start.
 - Keeps secret material in root-controlled files under memory-backed `/run`.
-- Runs the container on host port 80 and container port 3000.
-- Uses PostgreSQL with pool size 3, verified RDS TLS, migration prestart,
-  production auth, and the CloudFront Better Auth URL.
+- Runs PostgreSQL with `ssl=on`, `shared_buffers=96MB`, `max_connections=20`,
+  and a 448 MiB container memory limit, published on the host's IPv6 address and
+  on loopback but never on `0.0.0.0`.
+- Starts the application only after `pg_isready` succeeds, so a slow database
+  start does not produce a migration failure loop.
+- Runs the application container on host port 80 and container port 3000.
+- Uses PostgreSQL with pool size 3, verified TLS, migration prestart, production
+  auth, and the CloudFront Better Auth URL.
 - Writes container output to `/better-budget/production` with 14-day retention.
-- Restarts a crashed process through systemd.
+- Restarts a crashed process through systemd. `better-budget.service` requires
+  and orders after `better-budget-db.service`, but does not restart with it, so
+  the connection pool reconnects across a database restart instead of cycling
+  the application.
 - Checks only `/api/live` every minute and restarts after three consecutive
   liveness failures. A readiness-only database outage does not cause a restart
   loop.
-- Retains only the current and preceding local images.
+- Retains only the current and preceding local application images. Image pruning
+  filters on the ECR repository, so the pinned PostgreSQL image is never reaped.
 
 The host pulls from the IPv6-capable registry
 `563692880710.dkr-ecr.us-east-2.on.aws/better-budget/app:<commit-sha>`.
@@ -204,11 +239,22 @@ attached to `better-budget-github-deploy`. Keep `better-budget/app` configured
 with **Immutable** image tags. The workflow checks both prerequisites before it
 builds an image or changes the host.
 
+A deployment restarts only `better-budget.service`. The database container keeps
+running across deploys, so a deploy never interrupts the data layer. It does
+depend on it: `run_application` waits up to 60 seconds for `pg_isready` and
+fails with `The database container did not become ready.` if the database is
+down, which triggers the normal rollback rather than a crash-looping container.
+Check `better-budget-db.service` first when a deploy fails for that reason.
+
+A redeploy of the currently running tag is a safe way to exercise the whole
+path; it completes in under ten seconds.
+
 Production startup applies only missing, advisory-lock-protected migrations.
-It does not seed, reset, recreate the database, or recreate the owner. RDS data
-and the owner survive image deployments and EC2 replacement. Database
-migrations must remain backward-compatible because restoring an older image
-does not undo a migration.
+It does not seed, reset, recreate the database, or recreate the owner. Database
+data and the owner survive image deployments, because the data directory lives
+on the EBS root volume rather than inside either container. Database migrations
+must remain backward-compatible because restoring an older image does not undo a
+migration.
 
 ### Manual rollback
 
@@ -246,59 +292,107 @@ data is not breaching, and the configured action recovers the instance. With
 one metric sample per minute, `Minimum` and `Maximum` have the same practical
 result; this documents the live setting.
 
-## RDS public access
+## Database access
 
-RDS is intentionally public at present. Keep these safeguards in place:
+PostgreSQL runs on the application host and is published on two addresses:
 
-- Never allow `0.0.0.0/0` or `::/0` on PostgreSQL port 5432.
-- Keep direct access restricted to the current personal IP, preferably as a
-  single `/32` rule.
-- Retain the EC2 security-group source rule independently of the personal-IP
-  rule.
-- Continue using the RDS CA bundle and verified TLS from the application and
-  database client.
-- Remove a superseded personal-IP rule when adding a replacement.
+- The host's IPv6 address, gated by the personal-prefix security-group rule.
+  This is the operator path used by DBeaver.
+- `127.0.0.1`, reachable only from the instance itself. This is what Systems
+  Manager port forwarding connects to.
 
-While public access is enabled, DBeaver can connect directly with:
+It is never published on `0.0.0.0`, and the application uses neither published
+address: it reaches the container by name over the `better-budget` Docker
+network.
 
-- Host: `better-budget-db.czvyzz9gwvpl.us-east-2.rds.amazonaws.com`
+### DBeaver over IPv6
+
+Add one line to `/etc/hosts` on the client machine so the certificate's
+`better-budget-db` name resolves:
+
+```text
+2600:1f16:1049:6a00:d18f:1b07:59a2:447e  better-budget-db
+```
+
+Then configure DBeaver with:
+
+- Host: `better-budget-db`
 - Port: `5432`
 - Database: `better_budget`
-- Username: `better_b_admin`
-- Password: the current database password
+- Username: `better_budget`
+- Password: `postgres_password` from the production secret
 - SSL mode: `verify-full`
-- Root certificate: the current Amazon RDS CA bundle
+- Root certificate: the `database_ssl_ca` PEM from the production secret
 
-If the connection stops working after the home public IP changes, replace the
-old personal `/32` ingress rule instead of broadening it.
+Using the hostname rather than the IPv6 literal means replacing the EC2 host is
+a one-line local edit instead of reissuing the certificate. The IPv6 address is
+also in the certificate's subject alternative names, so connecting by literal
+address works without the `/etc/hosts` entry.
 
-Making RDS private is an optional future hardening step, not an unfinished
-deployment requirement. When ready:
+If the connection stops working, the home IPv6 prefix has almost certainly
+rotated. Read the current address, take its `/64`, then revoke the existing rule
+by its id and authorize the replacement. Never widen the rule instead of
+replacing it, and never use `::/0`, a `/56`, or an IPv4 range.
 
-1. Change **RDS**, **Connectivity**, **Public access** to **No**.
-2. Apply the modification and wait for `Available`.
-3. Confirm public `/api/ready` and owner data through CloudFront.
-4. Remove personal/public-IP PostgreSQL ingress, retaining the EC2 source.
+### Systems Manager fallback
 
-After that change, use Systems Manager remote-port forwarding for DBeaver:
+This path needs no inbound rule and works from a network without IPv6. It
+requires the local AWS CLI and the Session Manager plugin, and forwards the
+host's loopback `5432` to a local port:
 
 ```bash
 aws ssm start-session \
     --target i-058062ec86ebb26ae \
-    --document-name AWS-StartPortForwardingSessionToRemoteHost \
-    --parameters '{"host":["better-budget-db.czvyzz9gwvpl.us-east-2.rds.amazonaws.com"],"portNumber":["5432"],"localPortNumber":["15432"]}' \
+    --document-name AWS-StartPortForwardingSession \
+    --parameters '{"portNumber":["5432"],"localPortNumber":["15432"]}' \
     --region us-east-2
 ```
 
-Configure DBeaver for `localhost:15432`, database `better_budget`, user
-`better_b_admin`, the current password, the RDS CA bundle, and SSL mode
-`verify-ca` for the local tunnel. Normal AWS administration remains available
-through the browser console; this tunnel requires the local AWS CLI and Session
-Manager plugin.
+Point DBeaver at `localhost:15432` with the same database, user, password, and
+CA. `verify-full` still succeeds because `localhost` and `127.0.0.1` are both in
+the certificate's subject alternative names.
+
+### Claiming the owner on an empty database
+
+Only needed on a fresh database: a new deployment, or a host rebuild that was
+not restored from a dump. Public sign-up is disabled and `AUTH_BYPASS=false`, so
+until this runs there is no way to sign in.
+
+1. Run the deployment workflow with **build_owner_image** enabled and
+   `image_tag` empty. It pushes `better-budget/app:owner-<commit-sha>` next to
+   the runtime image. The workflow refuses to combine that input with a rollback
+   tag, because the checkout would not match the tag being deployed.
+2. Run `sudo better-budget-owner` on the host.
+
+The command waits for the database, pulls the owner image for the currently
+deployed commit, reads `owner_email` and `owner_password` from the production
+secret, and runs the bootstrap on the `better-budget` Docker network using the
+application's own secret files. It removes the image afterwards. It is
+idempotent and refuses to attach a second owner to a claimed household.
+
+Because it reuses the application's secret files rather than accepting a
+connection string, it cannot target the wrong database. Pass an explicit SHA as
+`sudo better-budget-owner <sha>` only to bootstrap from an image other than the
+deployed one.
+
+### On the host
+
+```bash
+sudo systemctl status better-budget-db.service --no-pager
+sudo docker exec -it better-budget-db psql -U better_budget
+sudo docker exec better-budget-db psql -U better_budget -c 'SHOW ssl'
+sudo docker logs --tail 50 better-budget-db
+```
+
+To confirm the application's own connection is encrypted rather than merely
+permitted, join `pg_stat_ssl` to `pg_stat_activity` and read the `ssl`,
+`version`, and `cipher` columns for the client backend.
 
 ## Replace an unhealthy EC2 host
 
-The host is disposable; RDS is the source of truth. To replace it:
+The host is no longer disposable: its EBS root volume holds the only copy of
+the database. Replace it only after taking a manual dump, and treat that dump as
+the source of truth during the rebuild.
 
 1. Launch the current Amazon Linux 2023 x86_64 AMI as a `t3a.micro` in
    `better-budget-ec2-private-us-east-2a`.
@@ -311,17 +405,29 @@ The host is disposable; RDS is the source of truth. To replace it:
 5. Tag it `Application=better-budget` and `Environment=production`.
 6. Paste the complete current
    [`bootstrap-ec2.sh`](../../scripts/aws/bootstrap-ec2.sh) into **User data**.
-7. Wait for Systems Manager to report `Online`, then confirm both local health
-   endpoints and the existing RDS data.
-8. Update or recreate the CloudFront VPC origin for the replacement instance,
+7. Wait for Systems Manager to report `Online`. The bootstrap starts an empty
+   PostgreSQL cluster, so the application will come up with no data.
+8. Stop `better-budget.service`, restore the dump into the new cluster with
+   `pg_restore --no-owner --no-acl -U better_budget -d better_budget`, then start
+   the application again and confirm both local health endpoints.
+9. Update or recreate the CloudFront VPC origin for the replacement instance,
    wait for `Deployed`, and ensure EC2 port 80 accepts only the new
    CloudFront-managed security group.
-9. Verify the public URL, owner sign-in, data reads/writes, logs, and a GitHub
-   deployment.
-10. Terminate the failed instance only after the replacement is healthy and
+10. Point the `/etc/hosts` entry for `better-budget-db` at the new instance's
+    IPv6 address. The certificate is reused from the secret and does not need
+    reissuing unless you connect by IPv6 literal.
+11. Verify the public URL, owner sign-in, data reads/writes, logs, and a GitHub
+    deployment.
+12. Terminate the failed instance only after the replacement is healthy and
     CloudFront no longer depends on it.
 
-Never run owner bootstrap, seeding, or reset while replacing the host.
+Run owner bootstrap only when rebuilding onto an empty database, using the
+procedure in `README.md` under "Bootstrapping the current AWS deployment". Never
+run seeding or reset.
+
+Note that step 2 also assigns a new IPv6 address, which is why step 10 exists.
+The certificate's `better-budget-db` name is what keeps this a local one-line
+edit rather than a certificate reissue.
 
 ## Completed ECS cleanup record
 
@@ -339,4 +445,68 @@ following old ECS resources were removed:
 
 The cleanup intentionally retained RDS and its data, ECR images, Secrets
 Manager, the GitHub OIDC role, and every resource listed in the current
-inventory above.
+inventory above. RDS was decommissioned later; see the record below.
+
+## Completed RDS decommission record
+
+On September 11, 2026 the managed database was replaced by a PostgreSQL
+container on the application host. RDS was costing roughly $20 per month —
+$13.93 instance, $2.30 storage, $3.60 for the public IPv4 address, and $0.13
+backups — against a dataset of a few megabytes on a single-household
+application. The co-located container costs nothing beyond the existing
+instance, taking the monthly bill from about $26.78 to about $9.
+
+The existing production data was explicitly declared disposable, so there was no
+dump, no restore, and no final snapshot. The new cluster started empty,
+`migrate-production.mjs` created the schema, and the owner was recreated from
+the secret.
+
+Removed:
+
+- RDS instance `better-budget-db` and its nine automated snapshots.
+- The RDS-managed public IPv4 address and Elastic IP allocation
+  `eipalloc-05d964a2c6fc3b885`, released with the instance.
+- RDS security group `sg-0691f597eb48f57c1`, including its personal
+  `108.198.40.10/32` ingress rule.
+- The RDS network interface `eni-0bfaca485e025cae9`.
+- The EC2 egress rule permitting TCP `5432` to the RDS security group.
+
+Changed:
+
+- The EC2 subnet's `::/0` route moved from egress-only gateway
+  `eigw-0df0ec04a5bc336df` to internet gateway `igw-0f1a928227d93c855`, so the
+  database port is reachable over IPv6.
+- EC2 security group `sg-03e2360c7d24e5ae6` gained inbound TCP `5432` from
+  `2600:1702:7489:ae10::/64` and lost its PostgreSQL egress rule.
+- The production secret gained `postgres_password`, `postgres_server_cert`, and
+  `postgres_server_key`, and its `database_url` and `database_ssl_ca` were
+  replaced.
+- Host swap grew from 1 GiB to 2 GiB.
+
+Also removed in the same pass, after confirming each was orphaned:
+
+- DB subnet group `default-vpc-014bc408e55f0fc9d`.
+- Subnets `subnet-04a0a88ce2cbbc5a0` and `subnet-070941edb58234eab`, which held
+  only the RDS network interface.
+- Egress-only internet gateway `eigw-0df0ec04a5bc336df`, unreferenced by any
+  route table once the EC2 subnet's `::/0` route moved to the internet gateway.
+- CloudWatch log group `RDSOSMetrics` from RDS Enhanced Monitoring.
+- IAM service-linked role `AWSServiceRoleForRDS`. AWS recreates this
+  automatically if RDS is ever used again.
+
+`rtb-05da4f6a04eeacb65` could not be deleted because it is the VPC's main route
+table, so it was renamed from `better-budget-rds-public-route-table` to
+`better-budget-vpc-main-route-table-unused`. It has no subnet associations. Its
+`0.0.0.0/0` route to the internet gateway is inert today, but a new subnet
+created without an explicit route-table association would inherit it and become
+public. Always associate a new subnet explicitly.
+
+Checked and deliberately left alone: no IAM policy granted any RDS permission,
+so `ec2-runtime-policy.json` and `github-actions-deploy-policy.json` are
+unchanged. Every KMS key in the account, `alias/aws/rds` included, is
+AWS-managed, free, and not deletable. Secrets Manager holds one secret, still in
+use. The default RDS parameter and option groups cannot be deleted and cost
+nothing.
+
+Retained and still required: ECR, Secrets Manager, the CloudWatch log group and
+recovery alarm, both IAM roles, the internet gateway, and the VPC itself.
