@@ -48,11 +48,12 @@ GitHub Actions builds `linux/arm64` only, natively on a GitHub-hosted `ubuntu-24
 
 `scripts/aws/bootstrap-ec2.sh` is sized for 512 MiB. PostgreSQL runs with `shared_buffers=32MB`, `max_connections=10`, and a 192 MiB container limit; the application container has a 320 MiB limit and a 256 MiB V8 old-space limit. If the application restarts under memory pressure, lower `shared_buffers` further or resize the instance to `t4g.micro` — a stop, change-type, and start, since the architecture is unchanged. Do not remove the container limits.
 
-Three host facts are load-bearing and easy to violate:
+Four host facts are load-bearing and easy to violate:
 
 - A fresh host pulls the seed image tag in `bootstrap_host()` before any deployment runs. That tag must name a commit whose ECR image includes an arm64 manifest, or the host fails its first pull with no matching manifest.
 - Deployment requires exactly one _running_ instance carrying both production tags. Two running hosts fail every deployment; a stopped host is invisible and is the rollback.
 - Data Lifecycle Manager selects volumes by the `Backup=daily` tag. A replacement root volume without that tag is never snapshotted and nothing reports it.
+- The deployment helper refuses an image whose architecture does not match the host. A wrong-architecture image pulls successfully and only fails at exec time, so without that check it overwrites the working tag and crashloops with no usable rollback target. This took production down once during the Version 4 migration.
 
 The instance uses Unlimited CPU credits. Standard credits throttle a `t4g.nano` partway through a deployment and roll back a working image; the surplus charge is cents a month at this traffic. Do not switch it back to Standard as a cost measure.
 

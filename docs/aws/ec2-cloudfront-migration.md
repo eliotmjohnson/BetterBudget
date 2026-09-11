@@ -194,6 +194,9 @@ version-controlled host definition. On a fresh Amazon Linux 2023 arm64 host it:
 - Runs PostgreSQL with `ssl=on`, `shared_buffers=32MB`, `max_connections=10`,
   and a 192 MiB container memory limit, published on the host's IPv6 address and
   on loopback but never on `0.0.0.0`.
+- Refuses any pulled image whose architecture does not match the host, before
+  writing the image tag or restarting, because a wrong-architecture image pulls
+  successfully and only fails at exec time.
 - Starts the application only after `pg_isready` succeeds, so a slow database
   start does not produce a migration failure loop.
 - Runs the application container on host port 80 and container port 3000, capped

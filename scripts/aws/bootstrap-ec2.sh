@@ -118,6 +118,19 @@ instance_ipv6() {
     printf '%s' "${address}"
 }
 
+require_matching_platform() {
+    local image=$1
+    local host_arch
+    local image_arch
+
+    host_arch=$(docker version --format '{{.Server.Arch}}')
+    image_arch=$(docker image inspect --format '{{.Architecture}}' "${image}")
+
+    if [[ ${host_arch} != "${image_arch}" ]]; then
+        fail "Image ${image} is ${image_arch} but this host is ${host_arch}; refusing to deploy it."
+    fi
+}
+
 pull_image() {
     local image_tag=$1
 
@@ -136,6 +149,7 @@ pull_image() {
 
     log "Pulling ${ECR_IMAGE}:${image_tag}."
     docker pull "${ECR_IMAGE}:${image_tag}"
+    require_matching_platform "${ECR_IMAGE}:${image_tag}"
 }
 
 ensure_image_present() {
@@ -405,6 +419,7 @@ run_owner_bootstrap() {
     if ! docker pull "${owner_image}"; then
         fail "No owner-bootstrap image ${owner_image}. Run the deployment workflow with build_owner_image enabled."
     fi
+    require_matching_platform "${owner_image}"
 
     secret_json=$(aws secretsmanager get-secret-value \
         --secret-id "${SECRET_ID}" \

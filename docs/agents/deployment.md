@@ -23,6 +23,14 @@ TLS, IPv6, and backup rule is retained.
 - The deployment helper prunes dangling images before pulling. Decompressing a
   new image beside a running container is the memory peak of a deployment, and
   it is the most likely place for this host to fail.
+- The helper refuses an image whose architecture does not match the host, before
+  it writes the image tag or restarts anything. A single-platform image for the
+  wrong architecture pulls _successfully_ and only fails when the container
+  execs, so without that check a wrong-architecture deployment overwrites the
+  working tag, crashloops, and cannot roll back: the rollback target is read
+  from the tag file at the start of the deployment, so a second bad deployment
+  makes the recorded previous tag bad too. This took production down once during
+  the Version 4 migration. Do not remove the check.
 - The instance uses Unlimited CPU credits. A `t4g.nano` earns six credits an
   hour against a five percent baseline, and Standard credits throttle it partway
   through a deployment, stretching the health check past its window and rolling
