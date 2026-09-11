@@ -43,6 +43,50 @@ development paths.
 `docs/agents/product.md` holds the complete implemented-capability inventory.
 Approved design references live in [`docs/design`](./docs/design).
 
+## Version 4 deployment release
+
+Version `4.0.0` kept the Version 1 budgeting product and database model while
+moving the production host from an x86_64 `t3a.micro` to an arm64 `t4g.nano`.
+The application source is unchanged. Nothing in the dependency tree blocked the
+port: both container base images are pinned to multi-platform manifest digests,
+every native npm package is build-time only and publishes `linux-arm64` builds,
+PGlite is WebAssembly, and `pg` is pure JavaScript.
+
+**What changed:**
+
+- GitHub Actions builds `linux/arm64`, with QEMU emulation providing the build
+  on the x86 runner, so builds take longer than before. `linux/amd64` was built
+  alongside it only during the cutover and dropped once the x86 host was
+  terminated.
+- `scripts/aws/bootstrap-ec2.sh` resizes both containers for 512 MiB of RAM.
+  PostgreSQL drops to `shared_buffers=32MB`, `max_connections=10`, and a 192 MiB
+  container limit. The application container gains a 320 MiB limit and a 256 MiB
+  V8 old-space limit, having previously had no limit at all. journald is capped
+  and `vm.swappiness` is raised to 80. The 2 GiB swap file is unchanged.
+- The deployment helper prunes dangling images before pulling, because
+  decompressing a new image beside a running container is the memory peak of the
+  whole deployment.
+- The instance uses Unlimited CPU credits. Standard credits throttle a
+  `t4g.nano` partway through a deployment and roll back a working image.
+- The existing production data was not migrated. The new cluster started empty
+  and the owner was recreated from the secret.
+
+**Retained boundaries and superseded guidance:**
+
+- Every Version 3 database, TLS, IPv6, and backup rule is unchanged. The
+  replacement host carries the same `Backup=daily` volume tag and the same
+  seven-day snapshot retention.
+- Deployment still requires exactly one _running_ instance carrying both
+  production tags, which is why the outgoing host is stopped rather than left
+  running during a cutover.
+- A fresh host pulls the seed image tag in `bootstrap_host()` before any
+  deployment runs, so that tag must name a commit whose image includes an arm64
+  manifest.
+- Every Version 1 non-goal still stands.
+
+The migration completed on September 11, 2026, taking the monthly bill from
+about $8.80 to about $4.75.
+
 ## Version 3 deployment release
 
 Version `3.0.0` kept the Version 1 budgeting product and database model while
@@ -466,7 +510,7 @@ The regular runtime image intentionally excludes source files and development to
 
 ```bash
 docker build \
-    --platform linux/amd64 \
+    --platform linux/arm64 \
     --target owner-bootstrap \
     --tag better-budget-owner-bootstrap:local \
     .
@@ -511,10 +555,10 @@ Keep `DATABASE_URL`, `DATABASE_SSL_CA`, and `BETTER_AUTH_SECRET` in the deployme
 
 Pushes to `main` run `.github/workflows/deploy-production.yml`. The workflow
 uses GitHub OIDC to obtain temporary AWS credentials, builds the `runtime`
-Docker target for `linux/amd64`, pushes an image tagged with the Git commit SHA,
-finds the one running EC2 instance tagged `Application=better-budget` and
-`Environment=production`, and invokes its deployment helper through Systems
-Manager. The helper pulls before stopping the current container, waits for
+Docker target for `linux/amd64` and `linux/arm64`, pushes a multi-platform image
+index tagged with the Git commit SHA, finds the one running EC2 instance tagged
+`Application=better-budget` and `Environment=production`, and invokes its
+deployment helper through Systems Manager. The helper pulls before stopping the current container, waits for
 `/api/live` and `/api/ready`, and restores the prior image automatically if the
 candidate fails. The workflow fails closed unless the production ECR repository
 uses immutable tags, and safely reuses an existing commit image when a workflow

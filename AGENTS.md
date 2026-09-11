@@ -40,6 +40,24 @@ Each calendar month holds its own budget built from household-scoped category an
 
 Read `docs/agents/product.md` for the complete implemented-capability inventory before adding, removing, or reshaping a user-facing capability.
 
+## Version 4 deployment release
+
+Version `4.0.0` moved the production host from an x86_64 `t3a.micro` to an arm64 `t4g.nano`. There is no application-source change. The Version 1 product, financial model, authentication model, database schema, and provider-neutral runtime image are unchanged, as is every Version 3 database, TLS, IPv6, and backup rule.
+
+GitHub Actions builds `linux/arm64`. The `linux/amd64` half was retained only while the outgoing x86 host was still receiving deployments, and was dropped once it was terminated. Restore it only if an x86 host becomes a real rollback target again; on an arm64-only fleet it is build time spent on an image nothing can run.
+
+`scripts/aws/bootstrap-ec2.sh` is sized for 512 MiB. PostgreSQL runs with `shared_buffers=32MB`, `max_connections=10`, and a 192 MiB container limit; the application container has a 320 MiB limit and a 256 MiB V8 old-space limit. If the application restarts under memory pressure, lower `shared_buffers` further or resize the instance to `t4g.micro` — a stop, change-type, and start, since the architecture is unchanged. Do not remove the container limits.
+
+Three host facts are load-bearing and easy to violate:
+
+- A fresh host pulls the seed image tag in `bootstrap_host()` before any deployment runs. That tag must name a commit whose ECR image includes an arm64 manifest, or the host fails its first pull with no matching manifest.
+- Deployment requires exactly one _running_ instance carrying both production tags. Two running hosts fail every deployment; a stopped host is invisible and is the rollback.
+- Data Lifecycle Manager selects volumes by the `Backup=daily` tag. A replacement root volume without that tag is never snapshotted and nothing reports it.
+
+The instance uses Unlimited CPU credits. Standard credits throttle a `t4g.nano` partway through a deployment and roll back a working image; the surplus charge is cents a month at this traffic. Do not switch it back to Standard as a cost measure.
+
+Read `docs/agents/deployment.md` before changing deployment, infrastructure, or the production runtime. `docs/aws/ec2-cloudfront-migration.md` remains the authoritative live-resource, operations, rollback, and replacement-host runbook.
+
 ## Version 3 deployment release
 
 Version `3.0.0` replaced the managed RDS database with a PostgreSQL 17 container on the existing EC2 host. The Version 1 product, financial model, authentication model, database schema, and provider-neutral runtime image are unchanged. The only application-source change is a guard in `src/db/index.ts` that skips development seeding during owner bootstrap.

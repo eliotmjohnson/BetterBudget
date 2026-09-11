@@ -1,9 +1,49 @@
-# Version 3 deployment release
+# Version 4 deployment release
 
 Read this before changing deployment, infrastructure, or the production
 runtime. The standing guardrails live in `AGENTS.md`;
 `docs/aws/ec2-cloudfront-migration.md` is the authoritative live-resource,
 operations, rollback, and replacement-host runbook.
+
+Version `4.0.0` moves the production host from an x86_64 `t3a.micro` to an arm64
+`t4g.nano`. There is no application-source change, and every Version 3 database,
+TLS, IPv6, and backup rule is retained.
+
+- GitHub Actions builds `linux/arm64`, with QEMU supplying the build on the x86
+  runner. `linux/amd64` was built alongside it only during the cutover, while the
+  outgoing x86 host was still receiving deployments, and was dropped once that
+  host was terminated. An arm64-only fleet has nothing that can run an amd64
+  image.
+- Both containers are resized for 512 MiB. PostgreSQL runs with
+  `shared_buffers=32MB`, `max_connections=10`, `work_mem=2MB`, and a 192 MiB
+  container limit. The application container gains a 320 MiB limit and a 256 MiB
+  V8 old-space limit, having previously had none. journald is capped at 64 MiB
+  and `vm.swappiness` is raised to 80. The 2 GiB swap file is unchanged.
+- The deployment helper prunes dangling images before pulling. Decompressing a
+  new image beside a running container is the memory peak of a deployment, and
+  it is the most likely place for this host to fail.
+- The instance uses Unlimited CPU credits. A `t4g.nano` earns six credits an
+  hour against a five percent baseline, and Standard credits throttle it partway
+  through a deployment, stretching the health check past its window and rolling
+  back a working image. Surplus credits cost cents a month at this traffic; do
+  not switch back to Standard as a cost measure.
+- A fresh host pulls the seed image tag in `bootstrap_host()` before any
+  deployment runs, so that tag must name a commit whose image includes an arm64
+  manifest.
+- Deployment requires exactly one _running_ instance carrying both production
+  tags, so a cutover stops the outgoing host rather than leaving it running.
+- The host was replaced rather than resized, because architecture cannot change
+  in place. Resizing between `t4g.nano` and `t4g.micro` later is a stop,
+  change-type, and start, with no volume or VPC-origin work.
+- The existing production data was not migrated. The new cluster started empty
+  and the owner was recreated from the secret.
+- The bill went from about $8.80/month to about $4.75/month. If memory pressure
+  proves the 512 MiB host wrong, `t4g.micro` at $6.13/month is the answer rather
+  than removing the container limits.
+
+Version 4 retains all Version 1, Version 2, and Version 3 boundaries.
+
+## Version 3 deployment release
 
 Version `3.0.0` replaces the managed RDS database with a PostgreSQL container on
 the existing application host. The product, financial model, authentication

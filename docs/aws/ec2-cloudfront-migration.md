@@ -76,7 +76,7 @@ otherwise noted.
 | CloudFront hostname     | `ddz00reob9ubc.cloudfront.net`                     | `BETTER_AUTH_URL` and `PRODUCTION_URL`          |
 | CloudFront VPC origin   | `vo_GKXJkQDSOGRChpUS3Ha7rz`                        | Private connection to EC2 on port 80            |
 | EC2 instance            | `better-budget-production` / `i-058062ec86ebb26ae` | Single application host                         |
-| EC2 instance type       | `t3a.micro`                                        | Low-cost production compute                     |
+| EC2 instance type       | `t4g.nano`                                         | Low-cost arm64 production compute               |
 | EC2 private IPv4        | `172.31.32.120`                                    | CloudFront VPC-origin traffic                   |
 | EC2 IPv6                | `2600:1f16:1049:6a00:d18f:1b07:59a2:447e`          | AWS service traffic and database access         |
 | EC2 root volume         | `vol-09117bfc959d79d71`                            | 8 GiB encrypted gp3 host volume                 |
@@ -178,23 +178,26 @@ Origin Shield, and access logging are disabled for this low-traffic deployment.
 ## Runtime behavior
 
 [`scripts/aws/bootstrap-ec2.sh`](../../scripts/aws/bootstrap-ec2.sh) is the
-version-controlled host definition. On a fresh Amazon Linux 2023 x86_64 host it:
+version-controlled host definition. On a fresh Amazon Linux 2023 arm64 host it:
 
 - Enables dual-stack AWS and Systems Manager endpoints.
 - Installs and starts Docker and installs `jq`.
-- Creates or grows a 2 GiB swap file, sized for two containers on 917 MiB of RAM.
+- Creates or grows a 2 GiB swap file, sized for two containers on 512 MiB of RAM.
+- Caps journald at 64 MiB on disk and 16 MiB in `/run`, and raises
+  `vm.swappiness` to 80 so cold pages leave RAM sooner.
 - Creates the `better-budget` Docker network and the database data directory.
 - Installs `better-budget-db.service`, `better-budget.service`,
   `better-budget-healthcheck.timer`, `better-budget-deploy`,
   `better-budget-set-url`, and `better-budget-owner`.
 - Reads the production Secrets Manager JSON on every service start.
 - Keeps secret material in root-controlled files under memory-backed `/run`.
-- Runs PostgreSQL with `ssl=on`, `shared_buffers=96MB`, `max_connections=20`,
-  and a 448 MiB container memory limit, published on the host's IPv6 address and
+- Runs PostgreSQL with `ssl=on`, `shared_buffers=32MB`, `max_connections=10`,
+  and a 192 MiB container memory limit, published on the host's IPv6 address and
   on loopback but never on `0.0.0.0`.
 - Starts the application only after `pg_isready` succeeds, so a slow database
   start does not produce a migration failure loop.
-- Runs the application container on host port 80 and container port 3000.
+- Runs the application container on host port 80 and container port 3000, capped
+  at 320 MiB with a 256 MiB V8 old-space limit.
 - Uses PostgreSQL with pool size 3, verified TLS, migration prestart, production
   auth, and the CloudFront Better Auth URL.
 - Writes container output to `/better-budget/production` with 14-day retention.
@@ -229,7 +232,7 @@ A push to `main` is the complete normal deployment action. The workflow in
 1. Checks formatting, TypeScript, and linting.
 2. Verifies that `better-budget/app` uses ECR's `IMMUTABLE` tag policy.
 3. Reuses the immutable commit image when it already exists, including on a
-   workflow rerun; otherwise builds the runtime target for `linux/amd64` from a
+   workflow rerun; otherwise builds the runtime target for `linux/arm64` from a
    digest-pinned Node image and pushes it with the full Git commit SHA.
 4. Finds exactly one running EC2 instance carrying both production tags.
 5. Confirms that instance is online in Systems Manager.
@@ -474,32 +477,47 @@ the volume is intact, restoring it onto a new instance is usually faster than
 rebuilding. Rebuild only when you need a fresh host, and take a manual dump
 first if the current database is still readable.
 
-1. Launch the current Amazon Linux 2023 x86_64 AMI as a `t3a.micro` in
+1. Confirm the seed image tag in `bootstrap_host()` names a commit whose ECR
+   image includes a `linux/arm64` manifest. A fresh host pulls that tag before
+   any deployment runs, and an amd64-only image fails with no matching manifest.
+   Verify with `docker buildx imagetools inspect` before launching anything.
+2. Launch the current Amazon Linux 2023 arm64 AMI as a `t4g.nano` in
    `better-budget-ec2-private-us-east-2a`.
-2. Disable public IPv4, assign one IPv6 address, use CPU credit mode Standard,
-   and require IMDSv2.
-3. Use no key pair, disable detailed monitoring, enable termination protection,
+3. Disable public IPv4, assign one IPv6 address, use CPU credit mode Unlimited,
+   and require IMDSv2. Standard credits throttle `t4g.nano` mid-deployment: it
+   earns six credits an hour against a five percent baseline, and an exhausted
+   balance stretches a deployment past the health-check window and triggers a
+   rollback of a working image. Surplus credits bill at $0.05 per vCPU-hour,
+   which is cents a month at this traffic.
+4. Use no key pair, disable detailed monitoring, enable termination protection,
    and attach an 8 GiB encrypted gp3 root volume with delete-on-termination.
-4. Attach security group `sg-03e2360c7d24e5ae6` and IAM profile
+5. Attach security group `sg-03e2360c7d24e5ae6` and IAM profile
    `better-budget-ec2-runtime`.
-5. Tag it `Application=better-budget` and `Environment=production`.
-6. Paste the complete current
+6. Tag it `Application=better-budget` and `Environment=production`.
+7. Tag the new root volume `Backup=daily`. Data Lifecycle Manager selects
+   volumes by that tag, so a replacement volume without it is never snapshotted
+   and nothing reports the omission.
+8. Paste the complete current
    [`bootstrap-ec2.sh`](../../scripts/aws/bootstrap-ec2.sh) into **User data**.
-7. Wait for Systems Manager to report `Online`. The bootstrap starts an empty
+9. Wait for Systems Manager to report `Online`. The bootstrap starts an empty
    PostgreSQL cluster, so the application will come up with no data.
-8. Stop `better-budget.service`, restore the dump into the new cluster with
-   `pg_restore --no-owner --no-acl -U better_budget -d better_budget`, then start
-   the application again and confirm both local health endpoints.
-9. Update or recreate the CloudFront VPC origin for the replacement instance,
-   wait for `Deployed`, and ensure EC2 port 80 accepts only the new
-   CloudFront-managed security group.
-10. Point the `/etc/hosts` entry for `better-budget-db` at the new instance's
+10. Stop `better-budget.service`, restore the dump into the new cluster with
+    `pg_restore --no-owner --no-acl -U better_budget -d better_budget`, then start
+    the application again and confirm both local health endpoints. Skip this step
+    when rebuilding onto a deliberately empty database.
+11. Stop the outgoing instance before running any workflow. Instance discovery
+    requires exactly one _running_ tagged instance, so two running hosts fail
+    every deployment, while a stopped one is invisible and remains a rollback.
+12. Update or recreate the CloudFront VPC origin for the replacement instance,
+    wait for `Deployed`, and ensure EC2 port 80 accepts only the new
+    CloudFront-managed security group.
+13. Point the `/etc/hosts` entry for `better-budget-db` at the new instance's
     IPv6 address. The certificate is reused from the secret and does not need
     reissuing unless you connect by IPv6 literal.
-11. Verify the public URL, owner sign-in, data reads/writes, logs, and a GitHub
+14. Verify the public URL, owner sign-in, data reads/writes, logs, and a GitHub
     deployment.
-12. Terminate the failed instance only after the replacement is healthy and
-    CloudFront no longer depends on it.
+15. Terminate the failed instance only after the replacement is healthy and
+    CloudFront no longer depends on it. Clear termination protection first.
 
 Run owner bootstrap only when rebuilding onto an empty database, using the
 procedure in `README.md` under "Bootstrapping the current AWS deployment". Never

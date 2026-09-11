@@ -276,8 +276,8 @@ run_database() {
         --publish "[${host_ipv6}]:5432:5432" \
         --publish 127.0.0.1:5432:5432 \
         --stop-timeout 30 \
-        --memory 448m \
-        --memory-swap 1024m \
+        --memory 192m \
+        --memory-swap 640m \
         --mount "type=bind,source=${DATABASE_DATA_DIRECTORY},target=/var/lib/postgresql/data" \
         --mount "type=bind,source=${DATABASE_TLS_DIRECTORY},target=/run/postgres-tls,readonly" \
         --env "POSTGRES_USER=${POSTGRES_ROLE}" \
@@ -293,11 +293,11 @@ run_database() {
         -c ssl=on \
         -c ssl_cert_file=/run/postgres-tls/server.crt \
         -c ssl_key_file=/run/postgres-tls/server.key \
-        -c shared_buffers=96MB \
-        -c max_connections=20 \
-        -c work_mem=4MB \
-        -c maintenance_work_mem=32MB \
-        -c effective_cache_size=256MB
+        -c shared_buffers=32MB \
+        -c max_connections=10 \
+        -c work_mem=2MB \
+        -c maintenance_work_mem=16MB \
+        -c effective_cache_size=128MB
 }
 
 database_is_ready() {
@@ -350,8 +350,11 @@ run_application() {
         --network "${DATABASE_NETWORK}" \
         --publish 80:3000 \
         --stop-timeout 30 \
+        --memory 320m \
+        --memory-swap 896m \
         --mount "type=bind,source=${RUNTIME_SECRET_DIRECTORY},target=/run/better-budget-secrets,readonly" \
         --entrypoint /run/better-budget-secrets/entrypoint.sh \
+        --env NODE_OPTIONS=--max-old-space-size=256 \
         --env DATABASE_KIND=postgres \
         --env DATABASE_POOL_SIZE=3 \
         --env DATABASE_SSL=verify-full \
@@ -438,6 +441,9 @@ run_owner_bootstrap() {
         --network "${DATABASE_NETWORK}" \
         --mount "type=bind,source=${RUNTIME_SECRET_DIRECTORY},target=/run/better-budget-secrets,readonly" \
         --mount "type=bind,source=${OWNER_SECRET_DIRECTORY},target=/run/better-budget-owner,readonly" \
+        --memory 256m \
+        --memory-swap 768m \
+        --env NODE_OPTIONS=--max-old-space-size=192 \
         --env DATABASE_KIND=postgres \
         --env DATABASE_POOL_SIZE=3 \
         --env DATABASE_SSL=verify-full \
@@ -527,6 +533,7 @@ deploy_image() {
     previous_tag=$(<"${IMAGE_TAG_FILE}")
     require_commit_sha "${previous_tag}"
 
+    docker image prune --force >/dev/null
     pull_image "${requested_tag}"
     write_image_tag "${requested_tag}"
     systemctl restart "${SERVICE_NAME}"
@@ -652,6 +659,23 @@ create_swap() {
     fi
 }
 
+constrain_host_memory() {
+    install -d -m 0755 /etc/systemd/journald.conf.d
+
+    tee /etc/systemd/journald.conf.d/better-budget.conf >/dev/null <<'CONFIG'
+[Journal]
+SystemMaxUse=64M
+RuntimeMaxUse=16M
+CONFIG
+
+    tee /etc/sysctl.d/99-better-budget.conf >/dev/null <<'CONFIG'
+vm.swappiness=80
+CONFIG
+
+    systemctl restart systemd-journald.service
+    sysctl --quiet --load /etc/sysctl.d/99-better-budget.conf
+}
+
 install_systemd_units() {
     install -d -m 0755 /etc/systemd/system
 
@@ -761,6 +785,7 @@ bootstrap_host() {
     systemctl enable --now docker.service
     aws configure set default.use_dualstack_endpoint true
     create_swap
+    constrain_host_memory
 
     install -d -m 0755 "$(dirname "${HOST_PROGRAM}")"
     install -m 0755 "${script_source}" "${HOST_PROGRAM}"
