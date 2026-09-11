@@ -1,36 +1,36 @@
 {
-  "rules": [
-    {
-      "rulePriority": 1,
-      "description": "Expire untagged images after one day; they are build by-products.",
-      "selection": {
-        "tagStatus": "untagged",
-        "countType": "sinceImagePushed",
-        "countUnit": "days",
-        "countNumber": 1
-      },
-      "action": { "type": "expire" }
-    },
-    {
-      "rulePriority": 2,
-      "description": "Keep only the two most recent owner-bootstrap images; each is about 200 MiB and runs at most once per database.",
-      "selection": {
-        "tagStatus": "tagged",
-        "tagPatternList": ["owner-*"],
-        "countType": "imageCountMoreThan",
-        "countNumber": 2
-      },
-      "action": { "type": "expire" }
-    },
-    {
-      "rulePriority": 3,
-      "description": "Keep the twenty most recent runtime images. The bootstrap seed tag must always name one of these.",
-      "selection": {
-        "tagStatus": "any",
-        "countType": "imageCountMoreThan",
-        "countNumber": 20
-      },
-      "action": { "type": "expire" }
-    }
-  ]
+    "rules": [
+        {
+            "rulePriority": 1,
+            "description": "Expire untagged images after one day; they are build by-products.",
+            "selection": {
+                "tagStatus": "untagged",
+                "countType": "sinceImagePushed",
+                "countUnit": "days",
+                "countNumber": 1
+            },
+            "action": { "type": "expire" }
+        },
+        {
+            "rulePriority": 2,
+            "description": "Keep only the two most recent owner-bootstrap images; each is about 200 MiB and runs at most once per database.",
+            "selection": {
+                "tagStatus": "tagged",
+                "tagPatternList": ["owner-*"],
+                "countType": "imageCountMoreThan",
+                "countNumber": 2
+            },
+            "action": { "type": "expire" }
+        },
+        {
+            "rulePriority": 3,
+            "description": "Keep the twenty most recent runtime images. The bootstrap seed tag must always name one of these.",
+            "selection": {
+                "tagStatus": "any",
+                "countType": "imageCountMoreThan",
+                "countNumber": 20
+            },
+            "action": { "type": "expire" }
+        }
+    ]
 }
