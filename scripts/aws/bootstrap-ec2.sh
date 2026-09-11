@@ -821,7 +821,7 @@ CONFIG
     fi
 
     if [[ ! -e ${IMAGE_TAG_FILE} ]]; then
-        printf '%s\n' '19e045b7532f801c8994bb2e221d3d52a7c597c5' >"${IMAGE_TAG_FILE}"
+        printf '%s\n' '2173da23b11b9390d4e49efbab3634b88653e5d9' >"${IMAGE_TAG_FILE}"
         chmod 0600 "${IMAGE_TAG_FILE}"
     fi
 

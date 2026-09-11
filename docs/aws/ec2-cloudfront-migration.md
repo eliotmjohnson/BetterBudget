@@ -484,6 +484,12 @@ first if the current database is still readable.
    image includes a `linux/arm64` manifest. A fresh host pulls that tag before
    any deployment runs, and an amd64-only image fails with no matching manifest.
    Verify with `docker buildx imagetools inspect` before launching anything.
+
+    The image that tag names must never be deleted from ECR. Image retention is
+    manual, and pruning old images by date will take the seed image with them
+    unless it is excluded explicitly. Losing it does not affect a running host,
+    which holds its image locally, but it breaks every future host rebuild.
+
 2. Launch the current Amazon Linux 2023 arm64 AMI as a `t4g.nano` in
    `better-budget-ec2-private-us-east-2a`.
 3. Disable public IPv4, assign one IPv6 address, use CPU credit mode Unlimited,
@@ -519,15 +525,23 @@ first if the current database is still readable.
 11. Stop the outgoing instance before running any workflow. Instance discovery
     requires exactly one _running_ tagged instance, so two running hosts fail
     every deployment, while a stopped one is invisible and remains a rollback.
-12. Update or recreate the CloudFront VPC origin for the replacement instance,
-    wait for `Deployed`, and ensure EC2 port 80 accepts only the new
+12. Recreate the CloudFront VPC origin for the replacement instance. It cannot
+    be updated in place: `UpdateVpcOrigin` fails with
+    `CannotUpdateEntityWhileInUse` while any distribution references it. Create a
+    new origin, wait for `Deployed`, point the distribution's origin at it and at
+    the new instance's private DNS name, wait for the distribution to deploy, and
+    only then delete the old origin. Ensure EC2 port 80 accepts only the
     CloudFront-managed security group.
 13. Point the `/etc/hosts` entry for `better-budget-db` at the new instance's
     IPv6 address. The certificate is reused from the secret and does not need
     reissuing unless you connect by IPv6 literal.
-14. Verify the public URL, owner sign-in, data reads/writes, logs, and a GitHub
+14. Repoint both CloudWatch alarms at the replacement instance.
+    `better-budget-ec2-instance-reboot` and `better-budget-ec2-system-recovery`
+    carry an `InstanceId` dimension, so they keep watching the old instance and
+    silently protect nothing after a replacement.
+15. Verify the public URL, owner sign-in, data reads/writes, logs, and a GitHub
     deployment.
-15. Terminate the failed instance only after the replacement is healthy and
+16. Terminate the failed instance only after the replacement is healthy and
     CloudFront no longer depends on it. Clear termination protection first.
 
 Run owner bootstrap only when rebuilding onto an empty database, using the
