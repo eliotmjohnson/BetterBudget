@@ -23,8 +23,8 @@ personal IPv6 prefix on the PostgreSQL port.
 ## Current production status
 
 - CloudFront distribution `E13RII40P7L8EE` and VPC origin
-  `vo_GKXJkQDSOGRChpUS3Ha7rz` are deployed.
-- EC2 instance `i-058062ec86ebb26ae` is the only instance tagged
+  `vo_HPi66ME94UUGDNvG59gBcn` are deployed.
+- EC2 instance `i-03455a55b281dbde0` is the only instance tagged
   `Application=better-budget` and `Environment=production`.
 - Pushes to `main` verify ECR tag immutability, then build and deploy immutable
   commit-SHA images through GitHub OIDC and Systems Manager.
@@ -48,7 +48,7 @@ production data must not be deleted during host recovery.
 **Backups are daily EBS snapshots of the root volume, retained seven days.**
 Data Lifecycle Manager policy `policy-0814a8ef0cb72ddd5` snapshots every volume
 tagged `Backup=daily` at 08:00 UTC, which is 03:00 in `America/Chicago`. Only
-`vol-09117bfc959d79d71` carries that tag.
+`vol-034582146e2ccaad7` carries that tag.
 
 Those snapshots are **crash-consistent, not transactionally clean**: they are
 taken while PostgreSQL is running, so a restore replays write-ahead log the way
@@ -74,12 +74,12 @@ otherwise noted.
 | ----------------------- | -------------------------------------------------- | ----------------------------------------------- |
 | CloudFront distribution | `E13RII40P7L8EE`                                   | Public HTTPS application endpoint               |
 | CloudFront hostname     | `ddz00reob9ubc.cloudfront.net`                     | `BETTER_AUTH_URL` and `PRODUCTION_URL`          |
-| CloudFront VPC origin   | `vo_GKXJkQDSOGRChpUS3Ha7rz`                        | Private connection to EC2 on port 80            |
-| EC2 instance            | `better-budget-production` / `i-058062ec86ebb26ae` | Single application host                         |
+| CloudFront VPC origin   | `vo_HPi66ME94UUGDNvG59gBcn`                        | Private connection to EC2 on port 80            |
+| EC2 instance            | `better-budget-production` / `i-03455a55b281dbde0` | Single application host                         |
 | EC2 instance type       | `t4g.nano`                                         | Low-cost arm64 production compute               |
-| EC2 private IPv4        | `172.31.32.120`                                    | CloudFront VPC-origin traffic                   |
-| EC2 IPv6                | `2600:1f16:1049:6a00:d18f:1b07:59a2:447e`          | AWS service traffic and database access         |
-| EC2 root volume         | `vol-09117bfc959d79d71`                            | 8 GiB encrypted gp3 host volume                 |
+| EC2 private IPv4        | `172.31.32.45`                                     | CloudFront VPC-origin traffic                   |
+| EC2 IPv6                | `2600:1f16:1049:6a00:cdcb:76c8:fe1d:cea2`          | AWS service traffic and database access         |
+| EC2 root volume         | `vol-034582146e2ccaad7`                            | 8 GiB encrypted gp3 host volume                 |
 | Database container      | `better-budget-db`                                 | PostgreSQL 17 on the application host           |
 | Database image          | `postgres:17-alpine`, digest-pinned                | Pulled from Docker Hub, runs as uid 70          |
 | Database data directory | `/var/lib/better-budget/postgres`                  | Persistent application data on EBS              |
@@ -352,7 +352,7 @@ Add one line to `/etc/hosts` on the client machine so the certificate's
 `better-budget-db` name resolves:
 
 ```text
-2600:1f16:1049:6a00:d18f:1b07:59a2:447e  better-budget-db
+2600:1f16:1049:6a00:cdcb:76c8:fe1d:cea2  better-budget-db
 ```
 
 Then configure DBeaver with:
@@ -383,7 +383,7 @@ host's loopback `5432` to a local port:
 
 ```bash
 aws ssm start-session \
-    --target i-058062ec86ebb26ae \
+    --target i-03455a55b281dbde0 \
     --document-name AWS-StartPortForwardingSession \
     --parameters '{"portNumber":["5432"],"localPortNumber":["15432"]}' \
     --region us-east-2
@@ -451,10 +451,10 @@ They are also crash-consistent, so PostgreSQL replays write-ahead log on first
 boot exactly as it would after a power loss.
 
 1. Pick the snapshot. `aws ec2 describe-snapshots --owner-ids self` and take the
-   newest `completed` one for `vol-09117bfc959d79d71`.
+   newest `completed` one for `vol-034582146e2ccaad7`.
 2. Create a volume from it in `us-east-2a`, matching the instance's availability
    zone, as 8 GiB `gp3`, encrypted.
-3. Stop `i-058062ec86ebb26ae`. Termination protection prevents accidental
+3. Stop `i-03455a55b281dbde0`. Termination protection prevents accidental
    termination but does not prevent stopping.
 4. Detach the impaired root volume, then attach the restored volume as
    `/dev/xvda`, the instance's root device name.
@@ -500,8 +500,16 @@ first if the current database is still readable.
 7. Tag the new root volume `Backup=daily`. Data Lifecycle Manager selects
    volumes by that tag, so a replacement volume without it is never snapshotted
    and nothing reports the omission.
-8. Paste the complete current
-   [`bootstrap-ec2.sh`](../../scripts/aws/bootstrap-ec2.sh) into **User data**.
+8. Supply the complete current
+   [`bootstrap-ec2.sh`](../../scripts/aws/bootstrap-ec2.sh) as **User data**. The
+   script is larger than the 16 KiB user-data limit, so it cannot be pasted
+   directly; gzip it first and upload the compressed file, which cloud-init
+   decompresses on boot:
+
+    ```bash
+    gzip -9 -c scripts/aws/bootstrap-ec2.sh >bootstrap-ec2.sh.gz
+    ```
+
 9. Wait for Systems Manager to report `Online`. The bootstrap starts an empty
    PostgreSQL cluster, so the application will come up with no data.
 10. Stop `better-budget.service`, restore the dump into the new cluster with
@@ -547,6 +555,37 @@ following old ECS resources were removed:
 The cleanup intentionally retained RDS and its data, ECR images, Secrets
 Manager, the GitHub OIDC role, and every resource listed in the current
 inventory above. RDS was decommissioned later; see the record below.
+
+## Completed arm64 migration record
+
+On September 11, 2026 the production host moved from an x86_64 `t3a.micro` to an
+arm64 `t4g.nano`, taking the monthly bill from about $8.80 to about $4.75. The
+architecture cannot change in place, so this was a host replacement onto an empty
+database; the existing data was explicitly declared disposable, so there was no
+dump, no restore, and no final snapshot. The owner was recreated from the secret.
+
+Replaced:
+
+- EC2 instance `i-058062ec86ebb26ae` (`t3a.micro`, x86_64) and its root volume
+  `vol-09117bfc959d79d71`, both terminated after the replacement was verified.
+- CloudFront VPC origin `vo_GKXJkQDSOGRChpUS3Ha7rz`, deleted once unattached. A
+  VPC origin cannot be updated while a distribution references it, so the
+  replacement is always a create, a distribution update, and then a delete.
+
+Two things cost an outage or an abandoned build and are worth remembering:
+
+- A wrong-architecture single-platform image **pulls successfully** and only
+  fails when the container execs. The deployment helper wrote the tag and
+  restarted before anything detected it, and could not roll back because the
+  rollback tag is read from the tag file at the start of the deployment, which a
+  previous bad deployment had already overwritten. `require_matching_platform`
+  now refuses the image before the tag is written.
+- Emulating the arm64 build with QEMU on an x86 runner was abandoned after nine
+  minutes. The repository is public, so `ubuntu-24.04-arm` runners are free; the
+  same build finishes in roughly 85 seconds natively.
+
+Also changed: the host script outgrew the 16 KiB user-data limit during Version
+3, so it is now supplied gzipped rather than pasted.
 
 ## Completed RDS decommission record
 
