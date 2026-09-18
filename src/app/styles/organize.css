@@ -165,6 +165,9 @@
     padding: 8px 12px calc(8px + env(safe-area-inset-bottom));
     border-top: 1px solid var(--line);
 }
+.organizer-delete-slot[data-single-action='true'] {
+    grid-template-columns: minmax(0, 1fr);
+}
 .organizer-delete-action,
 .organizer-permanent-action {
     min-height: 44px;

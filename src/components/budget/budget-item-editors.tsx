@@ -14,7 +14,12 @@ import type {
 import { createUuid } from '@/domain/uuid';
 import { TransactionIcon } from '@/components/shared/transaction-icon';
 import { TransactionSheet } from '@/components/transactions/transaction-sheet';
-import { money, type Mutate } from '@/components/shared/budget-view-helpers';
+import {
+    fitAmountStyle,
+    money,
+    type Mutate,
+    type MutateConfirmed
+} from '@/components/shared/budget-view-helpers';
 
 type TransactionActivityEntry = ActivityEntry & {
     type: Exclude<ActivityEntry['type'], 'income'>;
@@ -77,14 +82,17 @@ export function EditItemForm({
     item,
     snapshot,
     mutate,
+    mutateConfirmed,
     onDeleteTransaction
 }: {
     item: BudgetItemView;
     snapshot: MonthSnapshot;
     mutate: Mutate;
+    mutateConfirmed: MutateConfirmed;
     onDeleteTransaction: (entry: ActivityEntry) => void;
 }) {
     const [planned, setPlanned] = useState<string>(item.plannedCents);
+    const [plannedUnsaved, setPlannedUnsaved] = useState(false);
     const [selectedTransaction, setSelectedTransaction] =
         useState<ActivityEntry | null>(null);
     const [editingTransactionOpen, setEditingTransactionOpen] = useState(false);
@@ -116,11 +124,12 @@ export function EditItemForm({
     const remainingAmount = money(
         (remainingCents < 0n ? -remainingCents : remainingCents).toString()
     );
-    const commitPlanned = () => {
+    const commitPlanned = async () => {
         const plannedCents = planned || '0';
 
+        setPlannedUnsaved(false);
         if (plannedCents === item.plannedCents) return;
-        mutate({
+        const saved = await mutateConfirmed({
             type: 'updatePlan',
             clientMutationId: createUuid(),
             monthKey: snapshot.monthKey,
@@ -128,6 +137,8 @@ export function EditItemForm({
             plannedCents,
             expectedVersion: item.version
         });
+
+        setPlannedUnsaved(!saved);
     };
 
     return (
@@ -136,7 +147,9 @@ export function EditItemForm({
                 <span className='line-item-remaining-label'>
                     {remainingLabel}
                 </span>
-                <strong>{remainingAmount}</strong>
+                <strong style={fitAmountStyle(remainingAmount)}>
+                    {remainingAmount}
+                </strong>
                 <span className='line-item-remaining-note'>
                     {remainingCents < 0n
                         ? "Beyond this month's available funds"
@@ -147,13 +160,31 @@ export function EditItemForm({
                 <label htmlFor='item-planned'>Planned amount</label>
                 <CurrencyInput
                     id='item-planned'
+                    aria-invalid={plannedUnsaved || undefined}
+                    aria-describedby={
+                        plannedUnsaved ? 'item-planned-unsaved' : undefined
+                    }
                     value={planned}
-                    onValueChange={setPlanned}
-                    onBlur={commitPlanned}
+                    onValueChange={(value) => {
+                        setPlanned(value);
+                        setPlannedUnsaved(false);
+                    }}
+                    onBlur={() => void commitPlanned()}
                     onKeyDown={(event) => {
                         if (event.key === 'Enter') event.currentTarget.blur();
                     }}
                 />
+                {plannedUnsaved ? (
+                    <p
+                        className='form-error'
+                        id='item-planned-unsaved'
+                        role='alert'
+                    >
+                        Not saved. The saved amount is{' '}
+                        {money(item.plannedCents)}. Select the amount to try
+                        again.
+                    </p>
+                ) : null}
             </div>
             <div className='switch-row'>
                 <div>
@@ -346,6 +377,7 @@ export function EditItemDetails({
     item,
     snapshot,
     mutate,
+    mutateConfirmed,
     onDeleteTransaction,
     onOpenChange,
     restoreFocusRef
@@ -353,6 +385,7 @@ export function EditItemDetails({
     item: BudgetItemView | null;
     snapshot: MonthSnapshot;
     mutate: Mutate;
+    mutateConfirmed: MutateConfirmed;
     onDeleteTransaction: (entry: ActivityEntry) => void;
     onOpenChange: (open: boolean) => void;
     restoreFocusRef: RefObject<HTMLElement | null>;
@@ -405,6 +438,7 @@ export function EditItemDetails({
                 item={renderedItem}
                 snapshot={snapshot}
                 mutate={mutate}
+                mutateConfirmed={mutateConfirmed}
                 onDeleteTransaction={onDeleteTransaction}
             />
             <TransactionSheet

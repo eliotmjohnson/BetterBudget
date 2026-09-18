@@ -205,7 +205,7 @@ export function TransactionsView({
                     />
                     <input
                         aria-label='Search transactions'
-                        placeholder='Search merchant, item, or note'
+                        placeholder='Search transactions'
                         value={search}
                         onChange={(event) => setSearch(event.target.value)}
                     />

@@ -70,6 +70,7 @@
     border-top: 1px solid var(--line);
 }
 .summary-stat {
+    container-type: inline-size;
     text-align: center;
     min-width: 0;
     padding: 0 8px;
@@ -85,8 +86,12 @@
 .summary-stat strong {
     display: block;
     margin-top: 6px;
-    font-size: 16px;
+    font-size: min(
+        var(--summary-stat-size, 16px),
+        calc(100cqi / (var(--amount-chars, 1) * 0.54))
+    );
     letter-spacing: -0.025em;
+    white-space: nowrap;
 }
 .summary-stat strong.positive {
     color: #1fa86e;
@@ -361,6 +366,14 @@
     border: 0;
     white-space: nowrap;
 }
+.live-announcer {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
 .sortable-keyboard-control:focus-visible {
     width: auto;
     height: 36px;
@@ -381,8 +394,8 @@
     box-shadow: inset 0 0 0 1px rgb(23 105 224 / 8%);
 }
 .category-edit-button {
-    width: 40px;
-    height: 40px;
+    width: 44px;
+    height: 44px;
     color: #666e78;
 }
 .category-edit-button:disabled {
@@ -764,9 +777,12 @@ body > .sortable-drag-overlay * {
     font-weight: 700;
     text-align: center;
 }
+/* An open Radix modal sets pointer-events: none on body; the toast lives
+   outside every dialog, so it must opt back in for Undo to be tappable. */
 .toast {
     position: fixed;
     z-index: 80;
+    pointer-events: auto;
     left: 16px;
     right: 16px;
     bottom: calc(88px + env(safe-area-inset-bottom));

@@ -337,6 +337,7 @@
     gap: 15px;
 }
 .line-item-remaining {
+    container-type: inline-size;
     position: relative;
     isolation: isolate;
     min-height: 128px;
@@ -377,7 +378,11 @@
 }
 .line-item-remaining strong {
     color: var(--blue);
-    font-size: clamp(34px, 10vw, 42px);
+    font-size: min(
+        clamp(34px, 10vw, 42px),
+        calc(100cqi / (var(--amount-chars, 1) * 0.54))
+    );
+    white-space: nowrap;
     font-weight: 820;
     letter-spacing: -0.05em;
     line-height: 1.05;

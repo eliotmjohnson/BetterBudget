@@ -6,7 +6,11 @@ import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import type { IncomePlanView, MonthSnapshot } from '@/domain/types';
 import { CategoryIcon } from '@/components/shared/category-icon';
 import { createDetailHistory } from '@/components/shared/detail-history';
-import { money, type Mutate } from '@/components/shared/budget-view-helpers';
+import {
+    fitAmountStyle,
+    money,
+    type Mutate
+} from '@/components/shared/budget-view-helpers';
 import { AddIncomeSource, RecordIncome } from './income-forms';
 import { IncomeSourceDetails } from './income-source-details';
 
@@ -111,19 +115,33 @@ export function IncomeView({
             </div>
             <div className='summary-card income-summary'>
                 <span className='summary-label'>Received</span>
-                <strong className='summary-amount'>
+                <strong
+                    className='summary-amount'
+                    style={fitAmountStyle(
+                        money(snapshot.summary.receivedIncomeCents)
+                    )}
+                >
                     {money(snapshot.summary.receivedIncomeCents)}
                 </strong>
                 <div className='summary-stats'>
                     <div className='summary-stat'>
                         <span>Expected</span>
-                        <strong>
+                        <strong
+                            style={fitAmountStyle(
+                                money(snapshot.summary.expectedIncomeCents)
+                            )}
+                        >
                             {money(snapshot.summary.expectedIncomeCents)}
                         </strong>
                     </div>
                     <div className='summary-stat'>
                         <span>{hasSurplus ? 'Surplus' : 'Remaining'}</span>
-                        <strong className={hasSurplus ? 'positive' : ''}>
+                        <strong
+                            className={hasSurplus ? 'positive' : ''}
+                            style={fitAmountStyle(
+                                money(expectedDifference.toString())
+                            )}
+                        >
                             {money(expectedDifference.toString())}
                         </strong>
                     </div>

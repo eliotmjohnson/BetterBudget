@@ -2,7 +2,7 @@
 
 import { useLayoutEffect, useRef, type CSSProperties } from 'react';
 import type { MonthSnapshot } from '@/domain/types';
-import { money } from '@/components/shared/budget-view-helpers';
+import { fitAmountStyle, money } from '@/components/shared/budget-view-helpers';
 import { remainingAvailableProgress } from './budget-category-section';
 
 export function budgetBalanceView(snapshot: MonthSnapshot) {
@@ -143,7 +143,11 @@ export function BudgetSummaryCard({ snapshot }: { snapshot: MonthSnapshot }) {
                         }}
                     />
                     <span>Income</span>
-                    <strong>
+                    <strong
+                        style={fitAmountStyle(
+                            money(snapshot.summary.expectedIncomeCents)
+                        )}
+                    >
                         {money(snapshot.summary.expectedIncomeCents)}
                     </strong>
                 </div>
@@ -156,7 +160,13 @@ export function BudgetSummaryCard({ snapshot }: { snapshot: MonthSnapshot }) {
                         }}
                     />
                     <span>Planned</span>
-                    <strong>{money(snapshot.summary.plannedCents)}</strong>
+                    <strong
+                        style={fitAmountStyle(
+                            money(snapshot.summary.plannedCents)
+                        )}
+                    >
+                        {money(snapshot.summary.plannedCents)}
+                    </strong>
                 </div>
                 <div className='desktop-bar'>
                     <div
@@ -167,7 +177,13 @@ export function BudgetSummaryCard({ snapshot }: { snapshot: MonthSnapshot }) {
                         }}
                     />
                     <span>Spent</span>
-                    <strong>{money(snapshot.summary.spentCents)}</strong>
+                    <strong
+                        style={fitAmountStyle(
+                            money(snapshot.summary.spentCents)
+                        )}
+                    >
+                        {money(snapshot.summary.spentCents)}
+                    </strong>
                 </div>
                 <div className='desktop-bar'>
                     <div
@@ -190,17 +206,33 @@ export function BudgetSummaryCard({ snapshot }: { snapshot: MonthSnapshot }) {
             <div className='summary-stats'>
                 <div className='summary-stat'>
                     <span>Income</span>
-                    <strong>
+                    <strong
+                        style={fitAmountStyle(
+                            money(snapshot.summary.expectedIncomeCents)
+                        )}
+                    >
                         {money(snapshot.summary.expectedIncomeCents)}
                     </strong>
                 </div>
                 <div className='summary-stat'>
                     <span>Planned</span>
-                    <strong>{money(snapshot.summary.plannedCents)}</strong>
+                    <strong
+                        style={fitAmountStyle(
+                            money(snapshot.summary.plannedCents)
+                        )}
+                    >
+                        {money(snapshot.summary.plannedCents)}
+                    </strong>
                 </div>
                 <div className='summary-stat'>
                     <span>Spent</span>
-                    <strong>{money(snapshot.summary.spentCents)}</strong>
+                    <strong
+                        style={fitAmountStyle(
+                            money(snapshot.summary.spentCents)
+                        )}
+                    >
+                        {money(snapshot.summary.spentCents)}
+                    </strong>
                 </div>
             </div>
         </div>

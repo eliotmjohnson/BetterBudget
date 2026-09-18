@@ -21,7 +21,11 @@ import type {
 import { createUuid } from '@/domain/uuid';
 import { createDetailHistory } from '@/components/shared/detail-history';
 import { TransactionSheet } from '@/components/transactions/transaction-sheet';
-import { money, type Mutate } from '@/components/shared/budget-view-helpers';
+import {
+    money,
+    type Mutate,
+    type MutateConfirmed
+} from '@/components/shared/budget-view-helpers';
 import { EditItemDetails } from './budget-item-editors';
 import { BudgetCategorySection } from './budget-category-section';
 import { BudgetSummaryCard, budgetBalanceView } from './budget-summary-card';
@@ -40,6 +44,7 @@ export function BudgetView({
     mutationPending,
     snapshot,
     mutate,
+    mutateConfirmed,
     onAmountViewChange,
     onDeleteTransaction
 }: {
@@ -48,6 +53,7 @@ export function BudgetView({
     mutationPending: boolean;
     snapshot: MonthSnapshot;
     mutate: Mutate;
+    mutateConfirmed: MutateConfirmed;
     onAmountViewChange: (amountView: BudgetAmountView) => void;
     onDeleteTransaction: (entry: ActivityEntry) => void;
 }) {
@@ -62,7 +68,7 @@ export function BudgetView({
     const itemTriggerRef = useRef<HTMLElement | null>(null);
     const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
     const [transactionOpen, setTransactionOpen] = useState(false);
-    const editor = useBudgetStructureEditor(snapshot, mutate);
+    const editor = useBudgetStructureEditor(snapshot, mutate, mutateConfirmed);
     const balance = budgetBalanceView(snapshot);
     const selectedItem = requestedItemDefinitionId
         ? (snapshot.categories
@@ -379,13 +385,14 @@ export function BudgetView({
                 item={selectedItem}
                 snapshot={snapshot}
                 mutate={mutate}
+                mutateConfirmed={mutateConfirmed}
                 onDeleteTransaction={onDeleteTransaction}
                 onOpenChange={(open) => {
                     if (!open) closeItemDetails();
                 }}
                 restoreFocusRef={itemTriggerRef}
             />
-            <BudgetStructureSheets editor={editor} />
+            <BudgetStructureSheets editor={editor} snapshot={snapshot} />
         </section>
     );
 }

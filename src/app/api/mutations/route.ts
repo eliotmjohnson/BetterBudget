@@ -51,7 +51,17 @@ export async function POST(request: Request) {
             { ok: false, message: 'Simulated temporary failure' },
             { status: 503 }
         );
-    const body: unknown = await request.json();
+    const body: unknown = await request.json().catch(() => undefined);
+
+    if (body === undefined)
+        return NextResponse.json(
+            {
+                ok: false,
+                code: 'validation',
+                message: 'That change could not be read. Try again.'
+            },
+            { status: 400 }
+        );
     const parsed = mutationSchema.safeParse(body);
 
     if (!parsed.success) {

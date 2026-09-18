@@ -2,6 +2,7 @@
 
 import * as Dialog from '@radix-ui/react-dialog';
 import { X } from 'lucide-react';
+import { isToastTarget } from './toast-provider';
 import {
     useEffect,
     useRef,
@@ -295,7 +296,8 @@ export function Sheet({
                         contentRef.current?.focus();
                     }}
                     onPointerDownOutside={(event) => {
-                        if (interactionDisabled) event.preventDefault();
+                        if (interactionDisabled || isToastTarget(event.target))
+                            event.preventDefault();
                     }}
                     onAnimationEnd={(event) => {
                         if (

@@ -631,8 +631,9 @@ and opens the category and budget-item organizer for the selected month. The
 organizer uses mobile push navigation with Back, browser history, and a
 left-edge swipe to dismiss, plus the shared centered modal on desktop. Its
 collapsible Budget-style list supports hold-to-drag and keyboard reordering,
-category appearance and item-name editing, history-preserving deletion, and
-permanent deletion of unused definitions. New structure remains a Budget-page
+category appearance and item-name editing, history-preserving deletion that
+moves affected transactions to a chosen item, and permanent deletion of
+definitions that were never used. New structure remains a Budget-page
 task rather than an organizer action.
 
 ## Release versioning
@@ -683,8 +684,8 @@ allocations, or copied months; direct versioned edits send `expectedVersion` and
 a mismatch produces a conflict rather than an overwrite; routine success is
 silent; and offline financial writes are not queued in version 1.
 
-Server-confirmed actions such as month copy, plan clearing, archival with
-history, password changes, and cross-month transaction moves show only a local
+Server-confirmed actions such as month copy, plan clearing, archival (which
+moves any affected activity to a chosen destination item), password changes, and cross-month transaction moves show only a local
 pending state. The client refreshes authoritative state on focus, route/month
 navigation, successful writes, and a lightweight visible-tab interval.
 

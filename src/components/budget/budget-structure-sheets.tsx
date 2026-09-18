@@ -4,12 +4,16 @@ import { Trash2 } from 'lucide-react';
 import { CurrencyInput } from '@/components/ui/currency-input';
 import { Sheet } from '@/components/ui/sheet';
 import { CategoryDetailsFields } from '@/components/shared/category-details-fields';
+import { DeleteDefinitionSheet } from '@/components/shared/delete-definition-sheet';
+import type { MonthSnapshot } from '@/domain/types';
 import type { BudgetStructureEditor } from './budget-structure-editor';
 
 export function BudgetStructureSheets({
-    editor
+    editor,
+    snapshot
 }: {
     editor: BudgetStructureEditor;
+    snapshot: MonthSnapshot;
 }) {
     return (
         <>
@@ -115,7 +119,7 @@ export function BudgetStructureSheets({
                                 type='button'
                                 onClick={(event) => {
                                     event.currentTarget.blur();
-                                    editor.setCategoryDeleteState('open');
+                                    editor.requestCategoryDelete();
                                 }}
                             >
                                 <Trash2 size={17} />
@@ -151,6 +155,7 @@ export function BudgetStructureSheets({
                                     <button
                                         className='text-button'
                                         type='button'
+                                        disabled={editor.deletePending}
                                         onClick={() =>
                                             editor.setCategoryDeleteState(
                                                 'closing'
@@ -162,45 +167,51 @@ export function BudgetStructureSheets({
                                     <button
                                         className='text-button danger-text'
                                         type='button'
-                                        onClick={editor.deleteCategory}
+                                        disabled={editor.deletePending}
+                                        onClick={() =>
+                                            void editor.deleteCategory()
+                                        }
                                     >
-                                        Delete
+                                        {editor.deletePending
+                                            ? 'Deleting…'
+                                            : 'Delete'}
                                     </button>
                                 </div>
                             </div>
                         ) : null}
                     </div>
                 </div>
+                <DeleteDefinitionSheet
+                    open={editor.categoryDeleteSheetOpen}
+                    onOpenChange={editor.setCategoryDeleteSheetOpen}
+                    snapshot={snapshot}
+                    sourceLabel={editor.editedCategory?.name ?? 'this category'}
+                    sourceItems={editor.editedCategory?.items ?? []}
+                    excludedCategoryId={editor.editedCategory?.id}
+                    pending={editor.deletePending}
+                    layer='nested'
+                    onConfirm={(reassignment) =>
+                        void editor.deleteCategory(reassignment)
+                    }
+                />
             </Sheet>
-            <Sheet
+            <DeleteDefinitionSheet
                 open={editor.deleteItemTarget !== null}
                 onOpenChange={(open) => {
                     if (!open) editor.setDeleteItemTarget(null);
                 }}
-                title='Delete budget item?'
-            >
-                <div className='form-grid'>
-                    <p className='confirmation-copy'>
-                        Remove{' '}
-                        {editor.deleteItemTarget?.item.name ?? 'this item'} from
-                        the budget? Past budget history will be preserved.
-                    </p>
-                    <button
-                        className='primary-button primary-button--wide danger-button'
-                        type='button'
-                        onClick={editor.deleteItem}
-                    >
-                        Delete budget item
-                    </button>
-                    <button
-                        className='text-button'
-                        type='button'
-                        onClick={() => editor.setDeleteItemTarget(null)}
-                    >
-                        Cancel
-                    </button>
-                </div>
-            </Sheet>
+                snapshot={snapshot}
+                sourceLabel={editor.deleteItemTarget?.item.name ?? 'this item'}
+                sourceItems={
+                    editor.deleteItemTarget
+                        ? [editor.deleteItemTarget.item]
+                        : []
+                }
+                pending={editor.deletePending}
+                onConfirm={(reassignment) =>
+                    void editor.deleteItem(reassignment)
+                }
+            />
         </>
     );
 }

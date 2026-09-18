@@ -25,7 +25,8 @@ export function applyStructurePatch(next: MonthSnapshot, input: Input): void {
                 tone: input.tone ?? 'lilac',
                 availableCents: cents(0),
                 items: [],
-                version: 1
+                version: 1,
+                permanentlyDeletable: true
             });
             break;
         case 'addItem': {
@@ -43,7 +44,9 @@ export function applyStructurePatch(next: MonthSnapshot, input: Input): void {
                 availableCents: cents(input.plannedCents),
                 carryInCents: cents(0),
                 carryoverEnabled: false,
-                version: 1
+                version: 1,
+                hasLaterActivity: false,
+                permanentlyDeletable: true
             });
             if (category)
                 category.availableCents = cents(
@@ -83,11 +86,13 @@ export function applyStructurePatch(next: MonthSnapshot, input: Input): void {
             break;
         }
         case 'archiveCategory':
+            if (input.reassignment) break;
             next.categories = next.categories.filter(
                 (category) => category.id !== input.categoryId
             );
             break;
         case 'archiveItem':
+            if (input.reassignment) break;
             for (const category of next.categories)
                 category.items = category.items.filter(
                     (item) => item.definitionId !== input.itemId

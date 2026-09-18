@@ -16,6 +16,7 @@ import {
     type DragContext,
     type DragState
 } from './drag';
+import { announce } from '../announce';
 
 export type SortLongPressProps = {
     'data-sort-long-press': true;
@@ -314,6 +315,13 @@ export function useSortableList<T>({
         ids.splice(toIndex, 0, moved!);
         animateOrder(dragContext(), ids);
         onReorder(ids);
+        const movedItem = items[fromIndex];
+
+        if (movedItem)
+            announce(
+                `${getLabel(movedItem)} moved to position ${toIndex + 1} of ${ids.length}.`,
+                event.currentTarget
+            );
         releaseTimerRef.current = window.setTimeout(() => setOrder(null), 380);
     };
     const getLongPressProps = (

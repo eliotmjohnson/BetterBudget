@@ -24,6 +24,9 @@ interface ToastState extends ToastOptions {
 type ShowToast = (options: ToastOptions) => void;
 
 const ToastContext = createContext<ShowToast | null>(null);
+
+export const isToastTarget = (target: EventTarget | null) =>
+    target instanceof Element && target.closest('[data-app-toast]') !== null;
 const toastDurationMs = 5_000;
 
 export function ToastProvider({ children }: { children: ReactNode }) {
@@ -61,6 +64,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 ? createPortal(
                       <div
                           className='toast'
+                          data-app-toast=''
                           role='status'
                           aria-atomic='true'
                           key={toast.id}

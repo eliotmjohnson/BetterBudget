@@ -19,6 +19,8 @@ export function optimisticSnapshot(
             );
 
             if (!item) continue;
+            item.permanentlyDeletable = false;
+            category.permanentlyDeletable = false;
             item.spentCents = cents(BigInt(item.spentCents) + amountCents);
             item.availableCents = cents(
                 BigInt(item.availableCents) - amountCents

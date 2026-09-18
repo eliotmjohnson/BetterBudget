@@ -1,8 +1,21 @@
 import 'server-only';
-import { and, eq, inArray, isNotNull, isNull } from 'drizzle-orm';
+import {
+    and,
+    eq,
+    inArray,
+    isNotNull,
+    isNull,
+    not,
+    type SQL
+} from 'drizzle-orm';
 import type { MonthKey } from '@/domain/money';
 import { splitsMatchTotal } from '@/domain/budget-calculations';
+import { monthDate } from '@/domain/calendar';
+import type { AppDb } from '@/db';
 import {
+    budgetItems,
+    budgetMonths,
+    categories,
     monthlyBudgetItems,
     transactionSplits,
     transactions
@@ -11,7 +24,22 @@ import {
     MutationFailure,
     throwTransactionMutationFailure
 } from '@/server/mutation-failures';
+import { definitionActiveIn } from './active-items';
 import { ensureMonth, type MutationContext } from './context';
+
+const activeMonthlyItems = (tx: AppDb, month: string, condition: SQL) =>
+    tx
+        .select({
+            id: monthlyBudgetItems.id,
+            budgetItemId: monthlyBudgetItems.budgetItemId
+        })
+        .from(monthlyBudgetItems)
+        .innerJoin(
+            budgetItems,
+            eq(monthlyBudgetItems.budgetItemId, budgetItems.id)
+        )
+        .innerJoin(categories, eq(budgetItems.categoryId, categories.id))
+        .where(and(definitionActiveIn(month), condition));
 
 export async function addTransaction({
     tx,
@@ -25,10 +53,11 @@ export async function addTransaction({
             'split_mismatch',
             'Split amounts must equal the transaction total.'
         );
-    const allowed = await tx
-        .select({ id: monthlyBudgetItems.id })
-        .from(monthlyBudgetItems)
-        .where(eq(monthlyBudgetItems.monthId, monthId));
+    const allowed = await activeMonthlyItems(
+        tx,
+        monthDate(input.monthKey),
+        eq(monthlyBudgetItems.monthId, monthId)
+    );
     const allowedIds = new Set(allowed.map((row) => row.id));
 
     if (input.splits.some((split) => !allowedIds.has(split.monthlyItemId)))
@@ -69,21 +98,17 @@ export async function updateTransaction({
             'split_mismatch',
             'Split amounts must equal the transaction total.'
         );
-    const sourcePlans = await tx
-        .select({
-            id: monthlyBudgetItems.id,
-            budgetItemId: monthlyBudgetItems.budgetItemId
-        })
-        .from(monthlyBudgetItems)
-        .where(
-            and(
-                eq(monthlyBudgetItems.monthId, monthId),
-                inArray(
-                    monthlyBudgetItems.id,
-                    input.splits.map((split) => split.monthlyItemId)
-                )
+    const sourcePlans = await activeMonthlyItems(
+        tx,
+        monthDate(input.monthKey),
+        and(
+            eq(monthlyBudgetItems.monthId, monthId),
+            inArray(
+                monthlyBudgetItems.id,
+                input.splits.map((split) => split.monthlyItemId)
             )
-        );
+        )!
+    );
 
     if (sourcePlans.length !== input.splits.length)
         throw new MutationFailure(
@@ -98,21 +123,17 @@ export async function updateTransaction({
     let normalizedSplits = input.splits;
 
     if (destinationMonthId !== monthId) {
-        const destinationPlans = await tx
-            .select({
-                id: monthlyBudgetItems.id,
-                budgetItemId: monthlyBudgetItems.budgetItemId
-            })
-            .from(monthlyBudgetItems)
-            .where(
-                and(
-                    eq(monthlyBudgetItems.monthId, destinationMonthId),
-                    inArray(
-                        monthlyBudgetItems.budgetItemId,
-                        sourcePlans.map((plan) => plan.budgetItemId)
-                    )
+        const destinationPlans = await activeMonthlyItems(
+            tx,
+            monthDate(destinationKey),
+            and(
+                eq(monthlyBudgetItems.monthId, destinationMonthId),
+                inArray(
+                    monthlyBudgetItems.budgetItemId,
+                    sourcePlans.map((plan) => plan.budgetItemId)
                 )
-            );
+            )!
+        );
         const destinationByDefinition = new Map(
             destinationPlans.map((plan) => [plan.budgetItemId, plan.id])
         );
@@ -200,6 +221,35 @@ export async function undoDeleteTransaction({
     monthId,
     input
 }: MutationContext<'undoDeleteTransaction'>): Promise<void> {
+    const [retiredAllocation] = await tx
+        .select({ id: transactionSplits.id })
+        .from(transactionSplits)
+        .innerJoin(
+            monthlyBudgetItems,
+            eq(transactionSplits.monthlyItemId, monthlyBudgetItems.id)
+        )
+        .innerJoin(
+            budgetMonths,
+            eq(monthlyBudgetItems.monthId, budgetMonths.id)
+        )
+        .innerJoin(
+            budgetItems,
+            eq(monthlyBudgetItems.budgetItemId, budgetItems.id)
+        )
+        .innerJoin(categories, eq(budgetItems.categoryId, categories.id))
+        .where(
+            and(
+                eq(transactionSplits.transactionId, input.transactionId),
+                not(definitionActiveIn(budgetMonths.month)!)
+            )
+        )
+        .limit(1);
+
+    if (retiredAllocation)
+        throw new MutationFailure(
+            'validation',
+            'A budget item on this transaction was deleted, so it can’t be restored.'
+        );
     const updated = await tx
         .update(transactions)
         .set({

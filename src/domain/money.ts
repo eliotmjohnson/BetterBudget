@@ -3,6 +3,9 @@ import { z } from 'zod';
 export const APP_CURRENCY = 'USD';
 export const APP_LOCALE = 'en-US';
 
+/** The largest single amount a person can enter: $99,999,999.99. */
+export const MAX_ENTRY_CENTS = 9_999_999_999n;
+
 export type Cents = string & { readonly __brand: 'Cents' };
 export type MonthKey = string & { readonly __brand: 'MonthKey' };
 

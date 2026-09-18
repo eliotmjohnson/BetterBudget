@@ -101,6 +101,7 @@ export function TransactionSheet({
         !merchant.trim() ||
         BigInt(totalCents) <= 0n ||
         splits.length === 0 ||
+        splits.some((split) => BigInt(split.amount || '0') <= 0n) ||
         remaining !== 0n;
     const movingToAnotherMonth = Boolean(
         editing && occurredOn.slice(0, 7) !== snapshot.monthKey

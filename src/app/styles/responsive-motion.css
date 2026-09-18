@@ -21,7 +21,10 @@
         font-size: 14px;
     }
     .summary-stat strong {
-        font-size: 18px;
+        --summary-stat-size: 18px;
+    }
+    .income-summary .summary-amount {
+        --summary-amount-max: 42px;
     }
     .budget-amount-label {
         font-size: 16px;

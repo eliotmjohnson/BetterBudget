@@ -8,6 +8,7 @@ import type {
     IncomePlanView,
     MonthSnapshot
 } from '@/domain/types';
+import { defaultDateForMonth } from '@/domain/calendar';
 import { createUuid } from '@/domain/uuid';
 import { CategoryIcon } from '@/components/shared/category-icon';
 import type { Mutate } from '@/components/shared/budget-view-helpers';
@@ -107,7 +108,9 @@ export function RecordIncome({
     onOpenChange: (open: boolean) => void;
 }) {
     const [amount, setAmount] = useState('');
-    const [date, setDate] = useState(`${snapshot.monthKey}-15`);
+    const [date, setDate] = useState(() =>
+        defaultDateForMonth(snapshot.monthKey)
+    );
     const [note, setNote] = useState('');
     const [previousPlan, setPreviousPlan] = useState<IncomePlanView | null>(
         plan

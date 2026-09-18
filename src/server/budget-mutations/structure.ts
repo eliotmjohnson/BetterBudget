@@ -1,5 +1,5 @@
 import 'server-only';
-import { and, eq, inArray, isNull } from 'drizzle-orm';
+import { and, eq, gt, inArray, isNull, or } from 'drizzle-orm';
 import {
     budgetItems,
     categories,
@@ -12,7 +12,12 @@ import {
     throwCategoryMutationFailure,
     throwItemDefinitionMutationFailure
 } from '@/server/mutation-failures';
+import {
+    loadDeletableCategoryIds,
+    loadItemUsage
+} from '@/server/definition-usage';
 import type { MutationContext } from './context';
+import { moveArchivedActivity } from './reassignment';
 
 export async function addCategory({
     tx,
@@ -161,11 +166,45 @@ export async function archiveCategory({
     householdId,
     input
 }: MutationContext<'archiveCategory'>): Promise<void> {
+    const fromDate = monthDate(input.monthKey);
+    const [category] = await tx
+        .select({ name: categories.name })
+        .from(categories)
+        .where(
+            and(
+                eq(categories.id, input.categoryId),
+                eq(categories.householdId, householdId)
+            )
+        )
+        .limit(1);
+
+    if (category) {
+        const items = await tx
+            .select({ id: budgetItems.id })
+            .from(budgetItems)
+            .where(
+                and(
+                    eq(budgetItems.categoryId, input.categoryId),
+                    or(
+                        isNull(budgetItems.archivedAt),
+                        gt(budgetItems.archivedFromMonth, fromDate)
+                    )
+                )
+            );
+
+        await moveArchivedActivity(tx, householdId, {
+            sourceItemIds: items.map((item) => item.id),
+            sourceLabel: category.name,
+            excludedCategoryId: input.categoryId,
+            fromDate,
+            reassignment: input.reassignment
+        });
+    }
     const updated = await tx
         .update(categories)
         .set({
             archivedAt: new Date(),
-            archivedFromMonth: monthDate(input.monthKey),
+            archivedFromMonth: fromDate,
             version: input.expectedVersion + 1,
             updatedAt: new Date()
         })
@@ -187,11 +226,31 @@ export async function archiveItem({
     householdId,
     input
 }: MutationContext<'archiveItem'>): Promise<void> {
+    const fromDate = monthDate(input.monthKey);
+    const [item] = await tx
+        .select({ name: budgetItems.name })
+        .from(budgetItems)
+        .innerJoin(categories, eq(budgetItems.categoryId, categories.id))
+        .where(
+            and(
+                eq(budgetItems.id, input.itemId),
+                eq(categories.householdId, householdId)
+            )
+        )
+        .limit(1);
+
+    if (item)
+        await moveArchivedActivity(tx, householdId, {
+            sourceItemIds: [input.itemId],
+            sourceLabel: item.name,
+            fromDate,
+            reassignment: input.reassignment
+        });
     const updated = await tx
         .update(budgetItems)
         .set({
             archivedAt: new Date(),
-            archivedFromMonth: monthDate(input.monthKey),
+            archivedFromMonth: fromDate,
             version: input.expectedVersion + 1,
             updatedAt: new Date()
         })
@@ -232,27 +291,29 @@ export async function deleteCategory({
 
     if (!owned[0])
         throw new MutationFailure('not_found', 'That category is not here.');
+    const deletable = await loadDeletableCategoryIds(
+        tx,
+        householdId,
+        monthDate(input.monthKey),
+        [input.categoryId]
+    );
+
+    if (!deletable.has(input.categoryId))
+        throw new MutationFailure(
+            'validation',
+            'This category has budget history and can only be archived.'
+        );
     const definitions = await tx
         .select({ id: budgetItems.id })
         .from(budgetItems)
         .where(eq(budgetItems.categoryId, input.categoryId));
-    const used = definitions.length
-        ? await tx
-              .select({ id: monthlyBudgetItems.id })
-              .from(monthlyBudgetItems)
-              .where(
-                  inArray(
-                      monthlyBudgetItems.budgetItemId,
-                      definitions.map((definition) => definition.id)
-                  )
-              )
-              .limit(1)
-        : [];
 
-    if (used[0])
-        throw new MutationFailure(
-            'validation',
-            'This category has budget history and can only be archived.'
+    if (definitions.length > 0)
+        await tx.delete(monthlyBudgetItems).where(
+            inArray(
+                monthlyBudgetItems.budgetItemId,
+                definitions.map((definition) => definition.id)
+            )
         );
     await tx
         .delete(budgetItems)
@@ -291,17 +352,21 @@ export async function deleteItem({
 
     if (!owned[0])
         throw new MutationFailure('not_found', 'That budget item is not here.');
-    const used = await tx
-        .select({ id: monthlyBudgetItems.id })
-        .from(monthlyBudgetItems)
-        .where(eq(monthlyBudgetItems.budgetItemId, input.itemId))
-        .limit(1);
+    const usage = await loadItemUsage(
+        tx,
+        householdId,
+        monthDate(input.monthKey),
+        [input.itemId]
+    );
 
-    if (used[0])
+    if (!usage.get(input.itemId)?.permanentlyDeletable)
         throw new MutationFailure(
             'validation',
             'This item has budget history and can only be archived.'
         );
+    await tx
+        .delete(monthlyBudgetItems)
+        .where(eq(monthlyBudgetItems.budgetItemId, input.itemId));
     const deleted = await tx
         .delete(budgetItems)
         .where(

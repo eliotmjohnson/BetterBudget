@@ -15,7 +15,7 @@ The backend writes completed mutation receipts in the same database transaction 
 
 Safe optimistic operations currently include:
 
-- Planned-amount edits committed on blur, Enter, or the established short debounce.
+- Planned-amount edits committed on blur, Enter, or the established short debounce. A failed save on the line-item detail keeps the typed amount and shows an inline Not saved message with the saved amount until the next edit or retry.
 - Carryover toggles.
 - Category and item renaming/reordering.
 - Simple category, item, expected-income, receipt, and transaction additions after full client validation.
@@ -29,7 +29,7 @@ Server-confirmed operations currently include:
 - Copying a month.
 - Clearing planned amounts.
 - Resetting a budget.
-- Archiving definitions that have history.
+- Archiving categories and items, including moving their activity and plan to a destination item.
 - Cross-month transaction moves.
 - Password changes and session revocation.
 

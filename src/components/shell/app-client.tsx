@@ -198,6 +198,7 @@ export function BudgetApp({
                 mutationPending={budgetMutation.isPending}
                 snapshot={snapshot}
                 mutate={mutate}
+                mutateConfirmed={mutateConfirmed}
                 onAmountViewChange={setBudgetAmountView}
                 onDeleteTransaction={deleteTransaction}
             />
@@ -250,6 +251,7 @@ function BudgetScreen({
     mutationPending,
     snapshot,
     mutate,
+    mutateConfirmed,
     onAmountViewChange,
     onDeleteTransaction
 }: {
@@ -258,6 +260,7 @@ function BudgetScreen({
     mutationPending: boolean;
     snapshot: MonthSnapshot;
     mutate: (input: BudgetMutation) => boolean;
+    mutateConfirmed: (input: BudgetMutation) => Promise<boolean>;
     onAmountViewChange: (amountView: BudgetAmountView) => void;
     onDeleteTransaction: (entry: ActivityEntry) => void;
 }) {
@@ -268,6 +271,7 @@ function BudgetScreen({
             mutationPending={mutationPending}
             snapshot={snapshot}
             mutate={mutate}
+            mutateConfirmed={mutateConfirmed}
             onAmountViewChange={onAmountViewChange}
             onDeleteTransaction={onDeleteTransaction}
         />

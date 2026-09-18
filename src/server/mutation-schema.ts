@@ -1,13 +1,36 @@
 import { z } from 'zod';
-import { monthKeySchema } from '@/domain/money';
+import { MAX_ENTRY_CENTS, monthKeySchema } from '@/domain/money';
 
 const base = z.object({
     clientMutationId: z.string().min(8).max(120),
     monthKey: monthKeySchema
 });
+const centsSchema = z
+    .string()
+    .regex(/^\d+$/)
+    .refine((value) => BigInt(value) <= MAX_ENTRY_CENTS, {
+        message: 'Amounts can be at most $99,999,999.99.'
+    });
+const positiveCentsSchema = centsSchema.refine((value) => BigInt(value) > 0n, {
+    message: 'Enter an amount greater than $0.'
+});
 const splitSchema = z.object({
     monthlyItemId: z.string().uuid(),
-    amountCents: z.string().regex(/^\d+$/)
+    amountCents: positiveCentsSchema
+});
+const splitsSchema = z
+    .array(splitSchema)
+    .min(1)
+    .max(20)
+    .refine(
+        (splits) =>
+            new Set(splits.map((split) => split.monthlyItemId)).size ===
+            splits.length,
+        { message: 'Choose each budget item only once.' }
+    );
+const reassignmentSchema = z.object({
+    destinationItemId: z.string().uuid(),
+    movePlan: z.boolean()
 });
 const categoryIconSchema = z.enum([
     'heart',
@@ -31,7 +54,7 @@ export const mutationSchema = z.discriminatedUnion('type', [
     base.extend({
         type: z.literal('updatePlan'),
         monthlyItemId: z.string().uuid(),
-        plannedCents: z.string().regex(/^\d+$/),
+        plannedCents: centsSchema,
         expectedVersion: z.number().int().positive()
     }),
     base.extend({
@@ -45,9 +68,9 @@ export const mutationSchema = z.discriminatedUnion('type', [
         kind: z.enum(['expense', 'refund']),
         merchant: z.string().trim().min(1).max(120),
         occurredOn: z.string().date(),
-        totalCents: z.string().regex(/^\d+$/),
+        totalCents: positiveCentsSchema,
         note: z.string().trim().max(500).optional(),
-        splits: z.array(splitSchema).min(1).max(20)
+        splits: splitsSchema
     }),
     base.extend({
         type: z.literal('updateTransaction'),
@@ -56,9 +79,9 @@ export const mutationSchema = z.discriminatedUnion('type', [
         kind: z.enum(['expense', 'refund']),
         merchant: z.string().trim().min(1).max(120),
         occurredOn: z.string().date(),
-        totalCents: z.string().regex(/^\d+$/),
+        totalCents: positiveCentsSchema,
         note: z.string().trim().max(500).optional(),
-        splits: z.array(splitSchema).min(1).max(20)
+        splits: splitsSchema
     }),
     base.extend({
         type: z.literal('deleteTransaction'),
@@ -75,7 +98,7 @@ export const mutationSchema = z.discriminatedUnion('type', [
         name: z.string().trim().min(1).max(80),
         icon: categoryIconSchema,
         tone: categoryToneSchema,
-        expectedCents: z.string().regex(/^\d+$/)
+        expectedCents: centsSchema
     }),
     base.extend({
         type: z.literal('updateIncomePlan'),
@@ -84,13 +107,13 @@ export const mutationSchema = z.discriminatedUnion('type', [
         name: z.string().trim().min(1).max(80),
         icon: categoryIconSchema,
         tone: categoryToneSchema,
-        expectedCents: z.string().regex(/^\d+$/)
+        expectedCents: centsSchema
     }),
     base.extend({
         type: z.literal('addIncomeReceipt'),
         incomePlanId: z.string().uuid(),
         receivedOn: z.string().date(),
-        amountCents: z.string().regex(/^\d+$/),
+        amountCents: positiveCentsSchema,
         note: z.string().trim().max(500).optional()
     }),
     base.extend({
@@ -113,7 +136,7 @@ export const mutationSchema = z.discriminatedUnion('type', [
         type: z.literal('addItem'),
         categoryId: z.string().uuid(),
         name: z.string().trim().min(1).max(80),
-        plannedCents: z.string().regex(/^\d+$/).default('0')
+        plannedCents: centsSchema.default('0')
     }),
     base.extend({
         type: z.literal('renameCategory'),
@@ -132,12 +155,14 @@ export const mutationSchema = z.discriminatedUnion('type', [
     base.extend({
         type: z.literal('archiveCategory'),
         categoryId: z.string().uuid(),
-        expectedVersion: z.number().int().positive()
+        expectedVersion: z.number().int().positive(),
+        reassignment: reassignmentSchema.optional()
     }),
     base.extend({
         type: z.literal('archiveItem'),
         itemId: z.string().uuid(),
-        expectedVersion: z.number().int().positive()
+        expectedVersion: z.number().int().positive(),
+        reassignment: reassignmentSchema.optional()
     }),
     base.extend({
         type: z.literal('deleteCategory'),

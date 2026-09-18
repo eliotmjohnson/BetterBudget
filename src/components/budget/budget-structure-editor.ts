@@ -10,7 +10,15 @@ import type {
 import { createUuid } from '@/domain/uuid';
 import { categoryIconOptions } from '@/components/shared/category-icon';
 import type { CategoryIconValue } from '@/components/shared/category-details-fields';
-import type { Mutate } from '@/components/shared/budget-view-helpers';
+import type {
+    Mutate,
+    MutateConfirmed
+} from '@/components/shared/budget-view-helpers';
+import {
+    deletionImpact,
+    offersReassignment,
+    type Reassignment
+} from '@/components/shared/delete-definition-sheet';
 
 export type DeleteItemTarget = {
     category: BudgetCategoryView;
@@ -24,7 +32,8 @@ export type CategoryDeleteState = 'closed' | 'open' | 'closing';
  */
 export function useBudgetStructureEditor(
     snapshot: MonthSnapshot,
-    mutate: Mutate
+    mutate: Mutate,
+    mutateConfirmed: MutateConfirmed
 ) {
     const [categoryOpen, setCategoryOpen] = useState(false);
     const [itemCategory, setItemCategory] = useState<BudgetCategoryView | null>(
@@ -115,29 +124,15 @@ export function useBudgetStructureEditor(
         }
         setEditedCategory(null);
     };
-    const deleteCategory = () => {
-        if (!editedCategory) return;
-        mutate({
-            type: 'archiveCategory',
-            clientMutationId: createUuid(),
-            monthKey: snapshot.monthKey,
-            categoryId: editedCategory.id,
-            expectedVersion: editedCategory.version
-        });
-        setCategoryDeleteState('closed');
-        setEditedCategory(null);
-    };
-    const deleteItem = () => {
-        if (!deleteItemTarget) return;
-        mutate({
-            type: 'archiveItem',
-            clientMutationId: createUuid(),
-            monthKey: snapshot.monthKey,
-            itemId: deleteItemTarget.item.definitionId,
-            expectedVersion: deleteItemTarget.item.definitionVersion
-        });
-        setDeleteItemTarget(null);
-    };
+    const deletion = useStructureDeletion({
+        snapshot,
+        mutateConfirmed,
+        editedCategory,
+        deleteItemTarget,
+        onCategoryDeleted: () => setEditedCategory(null),
+        onItemDeleted: () => setDeleteItemTarget(null),
+        setCategoryDeleteState
+    });
 
     return {
         categoryOpen,
@@ -169,6 +164,75 @@ export function useBudgetStructureEditor(
         addItem,
         openCategoryEditor,
         saveCategory,
+        ...deletion
+    };
+}
+
+function useStructureDeletion({
+    snapshot,
+    mutateConfirmed,
+    editedCategory,
+    deleteItemTarget,
+    onCategoryDeleted,
+    onItemDeleted,
+    setCategoryDeleteState
+}: {
+    snapshot: MonthSnapshot;
+    mutateConfirmed: MutateConfirmed;
+    editedCategory: BudgetCategoryView | null;
+    deleteItemTarget: DeleteItemTarget | null;
+    onCategoryDeleted: () => void;
+    onItemDeleted: () => void;
+    setCategoryDeleteState: (state: CategoryDeleteState) => void;
+}) {
+    const [categoryDeleteSheetOpen, setCategoryDeleteSheetOpen] =
+        useState(false);
+    const [deletePending, setDeletePending] = useState(false);
+    const requestCategoryDelete = () => {
+        if (!editedCategory) return;
+        if (offersReassignment(deletionImpact(snapshot, editedCategory.items)))
+            setCategoryDeleteSheetOpen(true);
+        else setCategoryDeleteState('open');
+    };
+    const deleteCategory = async (reassignment?: Reassignment) => {
+        if (!editedCategory) return;
+        setDeletePending(true);
+        const deleted = await mutateConfirmed({
+            type: 'archiveCategory',
+            clientMutationId: createUuid(),
+            monthKey: snapshot.monthKey,
+            categoryId: editedCategory.id,
+            expectedVersion: editedCategory.version,
+            reassignment
+        });
+
+        setDeletePending(false);
+        setCategoryDeleteState(deleted ? 'closed' : 'closing');
+        if (!deleted) return;
+        setCategoryDeleteSheetOpen(false);
+        onCategoryDeleted();
+    };
+    const deleteItem = async (reassignment?: Reassignment) => {
+        if (!deleteItemTarget) return;
+        setDeletePending(true);
+        const deleted = await mutateConfirmed({
+            type: 'archiveItem',
+            clientMutationId: createUuid(),
+            monthKey: snapshot.monthKey,
+            itemId: deleteItemTarget.item.definitionId,
+            expectedVersion: deleteItemTarget.item.definitionVersion,
+            reassignment
+        });
+
+        setDeletePending(false);
+        if (deleted) onItemDeleted();
+    };
+
+    return {
+        categoryDeleteSheetOpen,
+        setCategoryDeleteSheetOpen,
+        deletePending,
+        requestCategoryDelete,
         deleteCategory,
         deleteItem
     };

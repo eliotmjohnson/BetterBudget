@@ -17,6 +17,8 @@ export interface BudgetItemView {
     /** Whether this month's ending balance flows into the next month. */
     carryoverEnabled: boolean;
     version: number;
+    hasLaterActivity: boolean;
+    permanentlyDeletable: boolean;
 }
 
 export interface BudgetCategoryView {
@@ -27,6 +29,7 @@ export interface BudgetCategoryView {
     availableCents: Cents;
     items: BudgetItemView[];
     version: number;
+    permanentlyDeletable: boolean;
 }
 
 export interface ActivityEntry {

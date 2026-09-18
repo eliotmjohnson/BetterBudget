@@ -1,7 +1,7 @@
 'use client';
 
 import type { ComponentPropsWithoutRef } from 'react';
-import { formatCurrencyInput } from '@/domain/money';
+import { formatCurrencyInput, MAX_ENTRY_CENTS } from '@/domain/money';
 
 type CurrencyInputProps = Omit<
     ComponentPropsWithoutRef<'input'>,
@@ -34,9 +34,10 @@ export function CurrencyInput({
             value={formatCurrencyInput(value)}
             onChange={(event) => {
                 const digits = event.currentTarget.value.replace(/\D/g, '');
-                const normalized = digits.replace(/^0+/, '');
+                const normalized = digits.replace(/^0+/, '') || '0';
 
-                onValueChange(normalized || '0');
+                if (BigInt(normalized) > MAX_ENTRY_CENTS) return;
+                onValueChange(normalized);
             }}
             onClick={(event) => {
                 onClick?.(event);

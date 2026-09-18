@@ -5,6 +5,10 @@ import { leftToBudget } from '@/domain/budget-calculations';
 import type { MonthSnapshot } from '@/domain/types';
 import { getDatabase } from '@/db';
 import {
+    loadDeletableCategoryIds,
+    loadItemUsage
+} from '@/server/definition-usage';
+import {
     buildCarryoverChains,
     deriveBalances,
     sumSpendByMonthlyItem
@@ -57,12 +61,22 @@ export async function getMonthSnapshot(
         currentTransactionRows
     } = await loadTargetMonthRows(db, householdId, targetMonthId, targetDate);
     const targetDefinitionIds = targetPlanRows.map((plan) => plan.itemId);
-    const historicalPlanRows = await loadHistoricalPlanRows(
-        db,
-        householdId,
-        targetDate,
-        targetDefinitionIds
-    );
+    const [historicalPlanRows, itemUsage, deletableCategoryIds] =
+        await Promise.all([
+            loadHistoricalPlanRows(
+                db,
+                householdId,
+                targetDate,
+                targetDefinitionIds
+            ),
+            loadItemUsage(db, householdId, targetDate, targetDefinitionIds),
+            loadDeletableCategoryIds(db, householdId, targetDate, [
+                ...new Set([
+                    ...activeCategoryRows.map((category) => category.id),
+                    ...targetPlanRows.map((plan) => plan.categoryId)
+                ])
+            ])
+        ]);
     const planRows = buildCarryoverChains(
         targetPlanRows,
         historicalPlanRows,
@@ -126,12 +140,11 @@ export async function getMonthSnapshot(
                 cents(planned)
             )
         },
-        categories: buildCategories(
-            activeCategoryRows,
-            planRows,
-            calculated,
-            targetDate
-        ),
+        categories: buildCategories(activeCategoryRows, planRows, calculated, {
+            targetDate,
+            itemUsage,
+            deletableCategoryIds
+        }),
         incomePlans: currentIncomeRows.map((plan) => ({
             id: plan.id,
             name: plan.name,

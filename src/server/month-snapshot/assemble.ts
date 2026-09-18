@@ -6,6 +6,7 @@ import type {
     BudgetItemView,
     IncomeReceiptView
 } from '@/domain/types';
+import type { ItemUsage } from '@/server/definition-usage';
 import type { DerivedBalance } from './carryover';
 import type {
     ActiveCategoryRow,
@@ -19,7 +20,15 @@ export function buildCategories(
     activeCategoryRows: ActiveCategoryRow[],
     planRows: HistoricalPlanRow[],
     calculated: Map<string, DerivedBalance>,
-    targetDate: string
+    {
+        targetDate,
+        itemUsage,
+        deletableCategoryIds
+    }: {
+        targetDate: string;
+        itemUsage: Map<string, ItemUsage>;
+        deletableCategoryIds: Set<string>;
+    }
 ): BudgetCategoryView[] {
     const categoryMap = new Map<string, BudgetCategoryView>(
         activeCategoryRows.map((category) => [
@@ -31,7 +40,8 @@ export function buildCategories(
                 tone: category.tone,
                 availableCents: cents(0),
                 items: [],
-                version: category.version
+                version: category.version,
+                permanentlyDeletable: deletableCategoryIds.has(category.id)
             }
         ])
     );
@@ -52,7 +62,11 @@ export function buildCategories(
             availableCents: cents(values.available),
             carryInCents: cents(values.carryIn),
             carryoverEnabled: row.carryoverEnabled,
-            version: row.monthlyVersion
+            version: row.monthlyVersion,
+            hasLaterActivity:
+                itemUsage.get(row.itemId)?.hasLaterActivity ?? false,
+            permanentlyDeletable:
+                itemUsage.get(row.itemId)?.permanentlyDeletable ?? false
         };
         const existing = categoryMap.get(row.categoryId);
 
@@ -69,7 +83,8 @@ export function buildCategories(
                 tone: row.categoryTone,
                 availableCents: cents(values.available),
                 items: [item],
-                version: row.categoryVersion
+                version: row.categoryVersion,
+                permanentlyDeletable: deletableCategoryIds.has(row.categoryId)
             });
         }
     }

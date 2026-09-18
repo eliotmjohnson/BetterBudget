@@ -146,9 +146,15 @@
 }
 
 .income-summary {
+    container-type: inline-size;
     padding: 22px 18px 18px;
     text-align: center;
 }
 .income-summary .summary-amount {
     color: var(--ink);
+    font-size: min(
+        var(--summary-amount-max, 50px),
+        calc(100cqi / (var(--amount-chars, 1) * 0.54))
+    );
+    white-space: nowrap;
 }

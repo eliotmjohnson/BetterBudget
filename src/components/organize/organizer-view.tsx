@@ -19,6 +19,12 @@ import {
 } from '@/components/shared/category-details-fields';
 import { categoryIconOptions } from '@/components/shared/category-icon';
 import {
+    DeleteDefinitionSheet,
+    deletionImpact,
+    offersReassignment,
+    type Reassignment
+} from '@/components/shared/delete-definition-sheet';
+import {
     OrganizerCategorySection,
     organizerScrollContainer,
     type Mutate
@@ -62,6 +68,7 @@ export function OrganizerView({
     const [pendingAction, setPendingAction] = useState<
         'save' | 'delete' | null
     >(null);
+    const [reassignmentOpen, setReassignmentOpen] = useState(false);
     const actionPending = pendingAction !== null;
     const {
         containerRef: categoryContainerRef,
@@ -89,6 +96,16 @@ export function OrganizerView({
             : selection?.item.name;
     const deleteKindLabel =
         selection?.kind === 'category' ? 'category' : 'line item';
+    const selectedItems =
+        selection?.kind === 'category'
+            ? selection.category.items
+            : selection
+              ? [selection.item]
+              : [];
+    const permanentlyDeletable =
+        selection?.kind === 'category'
+            ? selection.category.permanentlyDeletable
+            : (selection?.item.permanentlyDeletable ?? false);
     const closeEditor = () => {
         if (actionPending) return;
         setEditorOpen(false);
@@ -135,8 +152,17 @@ export function OrganizerView({
         const saved = await mutateConfirmed(input);
 
         setPendingAction(null);
-        if (!saved) return;
-        if (action === 'delete') editorTriggerRef.current = null;
+        if (!saved) {
+            setDeleteConfirmationState((current) =>
+                current === 'open' ? 'closing' : current
+            );
+
+            return;
+        }
+        if (action === 'delete') {
+            editorTriggerRef.current = null;
+            setReassignmentOpen(false);
+        }
         setEditorOpen(false);
     };
     const saveSelection = async () => {
@@ -187,7 +213,7 @@ export function OrganizerView({
             'save'
         );
     };
-    const deleteSelection = async () => {
+    const deleteSelection = async (reassignment?: Reassignment) => {
         if (!selection || !deleteIntent) return;
         const permanent = deleteIntent === 'permanent';
 
@@ -198,14 +224,16 @@ export function OrganizerView({
                       clientMutationId: createUuid(),
                       monthKey: snapshot.monthKey,
                       categoryId: selection.category.id,
-                      expectedVersion: selection.category.version
+                      expectedVersion: selection.category.version,
+                      ...(permanent ? {} : { reassignment })
                   }
                 : {
                       type: permanent ? 'deleteItem' : 'archiveItem',
                       clientMutationId: createUuid(),
                       monthKey: snapshot.monthKey,
                       itemId: selection.item.definitionId,
-                      expectedVersion: selection.item.definitionVersion
+                      expectedVersion: selection.item.definitionVersion,
+                      ...(permanent ? {} : { reassignment })
                   },
             'delete'
         );
@@ -338,7 +366,12 @@ export function OrganizerView({
                     >
                         {pendingAction === 'save' ? 'Saving…' : 'Save changes'}
                     </button>
-                    <div className='organizer-delete-slot'>
+                    <div
+                        className='organizer-delete-slot'
+                        data-single-action={
+                            permanentlyDeletable ? undefined : 'true'
+                        }
+                    >
                         {deleteConfirmationState !== 'open' ? (
                             <>
                                 <button
@@ -347,23 +380,34 @@ export function OrganizerView({
                                     onClick={(event) => {
                                         event.currentTarget.blur();
                                         setDeleteIntent('safe');
-                                        setDeleteConfirmationState('open');
+                                        if (
+                                            offersReassignment(
+                                                deletionImpact(
+                                                    snapshot,
+                                                    selectedItems
+                                                )
+                                            )
+                                        )
+                                            setReassignmentOpen(true);
+                                        else setDeleteConfirmationState('open');
                                     }}
                                 >
                                     <Trash2 size={17} />
                                     Delete {deleteKindLabel}
                                 </button>
-                                <button
-                                    className='text-button subtle-danger organizer-permanent-action'
-                                    type='button'
-                                    onClick={(event) => {
-                                        event.currentTarget.blur();
-                                        setDeleteIntent('permanent');
-                                        setDeleteConfirmationState('open');
-                                    }}
-                                >
-                                    Delete {deleteKindLabel} permanently
-                                </button>
+                                {permanentlyDeletable ? (
+                                    <button
+                                        className='text-button subtle-danger organizer-permanent-action'
+                                        type='button'
+                                        onClick={(event) => {
+                                            event.currentTarget.blur();
+                                            setDeleteIntent('permanent');
+                                            setDeleteConfirmationState('open');
+                                        }}
+                                    >
+                                        Delete {deleteKindLabel} permanently
+                                    </button>
+                                ) : null}
                             </>
                         ) : null}
                         {deleteConfirmationState !== 'closed' ? (
@@ -389,10 +433,10 @@ export function OrganizerView({
                                     </strong>
                                     <span>
                                         {deleteIntent === 'permanent'
-                                            ? `${selectedLabel ?? `This ${deleteKindLabel}`} must be unused. This cannot be undone.`
+                                            ? `It has never been used, so it is removed completely. This cannot be undone.`
                                             : selection?.kind === 'category'
                                               ? 'Its items are removed. Past history stays.'
-                                              : 'It is removed from future budgets. Past history stays.'}
+                                              : 'It is removed from this month on. Past history stays.'}
                                     </span>
                                 </div>
                                 <div className='category-delete-confirmation-actions'>
@@ -423,6 +467,23 @@ export function OrganizerView({
                         ) : null}
                     </div>
                 </div>
+                <DeleteDefinitionSheet
+                    open={reassignmentOpen}
+                    onOpenChange={setReassignmentOpen}
+                    snapshot={snapshot}
+                    sourceLabel={selectedLabel ?? `this ${deleteKindLabel}`}
+                    sourceItems={selectedItems}
+                    excludedCategoryId={
+                        selection?.kind === 'category'
+                            ? selection.category.id
+                            : undefined
+                    }
+                    pending={pendingAction === 'delete'}
+                    layer='nested'
+                    onConfirm={(reassignment) =>
+                        void deleteSelection(reassignment)
+                    }
+                />
             </Sheet>
         </section>
     );

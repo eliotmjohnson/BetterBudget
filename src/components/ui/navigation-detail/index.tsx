@@ -2,6 +2,7 @@
 
 import * as Dialog from '@radix-ui/react-dialog';
 import { ChevronLeft, X } from 'lucide-react';
+import { isToastTarget } from '@/components/ui/toast-provider';
 import {
     useCallback,
     useEffect,
@@ -308,7 +309,10 @@ export function NavigationDetail({
                             );
                     }}
                     onPointerDownOutside={(event) => {
-                        if (window.matchMedia(mobileMedia).matches)
+                        if (
+                            window.matchMedia(mobileMedia).matches ||
+                            isToastTarget(event.target)
+                        )
                             event.preventDefault();
                     }}
                     onPointerDown={(event) => startDrag(dragContext(), event)}
