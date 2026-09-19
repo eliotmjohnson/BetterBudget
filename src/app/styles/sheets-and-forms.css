@@ -28,7 +28,8 @@
     flex-direction: column;
     overflow: hidden;
     padding: 12px 0 0;
-    border-radius: 28px 28px 0 0;
+    border-radius: calc(28px * var(--corner-radius-scale))
+        calc(28px * var(--corner-radius-scale)) 0 0;
     background: white;
     box-shadow: 0 -22px 55px rgb(19 28 45 / 18%);
     backface-visibility: hidden;
@@ -119,7 +120,7 @@
     justify-content: center;
     padding-inline: 14px;
     border: 1px solid color-mix(in srgb, var(--blue) 18%, white);
-    border-radius: 12px;
+    border-radius: calc(12px * var(--corner-radius-scale));
     background: color-mix(in srgb, var(--blue) 8%, white);
     color: var(--blue);
     font-size: 13px;
@@ -187,7 +188,7 @@
     min-height: 48px;
     padding: 11px 13px;
     border: 1px solid #cfd3da;
-    border-radius: 12px;
+    border-radius: calc(12px * var(--corner-radius-scale));
     background: white;
     color: var(--ink);
 }
@@ -201,7 +202,7 @@
     height: 48px;
     overflow: hidden;
     border: 1px solid #cfd3da;
-    border-radius: 12px;
+    border-radius: calc(12px * var(--corner-radius-scale));
     background: white;
 }
 .date-input-shell input[type='date'] {
@@ -263,23 +264,22 @@
     overflow: hidden;
     padding: 3px;
     border: 1px solid var(--line);
-    border-radius: 13px;
+    border-radius: calc(13px * var(--corner-radius-scale));
 }
-.segmented::before {
-    content: '';
+.segmented-thumb {
     position: absolute;
     z-index: -1;
     top: 3px;
     bottom: 3px;
     left: 3px;
     width: calc(50% - 3px);
-    border-radius: 10px;
+    border-radius: calc(10px * var(--corner-radius-scale));
     background: var(--blue);
     box-shadow: 0 5px 12px rgb(23 105 224 / 20%);
     transform: translateX(0);
     transition: transform 0.45s cubic-bezier(0.4, 1, 0.4, 1);
 }
-.segmented[data-kind='refund']::before {
+.segmented[data-kind='refund'] .segmented-thumb {
     transform: translateX(100%);
 }
 .segment {
@@ -288,7 +288,7 @@
     min-width: 0;
     min-height: 42px;
     border: 0;
-    border-radius: 10px;
+    border-radius: calc(10px * var(--corner-radius-scale));
     background: transparent;
     font-weight: 700;
     cursor: pointer;
@@ -420,7 +420,7 @@
     place-content: center;
     margin: 0;
     border: 1.5px solid #aeb5bf;
-    border-radius: 7px;
+    border-radius: calc(7px * var(--corner-radius-scale));
     background: white;
     cursor: inherit;
     appearance: none;
@@ -484,7 +484,7 @@
     margin-top: 6px;
     padding: 16px;
     border: 1px solid var(--line);
-    border-radius: 14px;
+    border-radius: calc(14px * var(--corner-radius-scale));
     text-align: center;
 }
 .split-summary div + div {
@@ -523,7 +523,7 @@
     display: grid;
     gap: 10px;
     padding: 12px 14px;
-    border-radius: 12px;
+    border-radius: calc(12px * var(--corner-radius-scale));
     background: #eef5ff;
 }
 .carryover-callout-row {
@@ -566,7 +566,7 @@
     align-items: center;
     gap: 12px;
     padding: 12px;
-    border-radius: 14px;
+    border-radius: calc(14px * var(--corner-radius-scale));
     background: var(--soft);
 }
 .category-editor-preview > div {
@@ -592,7 +592,7 @@
     place-items: center;
     padding: 0;
     border: 1px solid transparent;
-    border-radius: 12px;
+    border-radius: calc(12px * var(--corner-radius-scale));
     background: var(--soft);
     cursor: pointer;
 }
@@ -615,7 +615,7 @@
     display: grid;
     place-items: center;
     border: 1px solid transparent;
-    border-radius: 12px;
+    border-radius: calc(12px * var(--corner-radius-scale));
     background: var(--soft);
     cursor: pointer;
 }
@@ -708,7 +708,7 @@
     min-height: 46px;
     padding: 0 44px 0 42px;
     border: 1px solid var(--line);
-    border-radius: 14px;
+    border-radius: calc(14px * var(--corner-radius-scale));
     background: white;
 }
 .search-clear-button {
@@ -732,8 +732,7 @@
     color: var(--ink);
 }
 .bordered-icon {
-    position: relative;
     flex: 0 0 auto;
     border: 1px solid var(--line);
-    border-radius: 14px;
+    border-radius: calc(12px * var(--corner-radius-scale));
 }

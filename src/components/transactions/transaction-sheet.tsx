@@ -243,6 +243,7 @@ export function TransactionSheet({
                     data-kind={kind}
                     aria-label='Transaction type'
                 >
+                    <span className='segmented-thumb' aria-hidden='true' />
                     <button
                         type='button'
                         aria-pressed={kind === 'expense'}

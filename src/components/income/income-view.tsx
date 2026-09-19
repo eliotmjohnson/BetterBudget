@@ -11,6 +11,7 @@ import {
     money,
     type Mutate
 } from '@/components/shared/budget-view-helpers';
+import { useContinuousCorners } from '@/components/ui/continuous-corners';
 import { AddIncomeSource, RecordIncome } from './income-forms';
 import { IncomeSourceDetails } from './income-source-details';
 
@@ -37,6 +38,7 @@ export function IncomeView({
     const [incomeRestoreFocusVisible, setIncomeRestoreFocusVisible] =
         useState(true);
     const [adding, setAdding] = useState(false);
+    const [summaryCornersRef] = useContinuousCorners<HTMLDivElement>();
     const [recordingPlanId, setRecordingPlanId] = useState<string | null>(null);
     const selectedPlan = requestedPlanId
         ? (snapshot.incomePlans.find((plan) => plan.id === requestedPlanId) ??
@@ -113,7 +115,10 @@ export function IncomeView({
                     </button>
                 ) : null}
             </div>
-            <div className='summary-card income-summary'>
+            <div
+                ref={summaryCornersRef}
+                className='summary-card income-summary'
+            >
                 <span className='summary-label'>Received</span>
                 <strong
                     className='summary-amount'

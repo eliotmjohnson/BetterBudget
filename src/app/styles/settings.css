@@ -67,7 +67,7 @@
     gap: 10px;
     padding: 15px;
     border: 1px solid #d8e4f8;
-    border-radius: 16px;
+    border-radius: calc(16px * var(--corner-radius-scale));
     background: #f6f9ff;
 }
 .scenario-panel strong {
@@ -84,7 +84,7 @@
     min-height: 42px;
     padding: 0 10px;
     border: 1px solid var(--line);
-    border-radius: 10px;
+    border-radius: calc(10px * var(--corner-radius-scale));
     background: white;
 }
 .app-version {
@@ -142,7 +142,7 @@
     justify-content: center;
     padding: 54px 20px 34px;
     border: 1px solid var(--line);
-    border-radius: 34px;
+    border-radius: calc(34px * var(--corner-radius-scale));
     background: white;
     box-shadow: var(--shadow);
 }

@@ -122,7 +122,7 @@
     overflow: hidden;
     padding: 0 6px;
     border: 0;
-    border-radius: 12px;
+    border-radius: calc(12px * var(--corner-radius-scale));
     background: transparent;
     color: var(--ink);
     cursor: pointer;
@@ -142,7 +142,7 @@
     width: min(320px, calc(100vw - 24px));
     padding: 14px;
     border: 1px solid rgb(226 230 236 / 88%);
-    border-radius: 20px;
+    border-radius: calc(20px * var(--corner-radius-scale));
     background: rgb(255 255 255 / 94%);
     box-shadow:
         0 20px 52px rgb(28 39 58 / 18%),
@@ -179,7 +179,7 @@
     position: relative;
     min-height: 44px;
     border: 0;
-    border-radius: 11px;
+    border-radius: calc(11px * var(--corner-radius-scale));
     background: transparent;
     color: #555d68;
     font-size: 14px;

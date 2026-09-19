@@ -220,20 +220,22 @@ export function TransactionsView({
                         </button>
                     ) : null}
                 </div>
-                <button
-                    className='icon-button bordered-icon'
-                    type='button'
-                    data-filtered={activeFilterCount ? 'true' : 'false'}
-                    aria-label={
-                        activeFilterCount
-                            ? `Transaction filters, ${activeFilterCount} active`
-                            : 'Transaction filters'
-                    }
-                    aria-haspopup='dialog'
-                    aria-expanded={filtersOpen}
-                    onClick={openFilterSheet}
-                >
-                    <SlidersHorizontal size={19} />
+                <span className='transaction-filter-control'>
+                    <button
+                        className='icon-button bordered-icon'
+                        type='button'
+                        data-filtered={activeFilterCount ? 'true' : 'false'}
+                        aria-label={
+                            activeFilterCount
+                                ? `Transaction filters, ${activeFilterCount} active`
+                                : 'Transaction filters'
+                        }
+                        aria-haspopup='dialog'
+                        aria-expanded={filtersOpen}
+                        onClick={openFilterSheet}
+                    >
+                        <SlidersHorizontal size={19} />
+                    </button>
                     {activeFilterCount ? (
                         <span
                             className='transaction-filter-count'
@@ -242,7 +244,7 @@ export function TransactionsView({
                             {activeFilterCount}
                         </span>
                     ) : null}
-                </button>
+                </span>
             </div>
             <div className='transaction-filter-summary-row'>
                 <TransactionFilterTabs

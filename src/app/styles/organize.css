@@ -121,7 +121,7 @@
     margin: 6px 0;
     padding: 30px 22px 24px;
     border: 1px solid #d8e4f8;
-    border-radius: 20px;
+    border-radius: calc(20px * var(--corner-radius-scale));
     background: linear-gradient(180deg, #f8fbff 0%, #fff 100%);
     text-align: center;
 }
@@ -131,7 +131,7 @@
     display: grid;
     place-items: center;
     margin-bottom: 2px;
-    border-radius: 18px;
+    border-radius: calc(18px * var(--corner-radius-scale));
     background: #e9f1ff;
     color: var(--blue);
 }
@@ -176,7 +176,7 @@
     justify-content: center;
     gap: 6px;
     padding-inline: 8px;
-    border-radius: 12px;
+    border-radius: calc(12px * var(--corner-radius-scale));
     font-size: 12.5px;
     font-weight: 750;
     line-height: 1.15;
@@ -227,6 +227,6 @@
 
 .settings-list {
     border: 1px solid var(--line);
-    border-radius: 16px;
+    border-radius: calc(16px * var(--corner-radius-scale));
     overflow: hidden;
 }

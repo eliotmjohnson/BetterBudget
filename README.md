@@ -830,7 +830,7 @@ The database CLI scripts intentionally set the `react-server` Node condition bec
 │   ├── components/settings/       Settings page
 │   ├── components/shell/          App shell, query lifecycle, optimistic patches
 │   ├── components/shared/         Primitives more than one view needs
-│   ├── components/ui/             Sheet, gesture, sortable, and input primitives
+│   ├── components/ui/             Sheet, gesture, sortable, input, and corner primitives
 │   ├── db/                        Drizzle schema, adapters, migrations, seed
 │   ├── domain/                    Exact money, calculations, and shared types
 │   ├── lib/                       Authentication and supporting libraries
@@ -854,6 +854,15 @@ a transparent overlay, shared entrance/exit motion, a fixed header, an
 independently scrolling body, and downward drag-to-dismiss on mobile.
 Budget-item and income-source details push over the page from the right on
 mobile and remain centered modals on desktop.
+
+Corners are continuous (iOS-style, curvature-smoothed), tuned by three tokens
+in `src/app/styles/tokens.css`. Chromium draws them natively for every rounded
+element through CSS `corner-shape`; Safari does not support it yet, so on iOS
+the tab bar, summary cards, sheets, and button-style controls get the same
+curve from `src/components/ui/continuous-corners/`, and everything else keeps
+plain rounded corners until WebKit ships `corner-shape`. Setting
+`--corner-superellipse: 1`, `--corner-extent: 1`, and `--capsule-smoothing: 0`
+turns the effect off everywhere without a code change.
 
 `docs/agents/design.md` holds the exact gesture, motion, swipe, reordering, and
 navigation-detail contracts these behaviors must satisfy.

@@ -2,8 +2,10 @@
 
 import * as Dialog from '@radix-ui/react-dialog';
 import { X } from 'lucide-react';
+import { useContinuousCorners } from './continuous-corners';
 import { isToastTarget } from './toast-provider';
 import {
+    useCallback,
     useEffect,
     useRef,
     type PointerEvent as ReactPointerEvent,
@@ -83,6 +85,14 @@ export function Sheet({
     children: ReactNode;
 }) {
     const contentRef = useRef<HTMLDivElement>(null);
+    const [cornersRef] = useContinuousCorners<HTMLDivElement>();
+    const setContentRef = useCallback(
+        (node: HTMLDivElement | null) => {
+            contentRef.current = node;
+            cornersRef(node);
+        },
+        [cornersRef]
+    );
     const overlayRef = useRef<HTMLDivElement>(null);
     const dragRef = useRef<DragState | null>(null);
     const dragFrameRef = useRef<GestureFrameDriver | null>(null);
@@ -263,7 +273,7 @@ export function Sheet({
                     data-layer={layer}
                 />
                 <Dialog.Content
-                    ref={contentRef}
+                    ref={setContentRef}
                     className='sheet-content'
                     data-has-footer={footer ? 'true' : 'false'}
                     data-interaction-disabled={

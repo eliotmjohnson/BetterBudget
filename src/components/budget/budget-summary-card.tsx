@@ -3,6 +3,7 @@
 import { useLayoutEffect, useRef, type CSSProperties } from 'react';
 import type { MonthSnapshot } from '@/domain/types';
 import { fitAmountStyle, money } from '@/components/shared/budget-view-helpers';
+import { useContinuousCorners } from '@/components/ui/continuous-corners';
 import { remainingAvailableProgress } from './budget-category-section';
 
 export function budgetBalanceView(snapshot: MonthSnapshot) {
@@ -20,6 +21,7 @@ export function budgetBalanceView(snapshot: MonthSnapshot) {
 
 export function BudgetSummaryCard({ snapshot }: { snapshot: MonthSnapshot }) {
     const summaryArcProgressRef = useRef<SVGPathElement>(null);
+    const [cornersRef] = useContinuousCorners<HTMLDivElement>();
     const summaryAvailable = snapshot.categories.reduce(
         (total, category) => total + BigInt(category.availableCents),
         0n
@@ -87,7 +89,7 @@ export function BudgetSummaryCard({ snapshot }: { snapshot: MonthSnapshot }) {
     }, [progress]);
 
     return (
-        <div className='summary-card budget-summary'>
+        <div ref={cornersRef} className='summary-card budget-summary'>
             <div className='summary-arc' style={summaryArcStyle}>
                 <svg
                     viewBox='0 0 232 118'

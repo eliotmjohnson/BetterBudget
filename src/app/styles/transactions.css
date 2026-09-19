@@ -4,8 +4,16 @@
     color: var(--blue);
     box-shadow: 0 5px 14px rgb(23 105 224 / 16%);
 }
+/* The count badge overhangs the filter button's corner, so it is the button's
+   sibling: the button's continuous-corner clip would otherwise notch it. */
+.transaction-filter-control {
+    position: relative;
+    display: inline-grid;
+    flex: 0 0 auto;
+}
 .transaction-filter-count {
     position: absolute;
+    pointer-events: none;
     top: -6px;
     right: -6px;
     min-width: 20px;
@@ -31,7 +39,7 @@
     min-height: 38px;
     padding: 0 14px;
     border: 1px solid var(--line);
-    border-radius: 10px;
+    border-radius: calc(10px * var(--corner-radius-scale));
     background: white;
     font-size: 13px;
     font-weight: 700;
@@ -65,7 +73,7 @@
     gap: 4px;
     padding: 0 10px;
     border: 1px solid #bfd2f2;
-    border-radius: 10px;
+    border-radius: calc(10px * var(--corner-radius-scale));
     background: #f5f8ff;
     color: var(--blue);
     font-size: 12px;
@@ -138,7 +146,7 @@
     width: fit-content;
     margin-top: 5px !important;
     padding: 2px 7px;
-    border-radius: 6px;
+    border-radius: calc(6px * var(--corner-radius-scale));
     background: #e8f0ff;
     color: var(--blue) !important;
     font-size: 10px !important;

@@ -18,6 +18,10 @@ import {
     type ReactNode
 } from 'react';
 import { BrandMark } from '@/components/brand-mark';
+import {
+    ContinuousStroke,
+    useContinuousCorners
+} from '@/components/ui/continuous-corners';
 import { shiftMonth, type MonthKey } from '@/domain/money';
 import { MonthPicker } from './month-picker';
 import {
@@ -207,6 +211,8 @@ function BottomNav({
         ({ view: itemView }) => itemView === contentView
     );
     const [lens, setLens] = useState({ index: activeIndex, moves: 0 });
+    const [surfaceRef, surfaceShape] = useContinuousCorners<HTMLSpanElement>();
+    const [lensRef, lensShape] = useContinuousCorners<HTMLSpanElement>();
 
     if (lens.index !== activeIndex)
         setLens({ index: activeIndex, moves: lens.moves + 1 });
@@ -214,15 +220,81 @@ function BottomNav({
     return (
         <nav
             className='bottom-nav'
+            data-ready={surfaceShape ? 'true' : undefined}
             aria-label='Primary navigation'
             style={{ '--bottom-nav-index': activeIndex } as CSSProperties}
         >
+            <span ref={surfaceRef} className='bottom-nav-surface'>
+                {surfaceShape ? (
+                    <ContinuousStroke
+                        shape={surfaceShape}
+                        width={1}
+                        gradient={(id) => (
+                            <linearGradient id={id} x1='0' y1='0' x2='1' y2='1'>
+                                <stop
+                                    offset='0'
+                                    stopColor='#fff'
+                                    stopOpacity='0.95'
+                                />
+                                <stop
+                                    offset='0.38'
+                                    stopColor='#fff'
+                                    stopOpacity='0.22'
+                                />
+                                <stop
+                                    offset='0.62'
+                                    stopColor='#fff'
+                                    stopOpacity='0.08'
+                                />
+                                <stop
+                                    offset='1'
+                                    stopColor='#fff'
+                                    stopOpacity='0.7'
+                                />
+                            </linearGradient>
+                        )}
+                    />
+                ) : null}
+            </span>
             <span className='bottom-nav-lens' aria-hidden='true'>
                 <span
                     key={lens.moves}
+                    ref={lensRef}
                     className='bottom-nav-lens-glass'
                     data-moving={lens.moves > 0 ? 'true' : undefined}
-                />
+                >
+                    {lensShape ? (
+                        <ContinuousStroke
+                            shape={lensShape}
+                            width={0.75}
+                            gradient={(id) => (
+                                <linearGradient
+                                    id={id}
+                                    x1='0'
+                                    y1='0'
+                                    x2='0'
+                                    y2='1'
+                                >
+                                    <stop
+                                        offset='0'
+                                        stopColor='#fff'
+                                        stopOpacity='0.85'
+                                    />
+                                    <stop
+                                        offset='0.5'
+                                        stopColor='#fff'
+                                        stopOpacity='0.4'
+                                    />
+                                    <stop
+                                        offset='1'
+                                        stopColor='#fff'
+                                        stopOpacity='0.55'
+                                    />
+                                </linearGradient>
+                            )}
+                        />
+                    ) : null}
+                </span>
             </span>
             {nav.map(({ view: itemView, href, label, icon: Icon }) => (
                 <a
