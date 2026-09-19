@@ -849,7 +849,7 @@ The application installs as **Better Budget** with white-background `any` and ma
 On mobile, the app intentionally disables pinch/double-tap page zoom, text
 selection, touch callouts, document-level pull-to-refresh, and cancelable Safari
 history gestures beginning in the leftmost 20 px. Each route scrolls inside the
-app content surface behind the translucent blurred bottom navigation. Sheets use
+app content surface behind the floating glass bottom navigation. Sheets use
 a transparent overlay, shared entrance/exit motion, a fixed header, an
 independently scrolling body, and downward drag-to-dismiss on mobile.
 Budget-item and income-source details push over the page from the right on

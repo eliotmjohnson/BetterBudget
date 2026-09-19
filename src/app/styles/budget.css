@@ -710,31 +710,128 @@ body > .sortable-drag-overlay * {
 .bottom-nav {
     position: fixed;
     z-index: 30;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    height: var(--bottom-nav-height);
-    min-height: var(--bottom-nav-height);
+    left: 14px;
+    right: 14px;
+    bottom: var(--bottom-nav-offset);
+    max-width: 440px;
+    height: var(--bottom-nav-bar-height);
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    padding: 7px 10px max(7px, env(safe-area-inset-bottom));
-    border-top: 1px solid rgb(255 255 255 / 68%);
-    background: rgb(245 248 252 / 68%);
-    box-shadow: 0 -12px 34px rgb(48 63 84 / 10%);
-    backdrop-filter: blur(26px) saturate(155%);
-    -webkit-backdrop-filter: blur(26px) saturate(155%);
+    margin-inline: auto;
+    padding: var(--bottom-nav-padding);
+    isolation: isolate;
+    border-radius: 999px;
+    background: linear-gradient(
+        180deg,
+        rgb(255 255 255 / 22%) 0%,
+        rgb(244 247 251 / 12%) 100%
+    );
+    box-shadow:
+        inset 0 1px 1px rgb(255 255 255 / 85%),
+        inset 0 -1px 1px rgb(255 255 255 / 30%),
+        0 0 0 0.5px rgb(28 39 58 / 10%),
+        0 10px 32px rgb(28 39 58 / 16%),
+        0 2px 8px rgb(28 39 58 / 8%);
+    backdrop-filter: blur(7px) saturate(180%);
+}
+/* Safari exposes no refraction to web content, so the glass is layered by
+   hand: a top specular sheen here and a light-catching rim in ::after. */
+.bottom-nav::before,
+.bottom-nav::after {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+}
+.bottom-nav::before {
+    background:
+        radial-gradient(
+            120% 90% at 22% -30%,
+            rgb(255 255 255 / 38%),
+            rgb(255 255 255 / 0%) 60%
+        ),
+        linear-gradient(
+            180deg,
+            rgb(255 255 255 / 16%) 0%,
+            rgb(255 255 255 / 0%) 48%
+        );
+}
+.bottom-nav::after {
+    padding: 1px;
+    background: linear-gradient(
+        135deg,
+        rgb(255 255 255 / 95%) 0%,
+        rgb(255 255 255 / 22%) 38%,
+        rgb(255 255 255 / 8%) 62%,
+        rgb(255 255 255 / 70%) 100%
+    );
+    mask:
+        linear-gradient(#000 0 0) content-box exclude,
+        linear-gradient(#000 0 0);
+}
+@supports not (
+    (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))
+) {
+    .bottom-nav {
+        background: rgb(247 249 252 / 96%);
+    }
+}
+.bottom-nav-lens {
+    position: absolute;
+    top: var(--bottom-nav-padding);
+    bottom: var(--bottom-nav-padding);
+    left: var(--bottom-nav-padding);
+    width: calc((100% - 2 * var(--bottom-nav-padding)) / 4);
+    pointer-events: none;
+    transform: translate3d(calc(var(--bottom-nav-index, 0) * 100%), 0, 0);
+    transition: transform 0.58s cubic-bezier(0.32, 1.32, 0.5, 1);
+}
+/* The tabs sit on fractional pixels. Without permanent layers, WebKit promotes
+   the tabs overlapping the moving lens only while it animates, re-snapping
+   their icons half a pixel and snapping them back when the lens settles. */
+.bottom-nav-lens,
+.bottom-nav-lens-glass,
+.bottom-nav .nav-item {
+    will-change: transform;
+}
+.bottom-nav-lens-glass {
+    position: absolute;
+    inset: 0;
+    border-radius: 999px;
+    background: linear-gradient(
+        180deg,
+        rgb(118 128 146 / 10%) 0%,
+        rgb(118 128 146 / 16%) 100%
+    );
+    box-shadow:
+        inset 0 1px 1px rgb(255 255 255 / 75%),
+        inset 0 -1px 2px rgb(255 255 255 / 35%),
+        inset 0 0 0 0.5px rgb(255 255 255 / 45%);
+    transition: scale 0.32s cubic-bezier(0.32, 1.4, 0.5, 1);
+}
+.bottom-nav-lens-glass[data-moving='true'] {
+    animation: bottom-nav-lens-stretch 0.58s cubic-bezier(0.3, 0.9, 0.4, 1) both;
+}
+.bottom-nav:has(.nav-item.active:active) .bottom-nav-lens-glass {
+    scale: 1.07;
 }
 .nav-item {
-    min-height: 55px;
+    position: relative;
+    min-height: 44px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 4px;
-    color: #737a84;
+    gap: 3px;
+    color: #5f6671;
     font-size: 10px;
     font-weight: 650;
-    border-radius: 12px;
+    border-radius: 999px;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-user-drag: none;
+    transition: color 220ms ease;
 }
 .nav-item.active {
     color: var(--blue);
@@ -785,7 +882,7 @@ body > .sortable-drag-overlay * {
     pointer-events: auto;
     left: 16px;
     right: 16px;
-    bottom: calc(88px + env(safe-area-inset-bottom));
+    bottom: calc(var(--bottom-nav-height) + 12px);
     display: flex;
     align-items: center;
     justify-content: space-between;

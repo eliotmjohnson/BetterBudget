@@ -10,7 +10,13 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useRef, type MouseEvent, type ReactNode } from 'react';
+import {
+    useRef,
+    useState,
+    type CSSProperties,
+    type MouseEvent,
+    type ReactNode
+} from 'react';
 import { BrandMark } from '@/components/brand-mark';
 import { shiftMonth, type MonthKey } from '@/domain/money';
 import { MonthPicker } from './month-picker';
@@ -179,22 +185,58 @@ export function AppShell({
                     {children}
                 </div>
             </main>
-            <nav className='bottom-nav' aria-label='Primary navigation'>
-                {nav.map(({ view: itemView, href, label, icon: Icon }) => (
-                    <a
-                        key={itemView}
-                        className={`nav-item ${view === itemView || (view === 'organize' && itemView === 'settings') ? 'active' : ''}`}
-                        href={`${href}?month=${monthKey}`}
-                        aria-current={
-                            contentView === itemView ? 'page' : undefined
-                        }
-                        onClick={(event) => navigate(event, itemView)}
-                    >
-                        <Icon size={21} strokeWidth={1.7} />
-                        <span>{label}</span>
-                    </a>
-                ))}
-            </nav>
+            <BottomNav
+                contentView={contentView}
+                monthKey={monthKey}
+                onNavigate={navigate}
+            />
         </div>
+    );
+}
+
+function BottomNav({
+    contentView,
+    monthKey,
+    onNavigate
+}: {
+    contentView: AppView;
+    monthKey: MonthKey;
+    onNavigate: (event: MouseEvent<HTMLAnchorElement>, view: AppView) => void;
+}) {
+    const activeIndex = nav.findIndex(
+        ({ view: itemView }) => itemView === contentView
+    );
+    const [lens, setLens] = useState({ index: activeIndex, moves: 0 });
+
+    if (lens.index !== activeIndex)
+        setLens({ index: activeIndex, moves: lens.moves + 1 });
+
+    return (
+        <nav
+            className='bottom-nav'
+            aria-label='Primary navigation'
+            style={{ '--bottom-nav-index': activeIndex } as CSSProperties}
+        >
+            <span className='bottom-nav-lens' aria-hidden='true'>
+                <span
+                    key={lens.moves}
+                    className='bottom-nav-lens-glass'
+                    data-moving={lens.moves > 0 ? 'true' : undefined}
+                />
+            </span>
+            {nav.map(({ view: itemView, href, label, icon: Icon }) => (
+                <a
+                    key={itemView}
+                    className={`nav-item ${contentView === itemView ? 'active' : ''}`}
+                    href={`${href}?month=${monthKey}`}
+                    draggable={false}
+                    aria-current={contentView === itemView ? 'page' : undefined}
+                    onClick={(event) => onNavigate(event, itemView)}
+                >
+                    <Icon size={21} strokeWidth={1.7} />
+                    <span>{label}</span>
+                </a>
+            ))}
+        </nav>
     );
 }

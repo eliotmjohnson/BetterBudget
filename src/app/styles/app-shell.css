@@ -148,7 +148,6 @@
         0 20px 52px rgb(28 39 58 / 18%),
         0 4px 12px rgb(28 39 58 / 8%);
     backdrop-filter: blur(24px) saturate(145%);
-    -webkit-backdrop-filter: blur(24px) saturate(145%);
     transform: translateX(-50%);
     transform-origin: top center;
 }
