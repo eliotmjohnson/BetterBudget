@@ -754,11 +754,13 @@ Docker image; it also rewrites `next-env.d.ts` to its production form, so run
 Prettier owns deterministic source layout: an 80-character print width,
 four-space indentation using spaces, single quotes in JavaScript/TypeScript and
 JSX, semicolons, LF endings, and no trailing commas. ESLint Stylistic
-complements it with structural whitespace. Because comment separation and
-variable grouping are enforced together, an own-line comment cannot sit between
-two consecutive `const`, `let`, or `var` declarations, and `npm run lint:fix`
-cannot resolve that combination — use a trailing comment, a block or
-object-literal start, or a position above a preceding non-declaration statement.
+complements it with structural whitespace. Source code carries no comments
+except JSDoc; explanations belong in this README, `AGENTS.md`, or
+`docs/agents/`, as `docs/agents/conventions.md` details. Because comment
+separation and variable grouping are enforced together, a JSDoc block cannot sit
+between two consecutive `const`, `let`, or `var` declarations, and
+`npm run lint:fix` cannot resolve that combination — start it at a block or
+object-literal start, or above a preceding non-declaration statement.
 
 For financial changes, manually exercise the affected exact-money, carryover,
 split, optimistic reconciliation, retry, conflict, and authorization flows. For

@@ -714,10 +714,6 @@ body > .sortable-drag-overlay * {
         0 2px 8px rgb(28 39 58 / 8%);
     position: fixed;
     z-index: 30;
-    /* The four tabs and the lens that slides between them split the inner
-       width, so it snaps to a multiple of 4 and the bar's left edge to a
-       whole pixel: every tab edge and lens stop lands on a device pixel
-       instead of each layer rounding a half pixel its own way. */
     --bottom-nav-width: min(
         440px,
         round(down, 100% - 28px - 2 * var(--bottom-nav-padding), 4px) + 2 *
@@ -732,9 +728,6 @@ body > .sortable-drag-overlay * {
     padding: var(--bottom-nav-padding);
     isolation: isolate;
 }
-/* The bar waits offscreen until its capsule path is measured, so the round
-   fallback never shows, then slides up. Only transform animates: opacity
-   below 1 would make the nav a backdrop root and flash the glass clear. */
 .bottom-nav:not([data-ready]) {
     transform: translate3d(0, var(--bottom-nav-hidden-offset), 0);
 }
@@ -742,8 +735,6 @@ body > .sortable-drag-overlay * {
     animation: bottom-nav-enter 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.08s
         backwards;
 }
-/* The glass lives on its own layer: a clip-path on the nav itself would make
-   it a backdrop root and blank the blur. */
 .bottom-nav-surface {
     position: absolute;
     z-index: -1;
@@ -767,8 +758,6 @@ body > .sortable-drag-overlay * {
 .bottom-nav-lens-glass[data-continuous-corners] {
     box-shadow: none;
 }
-/* Safari exposes no refraction to web content, so the glass is layered by
-   hand: a top specular sheen here and a light-catching rim in ::after. */
 .bottom-nav-surface::before,
 .bottom-nav-surface::after {
     content: '';
@@ -829,9 +818,6 @@ body > .sortable-drag-overlay * {
     transform: translate3d(calc(var(--bottom-nav-index, 0) * 100%), 0, 0);
     transition: transform 0.58s cubic-bezier(0.32, 1.32, 0.5, 1);
 }
-/* Without permanent layers, WebKit promotes the tabs overlapping the moving
-   lens only while it animates, re-rasterizing their icons and snapping them
-   by a sub-pixel when the lens settles. */
 .bottom-nav-lens,
 .bottom-nav-lens-glass,
 .bottom-nav .nav-item {

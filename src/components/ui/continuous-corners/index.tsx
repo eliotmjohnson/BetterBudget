@@ -11,8 +11,6 @@ import { attachContinuousCorners, type ContinuousShape } from './attach';
 
 export type { ContinuousShape } from './attach';
 
-/* Continuous corners for one element, returning its outline for decorative
-   strokes. A callback ref, so an element that remounts is re-attached. */
 export function useContinuousCorners<T extends HTMLElement>() {
     const [element, setElement] = useState<T | null>(null);
     const [shape, setShape] = useState<ContinuousShape | null>(null);
@@ -30,9 +28,6 @@ export function useContinuousCorners<T extends HTMLElement>() {
     return [setElement, element ? shape : null] as const;
 }
 
-/* Every button-like control gets continuous corners without per-call-site
-   wiring. Add a class here when a new button style needs them; elements a
-   hook already manages are skipped. */
 const continuousControls = [
     '.primary-button',
     '.soft-button',
@@ -101,8 +96,6 @@ export function ContinuousControls() {
     return null;
 }
 
-/* A decorative stroke along the continuous outline, drawn inside the edge,
-   for rims painted with gradients rather than a CSS border. */
 export function ContinuousStroke({
     shape,
     width,

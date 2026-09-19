@@ -4,8 +4,6 @@
     color: var(--blue);
     box-shadow: 0 5px 14px rgb(23 105 224 / 16%);
 }
-/* The count badge overhangs the filter button's corner, so it is the button's
-   sibling: the button's continuous-corner clip would otherwise notch it. */
 .transaction-filter-control {
     position: relative;
     display: inline-grid;

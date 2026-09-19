@@ -13,11 +13,6 @@ const integrationSteps = 240;
 const pointsPerCorner = 24;
 const curveCache = new Map<string, Curve>();
 
-/* A corner at unit curvature, from the horizontal edge (heading left) to the
-   vertical edge (heading down), in coordinates where the box corner is the
-   origin. Curvature ramps linearly from zero through `turnX` of the 90° turn,
-   holds as a circular arc, then ramps back to zero through `turnY` — the
-   curvature continuity behind Apple's continuous corners. */
 function cornerCurve(turnX: number, turnY: number): Curve {
     const key = `${turnX.toFixed(4)}:${turnY.toFixed(4)}`;
     const cached = curveCache.get(key);
@@ -66,9 +61,6 @@ function scaled(curve: Curve, kx: number, ky: number, radius: number) {
     };
 }
 
-/* The CSS corner-shape superellipse(K) curve at unit radius, from the
-   horizontal edge to the vertical edge: exponent 2^K, so 1 is round and
-   larger values square the corner off. */
 function superellipseCurve(k: number): Curve {
     const key = `superellipse:${k}`;
     const cached = curveCache.get(key);
@@ -93,9 +85,6 @@ function superellipseCurve(k: number): Curve {
     return curve;
 }
 
-/* A superellipse squarer than a circle bulges past its circular CSS corner,
-   and a clip can only remove paint, so the element's actual border-radius
-   drops to the largest circle that still contains the curve. */
 const enclosingCache = new Map<number, number>();
 
 function enclosingRatio(k: number) {
@@ -130,9 +119,6 @@ export type CornerStyle = {
     capsuleSmoothing: number;
 };
 
-/* A corner whose radius fills a whole side is a capsule end, ramping its
-   curvature only along the longer edge. Every other corner is the same
-   superellipse CSS corner-shape draws, so both tiers match exactly. */
 function continuousCorner(
     radius: number,
     budgetX: number,
@@ -167,7 +153,6 @@ function continuousCorner(
     );
 }
 
-/* Mirrors CSS: radii that overflow a side shrink together by one factor. */
 function usedRadii(width: number, height: number, radii: CornerRadii) {
     const [tl, tr, br, bl] = radii;
     const factor = Math.min(
@@ -239,9 +224,6 @@ function outlinePath(width: number, height: number, cornerSet: Corner[]) {
     return `M ${points.map(format).join(' L ')} Z`;
 }
 
-/* The clip keeps everything outside the element — shadows, focus rings — and
-   removes only the slivers between each circular corner and its continuous
-   curve, so borders aside, the element's own painting already has the shape. */
 function sliverClip(width: number, height: number, cornerSet: Corner[]) {
     const bleed = 120;
     const outer = [
@@ -285,8 +267,6 @@ function sliverClip(width: number, height: number, cornerSet: Corner[]) {
     return [`M ${outer.map(format).join(' L ')} Z`, ...slivers].join(' ');
 }
 
-/* The continuous outline, the clip that carves it from the element, and the
-   circular border-radius the element must paint for the clip to work. */
 export function continuousGeometry(
     width: number,
     height: number,

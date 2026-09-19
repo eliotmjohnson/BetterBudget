@@ -1,7 +1,7 @@
 # Formatting, comment, and release-documentation reference
 
-Read this before changing formatter or linter configuration, before adding a
-comment to any file, and before preparing a major release. `AGENTS.md` owns the
+Read this before changing formatter or linter configuration, before adding
+JSDoc or explaining code anywhere, and before preparing a major release. `AGENTS.md` owns the
 day-to-day conventions; this file holds the detail behind them.
 
 Nothing here needs to be recalled by hand during normal work: `npm run verify:fix`
@@ -33,84 +33,78 @@ ignored static assets must not be pulled into formatting runs accidentally.
 
 ## Comments
 
-The codebase is deliberately almost comment-free. Every comment that survives
-in `src/` records something a competent reader could not have derived from the
-code, and the same bar applies to anything new. A comment is the last resort,
-reached only after renaming, extracting, and restructuring have failed.
+Source code carries no comments except JSDoc. Every explanation — why a value
+was chosen, which browser behavior a workaround targets, which invariant the
+arithmetic implements, what couples two files — lives in the documentation set
+instead: `AGENTS.md`, `README.md`, or the `docs/agents/` reference that owns the
+area. This applies to every language in the repository: TypeScript, CSS, and
+configuration files alike.
 
-### Before writing one
+### Why
 
-Work through this in order. Most candidate comments die at the first or second
+A comment is documentation stored where only a reader of that one file will
+find it, and it drifts silently when the code around it changes. Keeping the
+reasoning in the documentation set means there is one place to read before a
+change and one place to update with it, and the source stays a precise
+statement of what the code does.
+
+### Before writing code that needs explaining
+
+Work through this in order. Most explanations disappear at the first or second
 step:
 
-1. **Rename.** A comment explaining what a value is usually means the
-   identifier is wrong. `titleRevealProgress` needs no gloss; `p` does.
-2. **Extract.** A comment introducing a block ("// build the carryover chain")
+1. **Rename.** An explanation of what a value is usually means the identifier
+   is wrong. `titleRevealProgress` needs no gloss; `p` does.
+2. **Extract.** An explanation introducing a block ("build the carryover chain")
    is the name of a function that has not been extracted yet.
-3. **Encode it in the type.** A comment about which states are legal is a
+3. **Encode it in the type.** An explanation of which states are legal is a
    discriminated union, a branded identifier, or an exhaustive switch that has
    not been written.
-4. **Delete it.** If it restates the line below, it is noise that will go stale.
+4. **Document it.** What still needs saying — a financial invariant, an
+   ordering or lifecycle guarantee, a browser or framework workaround and the
+   behavior it works around, a cross-file coupling, a tuned constant and why it
+   has that value — goes into the document that owns the area, in the same
+   change as the code. Name the file and symbol there so a reader can find the
+   code from the documentation.
 
-Only if the fact still has nowhere to live does it become a comment.
+Section banners, restatements, changelog notes, commented-out code,
+`TODO`/`FIXME` markers, and authorship or date stamps have no place anywhere:
+version control and the documentation set already hold them.
 
-### The admissible cases
+### Lint suppressions
 
-A comment is justified when, and only when, it records one of these:
+An `eslint-disable` directive states its reason in the directive's own
+description, after `--`, for example
+`// eslint-disable-next-line some-rule -- reason`. That description is part of
+the directive, not a separate comment, and a suppression without one is not
+acceptable.
 
-- **A financial invariant** that the arithmetic implements but does not state —
-  the carryover-chain rule in `server/month-snapshot/carryover.ts` is the
-  worked example.
-- **A concurrency, ordering, or lifecycle guarantee** that the surrounding code
-  depends on and cannot express.
-- **A browser or framework workaround**, with the behavior being worked around
-  named. `@property` registration in `styles/navigation-detail.css` is the
-  worked example.
-- **A cross-file coupling** a reader cannot follow from either side alone —
-  a TypeScript constant that must match a CSS keyframe stop, or the reverse.
-  Name the other file and symbol, and keep both ends pointing at each other.
-- **The justification for a lint suppression.** An `eslint-disable` line
-  without a reason above it is not acceptable.
-- **A policy that the configuration cannot enforce on itself**, such as the
-  no-exemptions note above the size budgets in `eslint.config.mjs`.
+### Existing comments
 
-Everything else — section banners, restatements, changelog notes, commented-out
-code, `TODO`/`FIXME` markers, and authorship or date stamps — does not belong in
-the source. Version control and this documentation set already hold them.
-
-### The shape
-
-- Explain **why**, never **what**. A reader can see what the code does; they
-  cannot see what forced it.
-- Put it where the constraint bites — beside the line that would otherwise look
-  wrong or arbitrary — not at the top of the file.
-- Keep it to the fewest lines that carry the reason, and prefer a trailing
-  comment on the declaration it qualifies.
-- Write it so it stays true. A comment naming a mechanism survives; one naming
-  line numbers, current values, or a work-in-progress does not.
-- When the code it explains is changed or moved, the comment is part of that
-  change: update it or delete it in the same edit. A comment that has drifted
-  out of date is worse than no comment.
+Comments written before this rule are legacy. When a change touches code that
+carries one, move its content into the owning document and delete it in the
+same change. Do not add to or extend a legacy comment.
 
 ### JSDoc
 
-JSDoc is the one form that may document an API rather than a constraint, and it
-is still not automatic. Add it to an exported function, type, or field when a
+JSDoc (`/** … */`) is the only comment form allowed in source, and it is still
+not automatic. Add it to an exported function, type, or field when a
 consumer needs a fact the signature does not carry: a unit, a null meaning, a
 precondition, or the reason a module was split out. Do not restate the name,
 the parameter list, or the return type in prose. Field-level JSDoc in
 `domain/types.ts` and the module-purpose blocks in `shared/detail-history.ts`
 and `budget/budget-structure-editor.ts` are the intended level. Internal
-helpers do not get JSDoc; if one needs explaining, its name is wrong.
+helpers do not get JSDoc; if one needs explaining, its name is wrong. JSDoc
+describes the contract a consumer relies on; rationale and history still belong
+in the documentation set.
 
 ### Stylistic constraint
 
 `lines-around-comment` requires a blank line before an own-line comment while
 `padding-line-between-statements` forbids a blank line between consecutive
-`const`/`let`/`var` declarations, so an own-line comment cannot sit between two
-declarations and `lint:fix` cannot resolve it. Use a trailing comment on the
-declaration, start the comment at a block or object-literal start, or place it
-above a preceding non-declaration statement.
+`const`/`let`/`var` declarations, so a JSDoc block cannot sit between two
+declarations and `lint:fix` cannot resolve it. Start the block at a block or
+object-literal start, or place it above a preceding non-declaration statement.
 
 ## Size and complexity budgets
 

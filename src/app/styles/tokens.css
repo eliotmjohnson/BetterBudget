@@ -28,19 +28,6 @@
     --corner-radius-scale: 1;
 }
 
-/* Continuous corners, two ways, one curve. A corner is the superellipse
-   --corner-superellipse (higher is smoother and squarer), reaching
-   --corner-extent times the authored border-radius along each edge (higher
-   is rounder). Apple's own corner is about 1.38 at 1.24, which at this app's
-   sizes is within a fraction of a pixel of a plain circle. Where the browser
-   draws corner-shape natively (Chromium today), every border-radius is
-   authored as calc(Npx * var(--corner-radius-scale)) so it can grow by the
-   extent; elsewhere the scale stays 1 and corners stay circular. Surfaces
-   that must look continuous on iOS now use the useContinuousCorners hook,
-   which applies the extent itself, so its elements keep a scale of 1.
-   Circles and pills keep round corners: a superellipse would square them
-   off, and the hook gives pills their own --capsule-smoothing ends. Any new
-   circle or pill belongs in the list below. */
 @supports (corner-shape: round) {
     *,
     ::before,
@@ -77,11 +64,6 @@
 .transaction-filter-count {
     corner-shape: round;
 }
-/* A continuous-corner border is also stroked along the curve as a background
-   layer (see attach.ts). Component state rules such as .filter-tab.active
-   restyle with the background shorthand, which resets background-image at
-   any specificity, so the layer is important: a bordered continuous element
-   uses background-color only. */
 [data-continuous-border] {
     background-image: var(--continuous-border-image) !important;
     background-origin: border-box !important;

@@ -43,23 +43,6 @@ function borderImage(
     return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
 }
 
-/* Gives an element continuous corners on every browser, derived from its own
-   CSS border-radius: the --corner-superellipse curve that corner-shape draws
-   natively, scaled by --corner-extent, or a --capsule-smoothing end when the
-   radius fills a side. The element paints a tighter circular radius that
-   contains the curve, and the clip trims only the slivers between them, so
-   shadows, focus rings, and contents stay as CSS paints them.
-
-   A CSS border cannot bend to the curve, so it is also stroked along the curve
-   as a background layer, which survives overflow clipping. The CSS border
-   stays: its parts outside the curve fall in the clipped slivers and the rest
-   lies under the stroke, so an opaque border color shows no seam, and the
-   live color can be re-read whenever a state attribute, hover, or border
-   transition changes it.
-
-   Sizes come from the observer's border-box size, which is fractional and
-   ignores transforms: offsetWidth rounds, and half a pixel shows at the tab
-   bar's narrow gaps. */
 export function attachContinuousCorners(
     element: HTMLElement,
     onShape?: (shape: ContinuousShape) => void
