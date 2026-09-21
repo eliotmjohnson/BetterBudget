@@ -24,7 +24,7 @@ import {
 } from '@/components/ui/continuous-corners';
 import { shiftMonth, type MonthKey } from '@/domain/money';
 import { MonthPicker } from './month-picker';
-import { PullToRefresh } from './pull-to-refresh';
+import { PullRefreshDial, PullToRefresh } from './pull-to-refresh';
 import {
     beginArrowMonthChange,
     beginPickerMonthChange,
@@ -202,6 +202,7 @@ export function AppShell({
                         ref={contentRef}
                         className='app-content app-content--enter'
                     >
+                        {onRefresh ? <PullRefreshDial /> : null}
                         {children}
                     </div>
                 </div>

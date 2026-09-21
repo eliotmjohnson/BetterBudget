@@ -35,11 +35,14 @@
     width: min(100%, 820px);
     min-height: 0;
     flex: 1;
-    margin: 0 auto;
+    position: relative;
+    margin: calc(-1 * var(--pull-band-height)) auto 0;
+    padding-top: var(--pull-band-height);
     overflow-x: hidden;
     overflow-y: auto;
     overscroll-behavior-x: none;
     overscroll-behavior-y: auto;
+    scroll-padding-top: var(--pull-band-height);
     scroll-padding-bottom: calc(var(--bottom-nav-height) + 20px);
     -webkit-overflow-scrolling: touch;
 }
@@ -49,19 +52,9 @@
     min-height: 0;
     display: flex;
     flex-direction: column;
-    --pull-band-height: 58px;
-    --pull-rest-lead: 20px;
-    --pull-rest-distance: calc(var(--pull-band-height) + var(--pull-rest-lead));
-    --pull-hold-motion: 0.72s cubic-bezier(0.32, 0.72, 0, 1);
+    --pull-float-top: 12px;
+    --pull-hold-motion: 0.5s cubic-bezier(0.25, 1, 0.5, 1);
     --pull-settle-motion: 0.44s cubic-bezier(0.29, 1, 0.29, 1);
-}
-.app-scroll[data-pull-state='refreshing'] {
-    --pull-distance: var(--pull-rest-distance);
-}
-@property --pull-distance {
-    syntax: '<length>';
-    inherits: true;
-    initial-value: 0px;
 }
 @property --pull-progress {
     syntax: '<number>';
@@ -70,14 +63,13 @@
 }
 .pull-refresh {
     position: absolute;
-    top: calc(-1 * var(--pull-band-height));
+    top: 0;
     left: 0;
     width: 100%;
     height: var(--pull-band-height);
     display: grid;
     place-items: center;
     pointer-events: none;
-    transform: translate3d(0, var(--pull-distance), 0);
 }
 .pull-refresh-dial {
     width: 30px;
@@ -104,33 +96,68 @@
         var(--pull-dial-circumference) * (1 - var(--pull-progress))
     );
 }
-.app-scroll[data-pull-state] .app-content {
-    transform: translate3d(0, var(--pull-distance), 0);
+.pull-refresh-float {
+    --pull-float-size: 44px;
+    position: absolute;
+    z-index: 2;
+    top: var(--pull-float-top);
+    left: calc(50% - var(--pull-float-size) / 2);
+    width: var(--pull-float-size);
+    height: var(--pull-float-size);
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 6px 18px rgb(21 25 31 / 0.14);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    scale: 0.6;
 }
-.app-scroll[data-pull-state] .app-content,
-.app-scroll[data-pull-state] .pull-refresh {
-    will-change: transform;
-}
-.app-scroll[data-pull-state='refreshing'] .app-content,
-.app-scroll[data-pull-state='refreshing'] .pull-refresh {
-    transition: transform var(--pull-hold-motion);
-}
-.app-scroll[data-pull-state='settling'] .app-content,
+.app-scroll[data-pull-state='releasing'] .pull-refresh,
+.app-scroll[data-pull-state='refreshing'] .pull-refresh,
 .app-scroll[data-pull-state='settling'] .pull-refresh {
-    transition: transform var(--pull-settle-motion);
+    visibility: hidden;
 }
-.app-scroll[data-pull-state='refreshing'] .pull-refresh-dial {
-    transition: opacity var(--pull-hold-motion);
-    animation: pull-refresh-spin 0.85s linear infinite;
+.app-scroll[data-pull-state='releasing'] .pull-refresh-float,
+.app-scroll[data-pull-state='refreshing'] .pull-refresh-float,
+.app-scroll[data-pull-state='settling'] .pull-refresh-float {
+    visibility: visible;
+    will-change: translate, opacity, scale;
 }
-.app-scroll[data-pull-state='settling'] .pull-refresh-dial {
+.app-scroll[data-pull-state='releasing'] .pull-refresh-float {
+    opacity: 1;
+    scale: 1;
+    translate: 0
+        calc(
+            var(--pull-release) - var(--pull-band-height) / 2 -
+                var(--pull-float-top) - var(--pull-float-size) / 2
+        );
+}
+.app-scroll[data-pull-state='refreshing'] .pull-refresh-float {
+    opacity: 1;
+    scale: 1;
+    translate: 0 0;
+    transition: translate var(--pull-hold-motion);
+}
+.app-scroll[data-pull-state='settling'] .pull-refresh-float {
     transition:
         opacity var(--pull-settle-motion),
-        transform var(--pull-settle-motion);
+        scale var(--pull-settle-motion),
+        visibility 0s linear var(--pull-settle-motion);
+}
+.app-scroll[data-pull-state='releasing'] .pull-refresh-dial,
+.app-scroll[data-pull-state='refreshing'] .pull-refresh-dial {
+    animation: pull-refresh-spin 0.85s linear infinite;
 }
 .app-scroll[data-pull-state='refreshing'] .pull-refresh-arc {
     stroke-dashoffset: calc(var(--pull-dial-circumference) * 0.7);
     transition: stroke-dashoffset 0.3s ease;
+}
+@media (pointer: coarse) {
+    .app-content > :not(.pull-refresh) {
+        min-height: calc(100% + 1px);
+    }
 }
 .app-content--enter > * {
     animation: page-enter 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;
@@ -154,6 +181,7 @@
 .page-slide-out {
     width: 100%;
     height: 100%;
+    padding-top: var(--pull-band-height);
     overflow: hidden;
     animation: page-slide-out var(--page-slide-motion) both;
     will-change: transform;

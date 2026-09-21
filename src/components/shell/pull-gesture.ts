@@ -1,54 +1,34 @@
 'use client';
 
 import type { RefObject } from 'react';
-import type { GestureFrameDriver } from '@/components/ui/gesture-frame';
-
-export interface PullGesture {
-    identifier: number;
-    startX: number;
-    startY: number;
-    claimed: boolean;
-}
 
 export interface PullContext {
-    distanceRef: RefObject<number>;
-    frameRef: RefObject<GestureFrameDriver | null>;
-    gestureRef: RefObject<PullGesture | null>;
+    frameRef: RefObject<number | null>;
     refreshingRef: RefObject<boolean>;
     scrollRef: RefObject<HTMLDivElement | null>;
     settleTimerRef: RefObject<ReturnType<typeof setTimeout> | null>;
     surface: HTMLDivElement;
+    touchingRef: RefObject<boolean>;
     triggerRefresh: () => void;
 }
 
-export const pullTriggerDistance = 62;
-const claimDistance = 12;
-const guardDistance = 4;
-const maximumDistance = 148;
+const pullFillStart = 29;
+const pullTriggerDistance = 115;
 const settleDuration = 440;
 const blockingSelector =
     '.sheet-content, [data-drag-active], [data-long-press-active], [data-long-press-pending]';
 
-function resistedDistance(raw: number) {
-    return (
-        maximumDistance * (1 - Math.exp(-Math.max(0, raw) / maximumDistance))
-    );
-}
-
-function pullBlocked(target: EventTarget | null) {
+function pullBlocked() {
     return (
         document.body.dataset.navigationDetailState === 'open' ||
-        document.querySelector(blockingSelector) !== null ||
-        (target instanceof Element &&
-            target.closest('.navigation-detail-content') !== null)
+        document.querySelector(blockingSelector) !== null
     );
 }
 
-export function writePullDistance(surface: HTMLDivElement, distance: number) {
-    surface.style.setProperty('--pull-distance', `${distance}px`);
+export function writePullProgress(surface: HTMLDivElement, overscroll: number) {
     surface.style.setProperty(
         '--pull-progress',
-        `${Math.min(1, distance / pullTriggerDistance)}`
+        `${Math.min(1, Math.max(0, overscroll - pullFillStart) / (pullTriggerDistance - pullFillStart))}`
     );
 }
 
@@ -59,120 +39,107 @@ function clearSettleTimer(ctx: PullContext) {
     ctx.settleTimerRef.current = null;
 }
 
-export function holdPullAtRest(ctx: PullContext) {
-    const { frameRef, surface } = ctx;
+function readOverscroll(ctx: PullContext) {
+    const scroller = ctx.scrollRef.current;
 
-    frameRef.current?.cancel();
+    return scroller ? Math.max(0, -scroller.scrollTop) : 0;
+}
+
+function trackOverscroll(ctx: PullContext, overscroll: number) {
+    const { surface, touchingRef } = ctx;
+    const state = surface.dataset.pullState;
+
+    if (state === 'refreshing') return;
+    if (touchingRef.current && overscroll > 0 && !pullBlocked()) {
+        clearSettleTimer(ctx);
+        surface.dataset.pullState = 'pulling';
+        writePullProgress(surface, overscroll);
+
+        return;
+    }
+    if (state !== 'pulling' && state !== 'returning') return;
+    surface.dataset.pullState = 'returning';
+    writePullProgress(surface, overscroll);
+    if (overscroll === 0 && !touchingRef.current)
+        delete surface.dataset.pullState;
+}
+
+export function observeOverscroll(ctx: PullContext) {
+    const { frameRef, touchingRef } = ctx;
+
+    if (frameRef.current !== null) return;
+
+    const frame = () => {
+        const overscroll = readOverscroll(ctx);
+
+        frameRef.current = null;
+        trackOverscroll(ctx, overscroll);
+        if (touchingRef.current || overscroll > 0)
+            frameRef.current = window.requestAnimationFrame(frame);
+    };
+
+    frameRef.current = window.requestAnimationFrame(frame);
+}
+
+export function cancelOverscrollObserver(ctx: PullContext) {
+    if (ctx.frameRef.current === null) return;
+
+    window.cancelAnimationFrame(ctx.frameRef.current);
+    ctx.frameRef.current = null;
+}
+
+function markRelease(surface: HTMLDivElement, overscroll: number) {
+    surface.style.setProperty('--pull-release', `${overscroll}px`);
+    surface.dataset.pullState = 'releasing';
+    void surface.offsetHeight;
+}
+
+export function holdPullAtRest(ctx: PullContext) {
+    const { surface } = ctx;
+
     clearSettleTimer(ctx);
     surface.dataset.pullState = 'refreshing';
-    void surface.offsetHeight;
-    surface.style.removeProperty('--pull-distance');
     surface.style.setProperty('--pull-progress', '1');
 }
 
 export function settlePull(ctx: PullContext) {
-    const { distanceRef, frameRef, settleTimerRef, surface } = ctx;
+    const { settleTimerRef, surface } = ctx;
 
-    frameRef.current?.cancel();
     clearSettleTimer(ctx);
     surface.dataset.pullState = 'settling';
     void surface.offsetHeight;
-    distanceRef.current = 0;
-    writePullDistance(surface, 0);
+    writePullProgress(surface, 0);
     settleTimerRef.current = setTimeout(() => {
         delete surface.dataset.pullState;
         settleTimerRef.current = null;
     }, settleDuration);
 }
 
-export function startPullGesture(ctx: PullContext, event: TouchEvent) {
-    const { gestureRef, refreshingRef, scrollRef } = ctx;
-    const touch = event.touches[0];
-    const scroller = scrollRef.current;
-
-    gestureRef.current = null;
-    if (
-        event.touches.length !== 1 ||
-        !touch ||
-        !scroller ||
-        refreshingRef.current ||
-        scroller.scrollTop > 0 ||
-        pullBlocked(event.target)
-    )
-        return;
-
-    gestureRef.current = {
-        identifier: touch.identifier,
-        startX: touch.clientX,
-        startY: touch.clientY,
-        claimed: false
-    };
+export function startPullTouch(ctx: PullContext, event: TouchEvent) {
+    ctx.touchingRef.current = event.touches.length > 0;
+    observeOverscroll(ctx);
 }
 
-function claimPullGesture(
-    ctx: PullContext,
-    gesture: PullGesture,
-    event: TouchEvent
-) {
-    const { frameRef, gestureRef, scrollRef, surface } = ctx;
+export function endPullTouch(ctx: PullContext, event: TouchEvent) {
+    const { refreshingRef, surface, touchingRef } = ctx;
 
-    if ((scrollRef.current?.scrollTop ?? 0) > 0 || pullBlocked(event.target)) {
-        gestureRef.current = null;
+    touchingRef.current = event.touches.length > 0;
+    if (touchingRef.current) return;
 
-        return false;
-    }
-    clearSettleTimer(ctx);
-    gesture.claimed = true;
-    frameRef.current?.reset(0);
-    surface.dataset.pullState = 'pulling';
+    const overscroll = readOverscroll(ctx);
 
-    return true;
-}
-
-export function movePullGesture(ctx: PullContext, event: TouchEvent) {
-    const { distanceRef, frameRef, gestureRef } = ctx;
-    const gesture = gestureRef.current;
-    const touch = event.touches[0];
-
-    if (!gesture) return;
-    if (
-        event.touches.length !== 1 ||
-        touch?.identifier !== gesture.identifier
-    ) {
-        gestureRef.current = null;
-
-        return;
-    }
-
-    const deltaX = touch.clientX - gesture.startX;
-    const deltaY = touch.clientY - gesture.startY;
-
-    if (!gesture.claimed) {
-        if (deltaY <= 0 || Math.abs(deltaX) > deltaY) {
-            if (Math.max(Math.abs(deltaX), -deltaY) >= claimDistance)
-                gestureRef.current = null;
+    if (surface.dataset.pullState === 'pulling') {
+        if (
+            overscroll >= pullTriggerDistance &&
+            !refreshingRef.current &&
+            !pullBlocked()
+        ) {
+            markRelease(surface, overscroll);
+            ctx.triggerRefresh();
 
             return;
         }
-        if (deltaY >= guardDistance && event.cancelable) event.preventDefault();
-        if (deltaY < claimDistance) return;
-        if (!claimPullGesture(ctx, gesture, event)) return;
+        surface.dataset.pullState = 'returning';
     }
-    if (event.cancelable) event.preventDefault();
-    distanceRef.current = resistedDistance(deltaY - claimDistance);
-    frameRef.current?.schedule(distanceRef.current);
-}
-
-export function endPullGesture(ctx: PullContext) {
-    const { distanceRef, gestureRef, triggerRefresh } = ctx;
-    const gesture = gestureRef.current;
-
-    gestureRef.current = null;
-    if (!gesture?.claimed) return;
-    if (distanceRef.current >= pullTriggerDistance) {
-        triggerRefresh();
-
-        return;
-    }
-    settlePull(ctx);
+    observeOverscroll(ctx);
 }

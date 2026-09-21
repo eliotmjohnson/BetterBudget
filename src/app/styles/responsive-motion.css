@@ -176,9 +176,6 @@
     .screen {
         padding: 24px 26px 48px;
     }
-    .app-scroll {
-        --pull-rest-lead: 24px;
-    }
     .bottom-nav {
         display: none;
     }
@@ -243,7 +240,7 @@
     }
     .right-rail {
         position: sticky;
-        top: 98px;
+        top: calc(98px + var(--pull-band-height));
         border: 1px solid var(--line);
         border-radius: calc(16px * var(--corner-radius-scale));
         overflow: hidden;
