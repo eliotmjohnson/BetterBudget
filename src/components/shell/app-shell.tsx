@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/continuous-corners';
 import { shiftMonth, type MonthKey } from '@/domain/money';
 import { MonthPicker } from './month-picker';
+import { PullToRefresh } from './pull-to-refresh';
 import {
     beginArrowMonthChange,
     beginPickerMonthChange,
@@ -61,6 +62,7 @@ export function AppShell({
     monthLabel,
     onViewChange,
     onMonthActions,
+    onRefresh,
     online,
     syncing,
     mutationPending,
@@ -71,6 +73,7 @@ export function AppShell({
     monthLabel: string;
     onViewChange: (view: AppView) => void;
     onMonthActions: () => void;
+    onRefresh?: () => Promise<void>;
     online: boolean;
     syncing: boolean;
     mutationPending: boolean;
@@ -80,6 +83,7 @@ export function AppShell({
     const path = view === 'budget' ? '/' : `/${view}`;
     const contentView = view === 'organize' ? 'settings' : view;
     const contentRef = useRef<HTMLDivElement>(null);
+    const scrollSurfaceRef = useRef<HTMLDivElement>(null);
 
     usePageTransition(contentRef, contentView, monthKey);
 
@@ -181,12 +185,21 @@ export function AppShell({
                         Still saving…
                     </div>
                 ) : null}
-                <div
-                    key={`${contentView}-${monthKey}`}
-                    ref={contentRef}
-                    className='app-content app-content--enter'
-                >
-                    {children}
+                <div ref={scrollSurfaceRef} className='app-scroll'>
+                    {onRefresh ? (
+                        <PullToRefresh
+                            onRefresh={onRefresh}
+                            scrollRef={contentRef}
+                            surfaceRef={scrollSurfaceRef}
+                        />
+                    ) : null}
+                    <div
+                        key={`${contentView}-${monthKey}`}
+                        ref={contentRef}
+                        className='app-content app-content--enter'
+                    >
+                        {children}
+                    </div>
                 </div>
             </main>
             <BottomNav

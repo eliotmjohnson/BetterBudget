@@ -681,3 +681,8 @@
         transform: translate3d(0, var(--bottom-nav-hidden-offset), 0);
     }
 }
+@keyframes pull-refresh-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}

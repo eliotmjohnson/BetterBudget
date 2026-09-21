@@ -48,7 +48,7 @@ export function BudgetApp({
     view: AppView;
 }) {
     const pathname = usePathname();
-    const { data: snapshot } = useBudgetSnapshot(initialSnapshot);
+    const { data: snapshot, refetch } = useBudgetSnapshot(initialSnapshot);
     const activeView = viewFromPathname(pathname, view);
     const online = useConnectivity();
     const syncing = useDelayedSyncIndicator();
@@ -123,6 +123,13 @@ export function BudgetApp({
                 });
             }
         });
+    };
+    const refreshBudget = async () => {
+        if (!online) throw new Error('Reconnect to refresh the budget.');
+
+        const result = await refetch();
+
+        if (result.isError) throw new Error('Could not refresh the budget.');
     };
     const navigateView = (nextView: AppView) => {
         if (nextView === activeView) return;
@@ -211,6 +218,7 @@ export function BudgetApp({
             monthLabel={snapshot.label}
             onViewChange={navigateView}
             onMonthActions={() => setMonthActionsOpen(true)}
+            onRefresh={activeView === 'budget' ? refreshBudget : undefined}
             online={online}
             syncing={syncing}
             mutationPending={budgetMutation.isPending}

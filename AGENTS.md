@@ -145,6 +145,7 @@ High-impact files:
 - `src/server/definition-usage.ts` — later-month activity and never-used (permanently deletable) status per definition, shared by the snapshot and the hard-delete handlers.
 - `src/components/shell/use-budget-data.ts` — hydration, retry, reconciliation, sync state.
 - `src/components/shell/optimistic.ts` — optimistic cache patches: clones the snapshot and delegates to `optimistic-patches/`, which mirrors `budget-mutations/` one file per mutation family.
+- `src/components/shell/pull-to-refresh.tsx` — the Budget page's pull-to-refresh indicator, refresh lifecycle, and status announcement; `pull-gesture.ts` holds the touch state machine it drives.
 - `src/components/shell/app-client.tsx` — authenticated interactive shell; `app-shell.tsx`, `budget-route.tsx`, `month-picker.tsx`, and `month-actions-sheet.tsx` are the surrounding chrome.
 - `src/components/budget/budget-view.tsx` — Budget page layout, URL-backed line-item details, item-scoped add-transaction flow. `budget-category-section.tsx` renders a category and its items, `budget-summary-card.tsx` the arc and balance, `budget-structure-editor.ts` owns the category/item sheet state that `budget-structure-sheets.tsx` renders.
 - `src/components/budget/budget-item-editors.tsx` — plan input, item edit/detail components.
