@@ -12,6 +12,7 @@ export const BACKUP_FORMAT_VERSION = 1;
 const nameSchema = z.string().trim().min(1).max(120);
 const noteSchema = z.string().max(500).nullable();
 const timestampSchema = z.string().datetime({ offset: true }).nullable();
+const createdAtSchema = z.string().datetime({ offset: true }).optional();
 const sortOrderSchema = z.number().int().min(0).max(1_000_000);
 const categorySchema = z.object({
     id: z.string().uuid(),
@@ -38,7 +39,8 @@ const receiptSchema = z.object({
     receivedOn: z.string().date(),
     amountCents: centsSchema,
     note: noteSchema,
-    deletedAt: timestampSchema
+    deletedAt: timestampSchema,
+    createdAt: createdAtSchema
 });
 const incomePlanSchema = z.object({
     id: z.string().uuid(),
@@ -57,6 +59,7 @@ const transactionSchema = z.object({
     totalCents: centsSchema,
     note: noteSchema,
     deletedAt: timestampSchema,
+    createdAt: createdAtSchema,
     splits: z
         .array(
             z.object({

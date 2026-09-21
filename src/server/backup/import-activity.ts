@@ -114,7 +114,8 @@ async function mergeIncome(
                     receivedOn: receipt.receivedOn,
                     amountCents: BigInt(receipt.amountCents),
                     note: receipt.note,
-                    deletedAt: toDate(receipt.deletedAt)
+                    deletedAt: toDate(receipt.deletedAt),
+                    createdAt: toDate(receipt.createdAt ?? null) ?? undefined
                 });
     }
     for (const batch of chunks(receipts))
@@ -214,7 +215,8 @@ export async function mergeActivity(
                 occurredOn: transaction.occurredOn,
                 totalCents: BigInt(transaction.totalCents),
                 note: transaction.note,
-                deletedAt: toDate(transaction.deletedAt)
+                deletedAt: toDate(transaction.deletedAt),
+                createdAt: toDate(transaction.createdAt ?? null) ?? undefined
             });
             splitValues.push(
                 ...resolveSplits(month, monthId, transaction, {

@@ -49,7 +49,8 @@ The implemented product supports:
   `better-budget-backup` JSON file (every month, category and item definition
   including archived ones, plan, carryover setting, income plan and receipt,
   transaction and split, soft-deleted activity included; cents as base-10
-  strings; splits reference household item definitions) and imports it in one
+  strings; transaction and receipt creation times, which order same-day
+  activity, are carried so a Replace keeps the activity feed order; splits reference household item definitions) and imports it in one
   database transaction. **Replace** permanently deletes the household's budget
   rows and mutation receipts, then restores the file. **Merge** never changes
   an existing row and only adds what is missing: categories match by id, then

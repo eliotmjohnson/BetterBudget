@@ -167,7 +167,8 @@ export async function exportHousehold(
                     receivedOn: receipt.receivedOn,
                     amountCents: receipt.amountCents.toString(),
                     note: receipt.note,
-                    deletedAt: toIso(receipt.deletedAt)
+                    deletedAt: toIso(receipt.deletedAt),
+                    createdAt: receipt.createdAt.toISOString()
                 })
             )
         })),
@@ -180,6 +181,7 @@ export async function exportHousehold(
                 totalCents: transaction.totalCents.toString(),
                 note: transaction.note,
                 deletedAt: toIso(transaction.deletedAt),
+                createdAt: transaction.createdAt.toISOString(),
                 splits: (splitsByTransaction.get(transaction.id) ?? []).map(
                     (split) => ({
                         budgetItemId: split.budgetItemId,
