@@ -50,8 +50,13 @@
     display: flex;
     flex-direction: column;
     --pull-band-height: 58px;
+    --pull-rest-lead: 20px;
+    --pull-rest-distance: calc(var(--pull-band-height) + var(--pull-rest-lead));
     --pull-hold-motion: 0.72s cubic-bezier(0.32, 0.72, 0, 1);
     --pull-settle-motion: 0.44s cubic-bezier(0.29, 1, 0.29, 1);
+}
+.app-scroll[data-pull-state='refreshing'] {
+    --pull-distance: var(--pull-rest-distance);
 }
 @property --pull-distance {
     syntax: '<length>';

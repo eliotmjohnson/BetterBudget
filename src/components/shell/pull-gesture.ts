@@ -21,7 +21,6 @@ export interface PullContext {
     triggerRefresh: () => void;
 }
 
-export const pullRestingDistance = 58;
 export const pullTriggerDistance = 62;
 const claimDistance = 12;
 const guardDistance = 4;
@@ -61,14 +60,13 @@ function clearSettleTimer(ctx: PullContext) {
 }
 
 export function holdPullAtRest(ctx: PullContext) {
-    const { distanceRef, frameRef, surface } = ctx;
+    const { frameRef, surface } = ctx;
 
     frameRef.current?.cancel();
     clearSettleTimer(ctx);
     surface.dataset.pullState = 'refreshing';
     void surface.offsetHeight;
-    distanceRef.current = pullRestingDistance;
-    writePullDistance(surface, pullRestingDistance);
+    surface.style.removeProperty('--pull-distance');
     surface.style.setProperty('--pull-progress', '1');
 }
 
