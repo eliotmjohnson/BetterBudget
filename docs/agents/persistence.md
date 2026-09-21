@@ -50,7 +50,7 @@ Mutation lifecycle rules:
 11. On a version conflict, fetch the authoritative entity and explain that it changed elsewhere. Never silently overwrite newer direct edits.
 12. When offline, preserve drafts but do not claim a financial write was saved. Revert unsafe inline mutations and maintain the persistent offline banner. Offline write synchronization is outside version 1.
 
-Other devices converge through refetches on window focus, route/month navigation, successful mutations, an explicit Budget-page pull-to-refresh, and a lightweight visible-tab interval. Version checks remain mandatory even without WebSockets.
+Other devices converge through refetches on window focus, route/month navigation, successful mutations, an explicit pull-to-refresh on any tab, and a lightweight visible-tab interval. Version checks remain mandatory even without WebSockets.
 
 ## Development scenarios
 

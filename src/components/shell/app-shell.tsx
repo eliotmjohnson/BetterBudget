@@ -84,6 +84,9 @@ export function AppShell({
     const contentView = view === 'organize' ? 'settings' : view;
     const contentRef = useRef<HTMLDivElement>(null);
     const scrollSurfaceRef = useRef<HTMLDivElement>(null);
+    const refreshLabel =
+        nav.find(({ view: itemView }) => itemView === contentView)?.label ??
+        'Budget';
 
     usePageTransition(contentRef, contentView, monthKey);
 
@@ -188,6 +191,7 @@ export function AppShell({
                 <div ref={scrollSurfaceRef} className='app-scroll'>
                     {onRefresh ? (
                         <PullToRefresh
+                            label={refreshLabel}
                             onRefresh={onRefresh}
                             scrollRef={contentRef}
                             surfaceRef={scrollSurfaceRef}

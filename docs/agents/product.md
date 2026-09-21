@@ -45,8 +45,8 @@ The implemented product supports:
   scope to renaming, reordering, and deletion.
   Switching the amount view directly on the Budget page remains active for the
   current app session and resets from this default only on a fresh load.
-- Pulling down past the top of the Budget page to refresh the selected month
-  from the server. The gesture is touch-only, reveals a progress dial from
-  beneath the header, refreshes when released past the threshold, and announces
-  the outcome to assistive technology.
+- Pulling down past the top of any tab to refresh the selected month from the
+  server. The gesture is touch-only, reveals a progress dial from beneath the
+  header, refreshes when released past the threshold, and announces the outcome
+  to assistive technology under the tab's own name.
 - File-persistent PGlite development, PostgreSQL parity, and Docker packaging.

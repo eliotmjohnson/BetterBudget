@@ -20,12 +20,19 @@ type PullStatus = 'idle' | 'refreshing' | 'refreshed' | 'failed';
 
 const maximumSpinDuration = 5_000;
 const minimumSpinDuration = 1_080;
-const statusMessage: Record<PullStatus, string> = {
-    idle: '',
-    refreshing: 'Refreshing the budget…',
-    refreshed: 'Budget updated.',
-    failed: 'The budget could not be refreshed.'
-};
+
+function statusMessage(status: PullStatus, label: string) {
+    switch (status) {
+        case 'refreshing':
+            return `Refreshing ${label}…`;
+        case 'refreshed':
+            return `${label} updated.`;
+        case 'failed':
+            return `${label} could not be refreshed.`;
+        case 'idle':
+            return '';
+    }
+}
 
 function spinFor(duration: number) {
     return new Promise<void>((resolve) => {
@@ -49,10 +56,12 @@ async function requestRefresh(refresh: () => Promise<void>) {
 }
 
 export function PullToRefresh({
+    label,
     onRefresh,
     scrollRef,
     surfaceRef
 }: {
+    label: string;
     onRefresh: () => Promise<void>;
     scrollRef: RefObject<HTMLDivElement | null>;
     surfaceRef: RefObject<HTMLDivElement | null>;
@@ -160,7 +169,7 @@ export function PullToRefresh({
                 </span>
             </div>
             <p className='live-announcer' role='status'>
-                {statusMessage[status]}
+                {statusMessage(status, label)}
             </p>
         </>
     );

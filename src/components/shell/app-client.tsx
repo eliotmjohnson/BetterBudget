@@ -124,12 +124,12 @@ export function BudgetApp({
             }
         });
     };
-    const refreshBudget = async () => {
-        if (!online) throw new Error('Reconnect to refresh the budget.');
+    const refreshMonth = async () => {
+        if (!online) throw new Error('Reconnect to refresh.');
 
         const result = await refetch();
 
-        if (result.isError) throw new Error('Could not refresh the budget.');
+        if (result.isError) throw new Error('The month could not be loaded.');
     };
     const navigateView = (nextView: AppView) => {
         if (nextView === activeView) return;
@@ -218,7 +218,7 @@ export function BudgetApp({
             monthLabel={snapshot.label}
             onViewChange={navigateView}
             onMonthActions={() => setMonthActionsOpen(true)}
-            onRefresh={activeView === 'budget' ? refreshBudget : undefined}
+            onRefresh={refreshMonth}
             online={online}
             syncing={syncing}
             mutationPending={budgetMutation.isPending}
