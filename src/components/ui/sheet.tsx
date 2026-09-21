@@ -13,21 +13,27 @@ import {
     type ReactNode
 } from 'react';
 import {
-    createGestureFrameDriver,
+    createPointerTrack,
+    exitMotion,
     getCoalescedPointerSamples,
-    getPredictedPointerSample,
-    listenForRawPointerUpdates,
-    updateGestureVelocity,
-    type GestureFrameDriver
-} from './gesture-frame';
+    recordPointerSamples,
+    releaseVelocity,
+    type PointerTrack
+} from './gesture-release';
 
 interface DragState {
     pointerId: number;
+    originY: number;
     startY: number;
-    lastPosition: number;
-    lastTime: number;
-    stopRawUpdates?: () => void;
-    velocity: number;
+    track: PointerTrack;
+}
+
+const settleDuration = 400;
+const exitOvershoot = 64;
+const translateY = (distance: number) => `translate3d(0, ${distance}px, 0)`;
+
+function renderedOffset(content: HTMLElement) {
+    return new DOMMatrixReadOnly(getComputedStyle(content).transform).m42;
 }
 
 function restoreSheetFocus(target: HTMLElement, focusVisible: boolean) {
@@ -95,49 +101,27 @@ export function Sheet({
     );
     const overlayRef = useRef<HTMLDivElement>(null);
     const dragRef = useRef<DragState | null>(null);
-    const dragFrameRef = useRef<GestureFrameDriver | null>(null);
     const restoreFocusVisibleRef = useRef(true);
     const settleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    useEffect(() => {
-        const dragFrame = createGestureFrameDriver(
-            (distance: number) => {
-                contentRef.current?.style.setProperty(
-                    '--sheet-drag-y',
-                    `${distance}px`
-                );
-            },
-            {
-                shouldInterpolate: () =>
-                    !window.matchMedia('(prefers-reduced-motion: reduce)')
-                        .matches
-            }
-        );
-
-        dragFrameRef.current = dragFrame;
-
-        return () => {
-            dragFrame.cancel();
-            if (dragFrameRef.current === dragFrame) dragFrameRef.current = null;
-            dragRef.current?.stopRawUpdates?.();
+    useEffect(
+        () => () => {
             if (settleTimerRef.current) clearTimeout(settleTimerRef.current);
             if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
-        };
-    }, []);
+        },
+        []
+    );
 
     useEffect(() => {
-        if (open) return;
-
-        dragRef.current?.stopRawUpdates?.();
-        dragRef.current = null;
-        dragFrameRef.current?.cancel();
+        if (!open) dragRef.current = null;
     }, [open]);
 
     const completeDragDismissal = (content: HTMLDivElement) => {
         if (content.dataset.dismissing !== 'true') return;
 
         delete content.dataset.dismissing;
+        content.style.setProperty('--sheet-drag-y', 'calc(100% + 64px)');
         content.style.setProperty('--sheet-dismiss-duration', '1ms');
         overlayRef.current?.style.setProperty(
             '--sheet-dismiss-duration',
@@ -149,22 +133,51 @@ export function Sheet({
         }
         onOpenChange(false);
     };
-    const moveDragFromPointer = (event: PointerEvent) => {
+    const moveDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
         const drag = dragRef.current;
         const content = contentRef.current;
 
         if (!drag || !content || drag.pointerId !== event.pointerId) return;
-        const samples = getCoalescedPointerSamples(event);
-        const latestSample = samples[samples.length - 1] ?? event;
-        const visualSample = getPredictedPointerSample(event, latestSample);
+        const samples = getCoalescedPointerSamples(event.nativeEvent);
+        const latestSample = samples[samples.length - 1] ?? event.nativeEvent;
 
-        updateGestureVelocity(drag, samples, 'clientY');
-        dragFrameRef.current?.schedule(
-            Math.max(0, visualSample.clientY - drag.startY)
+        recordPointerSamples(drag.track, samples);
+        content.style.transform = translateY(
+            Math.max(0, drag.originY + latestSample.clientY - drag.startY)
         );
     };
-    const moveDrag = (event: ReactPointerEvent<HTMLDivElement>) =>
-        moveDragFromPointer(event.nativeEvent);
+    const settleDrag = (content: HTMLDivElement) => {
+        content.style.removeProperty('transition');
+        content.dataset.settling = 'true';
+        void content.offsetHeight;
+        content.style.transform = translateY(0);
+        settleTimerRef.current = setTimeout(() => {
+            delete content.dataset.settling;
+            content.style.removeProperty('transform');
+            settleTimerRef.current = null;
+        }, settleDuration);
+    };
+    const dismissDrag = (
+        content: HTMLDivElement,
+        offset: number,
+        velocity: number
+    ) => {
+        const exitDistance =
+            content.getBoundingClientRect().height + exitOvershoot;
+        const { duration, transition } = exitMotion(
+            exitDistance - offset,
+            velocity
+        );
+
+        content.dataset.dismissing = 'true';
+        void content.offsetHeight;
+        content.style.transition = transition;
+        content.style.transform = translateY(exitDistance);
+        dismissTimerRef.current = setTimeout(
+            () => completeDragDismissal(content),
+            duration + 80
+        );
+    };
     const finishDrag = (
         event: ReactPointerEvent<HTMLDivElement>,
         cancelled = false
@@ -176,53 +189,31 @@ export function Sheet({
 
         const samples = getCoalescedPointerSamples(event.nativeEvent);
         const latestSample = samples[samples.length - 1] ?? event.nativeEvent;
+        const velocity = releaseVelocity(
+            drag.track,
+            event.nativeEvent,
+            samples
+        );
 
-        updateGestureVelocity(drag, samples, 'clientY');
-        drag.stopRawUpdates?.();
         dragRef.current = null;
-        const distance = Math.max(0, latestSample.clientY - drag.startY);
+        const distance = Math.max(
+            0,
+            drag.originY + latestSample.clientY - drag.startY
+        );
+        const offset = renderedOffset(content);
 
-        dragFrameRef.current?.cancel();
         delete content.dataset.dragging;
         const height = content.getBoundingClientRect().height;
         const threshold = Math.min(180, height * 0.26);
-        const projectedDistance = distance + Math.max(0, drag.velocity) * 180;
+        const projectedDistance = distance + Math.max(0, velocity) * 180;
         const dismiss =
             !cancelled &&
             (distance >= threshold ||
-                (distance >= 32 && drag.velocity >= 0.65) ||
+                (distance >= 32 && velocity >= 0.65) ||
                 (distance >= 24 && projectedDistance >= threshold * 1.12));
 
-        if (dismiss) {
-            const exitDistance = height + 64;
-            const remaining = Math.max(0, exitDistance - distance);
-            const duration = Math.round(
-                Math.max(180, Math.min(450, (450 * remaining) / exitDistance))
-            );
-            const dismissDuration = `${Math.round(duration)}ms`;
-
-            content.style.setProperty(
-                '--sheet-dismiss-duration',
-                dismissDuration
-            );
-            content.dataset.dismissing = 'true';
-            void content.offsetHeight;
-            content.style.setProperty('--sheet-drag-y', `${exitDistance}px`);
-            dismissTimerRef.current = setTimeout(
-                () => completeDragDismissal(content),
-                duration + 80
-            );
-
-            return;
-        }
-
-        content.dataset.settling = 'true';
-        void content.offsetHeight;
-        content.style.setProperty('--sheet-drag-y', '0px');
-        settleTimerRef.current = setTimeout(() => {
-            delete content.dataset.settling;
-            settleTimerRef.current = null;
-        }, 400);
+        if (dismiss) dismissDrag(content, offset, velocity);
+        else settleDrag(content);
     };
     const startDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
         if (
@@ -235,13 +226,16 @@ export function Sheet({
             return;
         const content = contentRef.current;
 
-        if (!content) return;
-        dragFrameRef.current?.reset(0);
+        if (!content || content.dataset.dismissing === 'true') return;
+        const offset = Math.max(0, renderedOffset(content));
+
         if (settleTimerRef.current) {
             clearTimeout(settleTimerRef.current);
             settleTimerRef.current = null;
         }
         delete content.dataset.settling;
+        content.style.removeProperty('transition');
+        content.style.transform = translateY(offset);
         content.style.removeProperty('--sheet-dismiss-duration');
         overlayRef.current?.style.removeProperty('--sheet-dismiss-duration');
         content.dataset.dragging = 'true';
@@ -249,15 +243,10 @@ export function Sheet({
         event.currentTarget.setPointerCapture(event.pointerId);
         dragRef.current = {
             pointerId: event.pointerId,
+            originY: offset,
             startY: event.clientY,
-            lastPosition: event.clientY,
-            lastTime: event.timeStamp,
-            velocity: 0
+            track: createPointerTrack(event.nativeEvent, 'clientY')
         };
-        dragRef.current.stopRawUpdates = listenForRawPointerUpdates(
-            event.currentTarget,
-            moveDragFromPointer
-        );
     };
     const changeOpen = (nextOpen: boolean) => {
         if (!nextOpen && interactionDisabled) return;

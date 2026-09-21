@@ -69,8 +69,6 @@
 }
 .sheet-content[data-dismissing='true'] {
     pointer-events: none;
-    transition: transform var(--sheet-dismiss-duration)
-        cubic-bezier(0.4, 1, 0.4, 1);
 }
 .sheet-drag-region {
     flex: 0 0 auto;

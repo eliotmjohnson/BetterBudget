@@ -1,7 +1,14 @@
 'use client';
 
 import type { PointerEvent as ReactPointerEvent, RefObject } from 'react';
-import { getCoalescedPointerSamples } from '@/components/ui/gesture-frame';
+import {
+    createPointerTrack,
+    exitMotion,
+    getCoalescedPointerSamples,
+    recordPointerSamples,
+    releaseVelocity,
+    type PointerTrack
+} from '@/components/ui/gesture-release';
 import { leftEdgeGestureWidth } from '@/components/ui/left-edge-gesture-guard';
 import { mobileMedia } from './title-motion';
 
@@ -13,30 +20,16 @@ export interface EdgeDragState {
     originX: number;
     startX: number;
     startY: number;
-    track: TrackSample[];
+    track: PointerTrack;
     dragging: boolean;
-}
-
-interface TrackSample {
-    x: number;
-    t: number;
 }
 
 const directionThreshold = 8;
 const settleDuration = 500;
-const minimumDismissDuration = 160;
-const maximumDismissDuration = 400;
-const maximumFlickDismissDuration = 300;
-const minimumExitSpeed = 0.5;
-const exitDurationScale = 1.6;
-const exitCurveX1 = 0.3;
-const exitCurveMinimumY1 = 0.3;
 const dismissDistance = 150;
 const flickDistance = 24;
 const flickVelocity = 0.55;
 const restingParallax = 128;
-const velocityWindow = 80;
-const releaseStaleTime = 60;
 const translateX = (distance: number) => `translate3d(${distance}px, 0, 0)`;
 
 function findAppFrame() {
@@ -158,7 +151,7 @@ export function moveDrag(
     const deltaX = latestSample.clientX - drag.startX;
     const deltaY = latestSample.clientY - drag.startY;
 
-    recordSamples(drag.track, samples);
+    recordPointerSamples(drag.track, samples);
 
     if (!drag.dragging) {
         if (Math.max(Math.abs(deltaX), Math.abs(deltaY)) < directionThreshold)
@@ -235,73 +228,8 @@ export function startDrag(
         originX: currentDistance,
         startX: event.clientX,
         startY: event.clientY,
-        track: [{ x: event.clientX, t: event.timeStamp }],
+        track: createPointerTrack(event.nativeEvent, 'clientX'),
         dragging: false
-    };
-}
-
-function recordSamples(track: TrackSample[], samples: readonly PointerEvent[]) {
-    for (const sample of samples) {
-        const last = track[track.length - 1];
-
-        if (last && sample.timeStamp <= last.t) continue;
-        track.push({ x: sample.clientX, t: sample.timeStamp });
-    }
-
-    const newest = track[track.length - 1];
-
-    if (!newest) return;
-    while (
-        track.length > 2 &&
-        (track[0]?.t ?? newest.t) < newest.t - velocityWindow
-    )
-        track.shift();
-}
-
-function releaseVelocity(track: readonly TrackSample[], releaseTime: number) {
-    const newest = track[track.length - 1];
-
-    if (!newest || releaseTime - newest.t > releaseStaleTime) return 0;
-    const recent = track.filter(
-        (sample) => sample.t >= newest.t - velocityWindow
-    );
-
-    if (recent.length < 2) return 0;
-    const meanT =
-        recent.reduce((sum, sample) => sum + sample.t, 0) / recent.length;
-    const meanX =
-        recent.reduce((sum, sample) => sum + sample.x, 0) / recent.length;
-    let covariance = 0;
-    let variance = 0;
-
-    for (const sample of recent) {
-        covariance += (sample.t - meanT) * (sample.x - meanX);
-        variance += (sample.t - meanT) ** 2;
-    }
-
-    return variance > 0 ? covariance / variance : 0;
-}
-
-function exitMotion(remaining: number, velocity: number) {
-    const duration = Math.min(
-        velocity >= flickVelocity
-            ? maximumFlickDismissDuration
-            : maximumDismissDuration,
-        Math.max(
-            minimumDismissDuration,
-            (remaining / Math.max(velocity, minimumExitSpeed)) *
-                exitDurationScale
-        )
-    );
-    const normalizedVelocity = (Math.max(0, velocity) * duration) / remaining;
-    const y1 = Math.min(
-        1,
-        Math.max(exitCurveMinimumY1, normalizedVelocity * exitCurveX1)
-    );
-
-    return {
-        duration,
-        curve: `cubic-bezier(${exitCurveX1}, ${y1.toFixed(3)}, 0.21, 1)`
     };
 }
 
@@ -311,9 +239,10 @@ function dismissDrag(
     drag: EdgeDragState,
     { distance, velocity }: { distance: number; velocity: number }
 ) {
-    const remaining = Math.max(1, drag.width - distance);
-    const { duration, curve } = exitMotion(remaining, velocity);
-    const transition = `transform ${Math.round(duration)}ms ${curve}`;
+    const { duration, transition } = exitMotion(
+        drag.width - distance,
+        velocity
+    );
 
     content.dataset.dismissing = 'true';
     void content.offsetHeight;
@@ -338,11 +267,7 @@ export function finishDrag(
     if (!drag || !content || drag.pointerId !== event.pointerId) return;
     const samples = getCoalescedPointerSamples(event.nativeEvent);
     const latestSample = samples[samples.length - 1] ?? event.nativeEvent;
-    const lastTracked = drag.track[drag.track.length - 1];
-
-    if (lastTracked && latestSample.clientX !== lastTracked.x)
-        recordSamples(drag.track, samples);
-    const velocity = releaseVelocity(drag.track, event.nativeEvent.timeStamp);
+    const velocity = releaseVelocity(drag.track, event.nativeEvent, samples);
 
     dragRef.current = null;
     if (event.currentTarget.hasPointerCapture(event.pointerId))
