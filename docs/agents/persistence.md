@@ -50,7 +50,9 @@ Mutation lifecycle rules:
 11. On a version conflict, fetch the authoritative entity and explain that it changed elsewhere. Never silently overwrite newer direct edits.
 12. When offline, preserve drafts but do not claim a financial write was saved. Revert unsafe inline mutations and maintain the persistent offline banner. Offline write synchronization is outside version 1.
 
-Other devices converge through refetches on window focus, route/month navigation, successful mutations, an explicit pull-to-refresh on any tab, and a lightweight visible-tab interval. Version checks remain mandatory even without WebSockets.
+Other devices converge through refetches on window focus, route/month navigation, successful mutations, an explicit pull-to-refresh on any tab, and a 10-second visible-tab interval (paused while the tab is hidden). Version checks remain mandatory even without WebSockets.
+
+Because those refetches land while the user may be mid-edit, every editor pins the `expectedVersion` it sends to the moment editing started: a sheet or rename captures it when it opens, and an inline amount field captures it on focus through `useVersionedDraft` (`src/components/shared/use-versioned-draft.ts`). Reading the version from the live snapshot at save time would let a refetch make a stale draft look current and silently overwrite the other device's change, violating rule 11. Inline amount fields are keyed by entity id only, never by amount, and follow the live snapshot only while unfocused, so a refetch cannot remount the field or replace a half-typed value. Refocusing after a refused save rebases the kept draft onto the version the conflict message just showed. Pushed detail views follow refreshed data for the entity they show, but close their child sheets (add transaction, appearance, delete confirmation) only when the selected entity id changes, never merely because a refetch replaced its object.
 
 ## Development scenarios
 

@@ -13,6 +13,7 @@ import {
     categoryIconOptions
 } from '@/components/shared/category-icon';
 import type { Mutate } from '@/components/shared/budget-view-helpers';
+import { useVersionedDraft } from '@/components/shared/use-versioned-draft';
 
 export type IncomeIconValue = (typeof categoryIconOptions)[number]['value'];
 
@@ -103,6 +104,10 @@ export function EditableIncomeTitle({
 }) {
     const [editing, setEditing] = useState(false);
     const [draft, setDraft] = useState(plan.name);
+    const [baseline, setBaseline] = useState({
+        name: plan.name,
+        version: plan.version
+    });
     const commit = () => {
         const name = draft.trim();
 
@@ -112,13 +117,13 @@ export function EditableIncomeTitle({
 
             return;
         }
-        if (name !== plan.name)
+        if (name !== baseline.name)
             mutate({
                 type: 'updateIncomePlan',
                 clientMutationId: createUuid(),
                 monthKey: snapshot.monthKey,
                 incomePlanId: plan.id,
-                expectedVersion: plan.version,
+                expectedVersion: baseline.version,
                 name,
                 icon: incomeIconValue(plan.icon),
                 tone: plan.tone,
@@ -153,6 +158,7 @@ export function EditableIncomeTitle({
             aria-label={`Rename ${plan.name}`}
             onClick={() => {
                 setDraft(plan.name);
+                setBaseline({ name: plan.name, version: plan.version });
                 setEditing(true);
             }}
         >
@@ -170,17 +176,19 @@ export function IncomePlanInput({
     snapshot: MonthSnapshot;
     mutate: Mutate;
 }) {
-    const [value, setValue] = useState<string>(plan.expectedCents);
+    const { value, setValue, baseline, startEditing, stopEditing } =
+        useVersionedDraft(plan.expectedCents, plan.version);
     const commit = () => {
         const expectedCents = value || '0';
 
-        if (expectedCents === plan.expectedCents) return;
+        stopEditing();
+        if (expectedCents === baseline.value) return;
         mutate({
             type: 'updateIncomePlan',
             clientMutationId: createUuid(),
             monthKey: snapshot.monthKey,
             incomePlanId: plan.id,
-            expectedVersion: plan.version,
+            expectedVersion: baseline.version,
             name: plan.name,
             icon: incomeIconValue(plan.icon),
             tone: plan.tone,
@@ -195,6 +203,7 @@ export function IncomePlanInput({
             aria-label={`Expected amount for ${plan.name}`}
             value={value}
             onValueChange={setValue}
+            onFocus={startEditing}
             onBlur={commit}
             onKeyDown={(event) => {
                 if (event.key === 'Enter') event.currentTarget.blur();

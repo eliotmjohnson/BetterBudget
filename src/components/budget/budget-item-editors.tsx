@@ -14,6 +14,7 @@ import type {
 import { createUuid } from '@/domain/uuid';
 import { TransactionIcon } from '@/components/shared/transaction-icon';
 import { TransactionSheet } from '@/components/transactions/transaction-sheet';
+import { useVersionedDraft } from '@/components/shared/use-versioned-draft';
 import {
     fitAmountStyle,
     money,
@@ -47,18 +48,20 @@ export function PlanInput({
     monthKey: MonthSnapshot['monthKey'];
     mutate: Mutate;
 }) {
-    const [value, setValue] = useState<string>(item.plannedCents);
+    const { value, setValue, baseline, startEditing, stopEditing } =
+        useVersionedDraft(item.plannedCents, item.version);
     const commit = () => {
         const plannedCents = value || '0';
 
-        if (plannedCents === item.plannedCents) return;
+        stopEditing();
+        if (plannedCents === baseline.value) return;
         mutate({
             type: 'updatePlan',
             clientMutationId: createUuid(),
             monthKey,
             monthlyItemId: item.id,
             plannedCents,
-            expectedVersion: item.version
+            expectedVersion: baseline.version
         });
     };
 
@@ -70,6 +73,7 @@ export function PlanInput({
             size={Math.max(8, formatCurrencyInput(value).length)}
             value={value}
             onValueChange={setValue}
+            onFocus={startEditing}
             onBlur={commit}
             onKeyDown={(event) => {
                 if (event.key === 'Enter') event.currentTarget.blur();
@@ -91,7 +95,13 @@ export function EditItemForm({
     mutateConfirmed: MutateConfirmed;
     onDeleteTransaction: (entry: ActivityEntry) => void;
 }) {
-    const [planned, setPlanned] = useState<string>(item.plannedCents);
+    const {
+        value: planned,
+        setValue: setPlanned,
+        baseline: plannedBaseline,
+        startEditing: startEditingPlanned,
+        stopEditing: stopEditingPlanned
+    } = useVersionedDraft(item.plannedCents, item.version);
     const [plannedUnsaved, setPlannedUnsaved] = useState(false);
     const [selectedTransaction, setSelectedTransaction] =
         useState<ActivityEntry | null>(null);
@@ -128,17 +138,22 @@ export function EditItemForm({
         const plannedCents = planned || '0';
 
         setPlannedUnsaved(false);
-        if (plannedCents === item.plannedCents) return;
+        if (plannedCents === plannedBaseline.value) {
+            stopEditingPlanned();
+
+            return;
+        }
         const saved = await mutateConfirmed({
             type: 'updatePlan',
             clientMutationId: createUuid(),
             monthKey: snapshot.monthKey,
             monthlyItemId: item.id,
             plannedCents,
-            expectedVersion: item.version
+            expectedVersion: plannedBaseline.version
         });
 
         setPlannedUnsaved(!saved);
+        if (saved) stopEditingPlanned();
     };
 
     return (
@@ -169,6 +184,7 @@ export function EditItemForm({
                         setPlanned(value);
                         setPlannedUnsaved(false);
                     }}
+                    onFocus={startEditingPlanned}
                     onBlur={() => void commitPlanned()}
                     onKeyDown={(event) => {
                         if (event.key === 'Enter') event.currentTarget.blur();
@@ -318,6 +334,10 @@ export function EditableItemTitle({
 }) {
     const [editing, setEditing] = useState(false);
     const [draft, setDraft] = useState(item.name);
+    const [baseline, setBaseline] = useState({
+        name: item.name,
+        version: item.definitionVersion
+    });
     const commit = () => {
         const name = draft.trim();
 
@@ -327,14 +347,14 @@ export function EditableItemTitle({
 
             return;
         }
-        if (name !== item.name)
+        if (name !== baseline.name)
             mutate({
                 type: 'renameItem',
                 clientMutationId: createUuid(),
                 monthKey: snapshot.monthKey,
                 itemId: item.definitionId,
                 name,
-                expectedVersion: item.definitionVersion
+                expectedVersion: baseline.version
             });
         setDraft(name);
         setEditing(false);
@@ -365,6 +385,10 @@ export function EditableItemTitle({
             aria-label={`Rename ${item.name}`}
             onClick={() => {
                 setDraft(item.name);
+                setBaseline({
+                    name: item.name,
+                    version: item.definitionVersion
+                });
                 setEditing(true);
             }}
         >
@@ -400,7 +424,7 @@ export function EditItemDetails({
 
     if (item !== previousItem) {
         setPreviousItem(item);
-        setAddingTransactionOpen(false);
+        if (item?.id !== previousItem?.id) setAddingTransactionOpen(false);
         if (item) setRenderedItem(item);
     }
 

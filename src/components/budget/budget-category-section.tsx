@@ -175,7 +175,7 @@ export function BudgetCategorySection({
                                                 </button>
                                                 {amountView === 'planned' ? (
                                                     <PlanInput
-                                                        key={`${item.id}:${item.plannedCents}`}
+                                                        key={item.id}
                                                         item={item}
                                                         monthKey={
                                                             snapshot.monthKey

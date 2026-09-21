@@ -687,7 +687,10 @@ silent; and offline financial writes are not queued in version 1.
 Server-confirmed actions such as month copy, plan clearing, archival (which
 moves any affected activity to a chosen destination item), password changes, and cross-month transaction moves show only a local
 pending state. The client refreshes authoritative state on focus, route/month
-navigation, successful writes, and a lightweight visible-tab interval.
+navigation, successful writes, and a 10-second interval while the tab is
+visible. Those background refreshes never replace a field being edited, and an
+edit started before another device's change is refused as a conflict rather
+than overwriting it.
 
 `docs/agents/persistence.md` holds the full mutation lifecycle rules, the
 safe-versus-server-confirmed operation lists, and the reconciliation contract.

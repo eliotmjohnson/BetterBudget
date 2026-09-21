@@ -143,7 +143,7 @@ export function useBudgetSnapshot(initialSnapshot: MonthSnapshot) {
             fetchSnapshot(initialSnapshot.monthKey, signal),
         initialData: initialSnapshot,
         refetchOnWindowFocus: 'always',
-        refetchInterval: 60_000,
+        refetchInterval: 10_000,
         refetchIntervalInBackground: false
     });
 }

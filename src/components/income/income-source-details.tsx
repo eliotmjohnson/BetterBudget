@@ -57,6 +57,7 @@ export function IncomeSourceDetails({
     const [appearanceIcon, setAppearanceIcon] =
         useState<IncomeIconValue>('wallet');
     const [appearanceTone, setAppearanceTone] = useState<CategoryTone>('mint');
+    const [appearanceVersion, setAppearanceVersion] = useState(0);
     const [previousPlan, setPreviousPlan] = useState<IncomePlanView | null>(
         plan
     );
@@ -66,8 +67,10 @@ export function IncomeSourceDetails({
 
     if (plan !== previousPlan) {
         setPreviousPlan(plan);
-        setDeleteOpen(false);
-        setAppearanceOpen(false);
+        if (plan?.id !== previousPlan?.id) {
+            setDeleteOpen(false);
+            setAppearanceOpen(false);
+        }
         if (plan) setRenderedPlan(plan);
     }
 
@@ -80,6 +83,7 @@ export function IncomeSourceDetails({
     const openAppearance = () => {
         setAppearanceIcon(incomeIconValue(renderedPlan.icon));
         setAppearanceTone(renderedPlan.tone);
+        setAppearanceVersion(renderedPlan.version);
         setAppearanceOpen(true);
     };
     const saveAppearance = () => {
@@ -92,7 +96,7 @@ export function IncomeSourceDetails({
                 clientMutationId: createUuid(),
                 monthKey: snapshot.monthKey,
                 incomePlanId: renderedPlan.id,
-                expectedVersion: renderedPlan.version,
+                expectedVersion: appearanceVersion,
                 name: renderedPlan.name,
                 icon: appearanceIcon,
                 tone: appearanceTone,
@@ -173,7 +177,7 @@ export function IncomeSourceDetails({
                                 Expected
                             </label>
                             <IncomePlanInput
-                                key={`${renderedPlan.id}:${renderedPlan.expectedCents}`}
+                                key={renderedPlan.id}
                                 plan={renderedPlan}
                                 snapshot={snapshot}
                                 mutate={mutate}
