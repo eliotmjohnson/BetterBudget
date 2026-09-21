@@ -32,7 +32,8 @@ notes and navigation, household category and budget-item definitions with
 per-month plans, month copying and clearing, budget resets, planned amounts with
 forward-looking carryover, expense and refund transactions with exact splits,
 expected and received income, searchable and filterable transaction history,
-URL-backed budget-item and income-source details, and a Settings organizer.
+URL-backed budget-item and income-source details, a Settings organizer, and a
+Settings JSON backup export with merge or replace import.
 
 Underneath that: optimistic updates with idempotent mutation retries, conflict
 detection, isolated rollback, and offline feedback; Better Auth email/password
@@ -265,6 +266,7 @@ Do not commit `.env.local` or real credentials.
 | `/settings`      | Security/session controls and non-production failure scenarios         |
 | `/sign-in`       | Shared household owner sign-in                                         |
 | `/api/snapshot`  | Authenticated canonical month snapshot                                 |
+| `/api/backup`    | Authenticated JSON backup export (GET) and merge/replace import (POST) |
 | `/api/mutations` | Validated/idempotent mutation endpoint and mutation status lookup      |
 | `/api/live`      | Process-only container liveness check                                  |
 | `/api/ready`     | Database-backed traffic readiness check                                |
@@ -972,7 +974,7 @@ The app validates production configuration, waits for PostgreSQL, runs migration
 
 ## Version 1 non-goals
 
-The current scope intentionally excludes bank syncing, account reconciliation, recurring transactions, multi-currency conversion, imports/exports, notifications, realtime WebSockets, queued offline writes, and multi-household/member-role workflows.
+The current scope intentionally excludes bank syncing, account reconciliation, recurring transactions, multi-currency conversion, imports/exports other than the Settings JSON backup, notifications, realtime WebSockets, queued offline writes, and multi-household/member-role workflows.
 
 Offline form drafts are preserved where practical, but the app never claims offline financial data was saved. Version 1 requires connectivity to persist a write.
 

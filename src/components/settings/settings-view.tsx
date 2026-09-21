@@ -17,6 +17,7 @@ import Link from 'next/link';
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Sheet } from '@/components/ui/sheet';
+import { SettingsDataSection } from './settings-data-section';
 import {
     APP_BUILD_LABEL,
     APP_DESCRIPTION,
@@ -181,6 +182,7 @@ export function SettingsView({
                     <ChevronRight size={18} />
                 </Link>
             </div>
+            <SettingsDataSection onMessage={onMessage} />
             <h2 className='settings-section-title'>Security</h2>
             <div className='settings-list'>
                 <button

@@ -5,7 +5,8 @@ const base = z.object({
     clientMutationId: z.string().min(8).max(120),
     monthKey: monthKeySchema
 });
-const centsSchema = z
+
+export const centsSchema = z
     .string()
     .regex(/^\d+$/)
     .refine((value) => BigInt(value) <= MAX_ENTRY_CENTS, {
@@ -32,7 +33,8 @@ const reassignmentSchema = z.object({
     destinationItemId: z.string().uuid(),
     movePlan: z.boolean()
 });
-const categoryIconSchema = z.enum([
+
+export const categoryIconSchema = z.enum([
     'heart',
     'house',
     'piggy-bank',
@@ -48,7 +50,13 @@ const categoryIconSchema = z.enum([
     'paw-print',
     'shopping-bag'
 ]);
-const categoryToneSchema = z.enum(['yellow', 'coral', 'blue', 'mint', 'lilac']);
+export const categoryToneSchema = z.enum([
+    'yellow',
+    'coral',
+    'blue',
+    'mint',
+    'lilac'
+]);
 
 export const mutationSchema = z.discriminatedUnion('type', [
     base.extend({

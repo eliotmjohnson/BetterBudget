@@ -83,7 +83,7 @@ Do not silently expand the product into any of the following without explicit us
 
 - Bank syncing or account reconciliation.
 - Recurring-transaction automation.
-- Imports or exports.
+- Imports or exports beyond the Settings JSON backup (no CSV, bank, or third-party formats).
 - Multi-currency storage or conversion.
 - Notifications.
 - WebSocket or realtime server push.
@@ -140,6 +140,7 @@ High-impact files:
 - `src/server/mutation-schema.ts` — validated mutation contracts.
 - `src/server/budget-service.ts` — the mutation entry point: idempotency receipts, the database transaction, cross-cutting month validation, the typed dispatcher, and error mapping.
 - `src/server/budget-mutations/` — one module per mutation family, each handler taking a `MutationContext`: `plans.ts` (plan amount, carryover), `transactions.ts` (add/update/delete/undo, splits, cross-month moves), `income.ts` (plans and receipts), `structure.ts` (categories, items, archive/delete, reordering), `reassignment.ts` (moving an archived definition's activity and plan), `active-items.ts` (the shared archived-as-of-month condition), `month-operations.ts` (note, copy, clear, reset), `context.ts` (shared `MutationContext`/`ensureMonth`). Read only the family you are changing.
+- `src/server/backup/` — the Settings JSON backup behind `/api/backup`. `schema.ts` validates the file (exact split sums, in-month dates, internal references), `export.ts` builds it, `import-replace.ts` clears the household's budget rows, and `import-merge.ts` plus `import-activity.ts` add whatever the household lacks. Replace is clear-then-merge inside one transaction.
 - `src/server/month-snapshot/` — canonical month snapshot read path. `index.ts` is orchestration only; `queries.ts` holds every database read, `carryover.ts` the chronological carryover chains and balance derivation, `assemble.ts` the category, activity, and receipt view assembly.
 - `src/server/mutation-failures.ts` — mutation-failure class, not-found/conflict helpers.
 - `src/server/definition-usage.ts` — later-month activity and never-used (permanently deletable) status per definition, shared by the snapshot and the hard-delete handlers.
