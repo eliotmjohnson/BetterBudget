@@ -19,7 +19,7 @@ import {
 type PullStatus = 'idle' | 'refreshing' | 'refreshed' | 'failed';
 
 const maximumSpinDuration = 5_000;
-const minimumSpinDuration = 540;
+const minimumSpinDuration = 1_080;
 const statusMessage: Record<PullStatus, string> = {
     idle: '',
     refreshing: 'Refreshing the budget…',

@@ -50,6 +50,8 @@
     display: flex;
     flex-direction: column;
     --pull-band-height: 58px;
+    --pull-hold-motion: 0.72s cubic-bezier(0.32, 0.72, 0, 1);
+    --pull-settle-motion: 0.44s cubic-bezier(0.29, 1, 0.29, 1);
 }
 @property --pull-distance {
     syntax: '<length>';
@@ -100,24 +102,26 @@
 .app-scroll[data-pull-state] .app-content {
     transform: translate3d(0, var(--pull-distance), 0);
 }
-.app-scroll[data-pull-state='pulling'] .app-content,
-.app-scroll[data-pull-state='pulling'] .pull-refresh {
+.app-scroll[data-pull-state] .app-content,
+.app-scroll[data-pull-state] .pull-refresh {
     will-change: transform;
 }
 .app-scroll[data-pull-state='refreshing'] .app-content,
-.app-scroll[data-pull-state='refreshing'] .pull-refresh,
+.app-scroll[data-pull-state='refreshing'] .pull-refresh {
+    transition: transform var(--pull-hold-motion);
+}
 .app-scroll[data-pull-state='settling'] .app-content,
 .app-scroll[data-pull-state='settling'] .pull-refresh {
-    transition: transform 0.44s cubic-bezier(0.29, 1, 0.29, 1);
-}
-.app-scroll[data-pull-state='refreshing'] .pull-refresh-dial,
-.app-scroll[data-pull-state='settling'] .pull-refresh-dial {
-    transition:
-        opacity 0.44s ease,
-        transform 0.44s cubic-bezier(0.29, 1, 0.29, 1);
+    transition: transform var(--pull-settle-motion);
 }
 .app-scroll[data-pull-state='refreshing'] .pull-refresh-dial {
+    transition: opacity var(--pull-hold-motion);
     animation: pull-refresh-spin 0.85s linear infinite;
+}
+.app-scroll[data-pull-state='settling'] .pull-refresh-dial {
+    transition:
+        opacity var(--pull-settle-motion),
+        transform var(--pull-settle-motion);
 }
 .app-scroll[data-pull-state='refreshing'] .pull-refresh-arc {
     stroke-dashoffset: calc(var(--pull-dial-circumference) * 0.7);
