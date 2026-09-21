@@ -13,15 +13,11 @@ import {
     type RefObject
 } from 'react';
 import {
-    createGestureFrameDriver,
-    type GestureFrameDriver
-} from '@/components/ui/gesture-frame';
-import {
     clearBaseMotion,
+    clearLayerMotion,
     completeDragDismissal,
     finishDrag,
     moveDrag,
-    setBaseDragPosition,
     startDrag,
     type EdgeDragContext,
     type EdgeDragState
@@ -35,7 +31,6 @@ import {
 
 const motionCleanupDelay = 600;
 const gestureReadyDelay = 500;
-const dragResponseTime = 21;
 
 function restoreDetailFocus(target: HTMLElement, focusVisible: boolean) {
     if (!focusVisible) target.dataset.navigationDetailRestoredFocus = 'true';
@@ -89,8 +84,6 @@ export function NavigationDetail({
     const contentRef = useRef<HTMLDivElement>(null);
     const [contentReady, setContentReady] = useState(false);
     const dragRef = useRef<EdgeDragState | null>(null);
-    const dragFrameRef = useRef<GestureFrameDriver | null>(null);
-    const dragWidthRef = useRef(1);
     const gestureReadyRef = useRef(false);
     const headerRef = useRef<HTMLElement>(null);
     const activeRef = useRef(false);
@@ -164,22 +157,25 @@ export function NavigationDetail({
             gestureReadyRef.current = false;
             delete contentRef.current?.dataset.hasDragged;
             delete document.body.dataset.navigationDetailDragging;
-            delete document.body.dataset.navigationDetailDismissing;
             delete document.body.dataset.navigationDetailSettling;
-            document.body.style.removeProperty(
-                '--navigation-detail-base-drag-x'
-            );
             document.body.style.removeProperty(
                 '--navigation-detail-dismiss-duration'
             );
+            clearLayerMotion(document.querySelector<HTMLElement>('.app-frame'));
             enterFrameRef.current = requestAnimationFrame(() => {
                 enterFrameRef.current = requestAnimationFrame(startEntrance);
             });
         } else if (activeRef.current) {
-            dragFrameRef.current?.cancel();
-            dragRef.current?.stopRawUpdates?.();
             dragRef.current = null;
             gestureReadyRef.current = false;
+            if (settleTimerRef.current) {
+                clearTimeout(settleTimerRef.current);
+                settleTimerRef.current = null;
+            }
+            delete contentRef.current?.dataset.settling;
+            clearLayerMotion(contentRef.current);
+            delete document.body.dataset.navigationDetailSettling;
+            clearLayerMotion(document.querySelector<HTMLElement>('.app-frame'));
             document.body.dataset.navigationDetailState = 'closed';
         }
     }, [open]);
@@ -207,34 +203,9 @@ export function NavigationDetail({
     }, [contentReady, open, title]);
 
     useEffect(() => {
-        const dragFrame = createGestureFrameDriver(
-            (distance) => {
-                contentRef.current?.style.setProperty(
-                    '--navigation-detail-drag-x',
-                    `${distance}px`
-                );
-                setBaseDragPosition(distance, dragWidthRef.current);
-            },
-            {
-                responseTime: dragResponseTime,
-                softLagThreshold: Number.POSITIVE_INFINITY,
-                shouldInterpolate: () =>
-                    !window.matchMedia('(prefers-reduced-motion: reduce)')
-                        .matches
-            }
-        );
-
-        dragFrameRef.current = dragFrame;
-
         return () => {
             resetSettleTimer();
-            dragFrame.cancel();
-            if (dragFrameRef.current === dragFrame) dragFrameRef.current = null;
-            dragRef.current?.stopRawUpdates?.();
-
-            // Reading the ref at teardown is the point: the timer the
-            // dismissal scheduled last is the one that has to be cancelled.
-            // eslint-disable-next-line react-hooks/exhaustive-deps
+            // eslint-disable-next-line react-hooks/exhaustive-deps -- teardown must cancel the latest dismissal timer, not the first one
             if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
             if (motionCleanupTimerRef.current)
                 clearTimeout(motionCleanupTimerRef.current);
@@ -251,9 +222,7 @@ export function NavigationDetail({
     const dragContext = (): EdgeDragContext => ({
         contentRef,
         dismissTimerRef,
-        dragFrameRef,
         dragRef,
-        dragWidthRef,
         gestureReadyRef,
         onOpenChange,
         resetSettleTimer,

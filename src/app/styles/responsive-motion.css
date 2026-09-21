@@ -98,17 +98,10 @@
             var(--navigation-detail-push-curve);
     }
     body[data-navigation-detail-dragging] .app-frame {
-        transform: translate3d(var(--navigation-detail-base-drag-x), 0, 0);
         transition: none;
     }
     body[data-navigation-detail-settling] .app-frame {
-        transform: translate3d(var(--navigation-detail-base-drag-x), 0, 0);
         transition: transform 0.5s var(--navigation-detail-push-curve);
-    }
-    body[data-navigation-detail-dismissing] .app-frame {
-        transform: translate3d(var(--navigation-detail-base-drag-x), 0, 0);
-        transition: transform var(--navigation-detail-dismiss-duration)
-            var(--navigation-detail-return-curve);
     }
 }
 
