@@ -88,12 +88,14 @@
         will-change: transform;
     }
     body[data-navigation-detail-state='open'] .app-frame {
-        transform: translate3d(max(-96px, -22vw), 0, 0);
-        transition: transform 0.4s;
+        transform: translate3d(var(--navigation-detail-parallax), 0, 0);
+        transition: transform var(--navigation-detail-push-duration)
+            var(--navigation-detail-push-curve);
     }
     body[data-navigation-detail-state='closed'] .app-frame {
         transform: translate3d(0, 0, 0);
-        transition: transform 0.4s;
+        transition: transform var(--navigation-detail-push-duration)
+            var(--navigation-detail-push-curve);
     }
     body[data-navigation-detail-dragging] .app-frame {
         transform: translate3d(var(--navigation-detail-base-drag-x), 0, 0);
@@ -101,12 +103,12 @@
     }
     body[data-navigation-detail-settling] .app-frame {
         transform: translate3d(var(--navigation-detail-base-drag-x), 0, 0);
-        transition: transform 0.41s cubic-bezier(0.29, 1, 0.29, 1);
+        transition: transform 0.5s var(--navigation-detail-push-curve);
     }
     body[data-navigation-detail-dismissing] .app-frame {
         transform: translate3d(var(--navigation-detail-base-drag-x), 0, 0);
         transition: transform var(--navigation-detail-dismiss-duration)
-            cubic-bezier(0.4, 1, 0.4, 1);
+            var(--navigation-detail-return-curve);
     }
 }
 
@@ -491,7 +493,7 @@
         transform: translate3d(var(--navigation-detail-drag-x, 0px), 0, 0);
     }
     to {
-        transform: translate3d(calc(100% + 48px), 0, 0);
+        transform: translate3d(100%, 0, 0);
     }
 }
 @keyframes navigation-detail-header-collapse {

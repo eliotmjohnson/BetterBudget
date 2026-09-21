@@ -34,6 +34,8 @@ import {
 } from './title-motion';
 
 const motionCleanupDelay = 600;
+const gestureReadyDelay = 500;
+const dragResponseTime = 21;
 
 function restoreDetailFocus(target: HTMLElement, focusVisible: boolean) {
     if (!focusVisible) target.dataset.navigationDetailRestoredFocus = 'true';
@@ -110,6 +112,27 @@ export function NavigationDetail({
     const gestureReadyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
         null
     );
+    const enterFrameRef = useRef<number | null>(null);
+    const cancelEnterFrame = () => {
+        if (enterFrameRef.current === null) return;
+        cancelAnimationFrame(enterFrameRef.current);
+        enterFrameRef.current = null;
+    };
+    const startEntrance = () => {
+        enterFrameRef.current = null;
+        document.body.dataset.navigationDetailState = 'open';
+        const reducedMotion = window.matchMedia(
+            '(prefers-reduced-motion: reduce)'
+        ).matches;
+
+        gestureReadyTimerRef.current = setTimeout(
+            () => {
+                gestureReadyRef.current = true;
+                gestureReadyTimerRef.current = null;
+            },
+            reducedMotion ? 0 : gestureReadyDelay
+        );
+    };
     const setContentRef = useCallback((element: HTMLDivElement | null) => {
         contentRef.current = element;
         setContentReady(element !== null);
@@ -134,6 +157,7 @@ export function NavigationDetail({
             clearTimeout(gestureReadyTimerRef.current);
             gestureReadyTimerRef.current = null;
         }
+        cancelEnterFrame();
 
         if (open) {
             activeRef.current = true;
@@ -148,18 +172,9 @@ export function NavigationDetail({
             document.body.style.removeProperty(
                 '--navigation-detail-dismiss-duration'
             );
-            document.body.dataset.navigationDetailState = 'open';
-            const reducedMotion = window.matchMedia(
-                '(prefers-reduced-motion: reduce)'
-            ).matches;
-
-            gestureReadyTimerRef.current = setTimeout(
-                () => {
-                    gestureReadyRef.current = true;
-                    gestureReadyTimerRef.current = null;
-                },
-                reducedMotion ? 0 : 620
-            );
+            enterFrameRef.current = requestAnimationFrame(() => {
+                enterFrameRef.current = requestAnimationFrame(startEntrance);
+            });
         } else if (activeRef.current) {
             dragFrameRef.current?.cancel();
             dragRef.current?.stopRawUpdates?.();
@@ -201,6 +216,8 @@ export function NavigationDetail({
                 setBaseDragPosition(distance, dragWidthRef.current);
             },
             {
+                responseTime: dragResponseTime,
+                softLagThreshold: Number.POSITIVE_INFINITY,
                 shouldInterpolate: () =>
                     !window.matchMedia('(prefers-reduced-motion: reduce)')
                         .matches
@@ -223,6 +240,8 @@ export function NavigationDetail({
                 clearTimeout(motionCleanupTimerRef.current);
             if (gestureReadyTimerRef.current)
                 clearTimeout(gestureReadyTimerRef.current);
+            if (enterFrameRef.current !== null)
+                cancelAnimationFrame(enterFrameRef.current);
             clearTitleSelectionTimer();
             clearTitleMotion(contentRef.current);
             clearBaseMotion();

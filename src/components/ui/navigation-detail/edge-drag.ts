@@ -3,7 +3,6 @@
 import type { PointerEvent as ReactPointerEvent, RefObject } from 'react';
 import {
     getCoalescedPointerSamples,
-    getPredictedPointerSample,
     listenForRawPointerUpdates,
     updateGestureVelocity,
     type GestureFrameDriver
@@ -16,6 +15,8 @@ export interface EdgeDragState {
     captureTarget: HTMLDivElement;
     width: number;
     originX: number;
+    filteredX: number;
+    filterTime: number;
     startX: number;
     startY: number;
     lastPosition: number;
@@ -26,9 +27,13 @@ export interface EdgeDragState {
 }
 
 const directionThreshold = 8;
-const settleDuration = 410;
-const dismissDuration = 620;
-const dismissOvershoot = 48;
+const settleDuration = 500;
+const dismissDuration = 400;
+const dismissDistance = 150;
+const flickDistance = 24;
+const flickVelocity = 0.55;
+const inputSmoothingTime = 24;
+const restingParallax = 128;
 
 export function clearBaseMotion() {
     delete document.body.dataset.navigationDetailDragging;
@@ -41,11 +46,10 @@ export function clearBaseMotion() {
 
 export function setBaseDragPosition(distance: number, width: number) {
     const progress = Math.min(1, Math.max(0, distance / width));
-    const restingOffset = Math.min(96, width * 0.22);
 
     document.body.style.setProperty(
         '--navigation-detail-base-drag-x',
-        `${-restingOffset * (1 - progress)}px`
+        `${-restingParallax * (1 - progress)}px`
     );
 }
 
@@ -119,6 +123,20 @@ export function stopPendingDrag(ctx: EdgeDragContext, pointerId: number) {
         drag.captureTarget.releasePointerCapture(pointerId);
     settleDrag(ctx, content, drag.width);
 }
+function filterDragInput(
+    drag: EdgeDragState,
+    samples: readonly PointerEvent[]
+) {
+    for (const sample of samples) {
+        const elapsed = sample.timeStamp - drag.filterTime;
+
+        if (elapsed <= 0) continue;
+        drag.filteredX +=
+            (sample.clientX - drag.filteredX) *
+            (1 - Math.exp(-elapsed / inputSmoothingTime));
+        drag.filterTime = sample.timeStamp;
+    }
+}
 export function moveDragFromPointer(
     ctx: EdgeDragContext,
     event: PointerEvent,
@@ -131,7 +149,6 @@ export function moveDragFromPointer(
     if (!drag || !content || drag.pointerId !== event.pointerId) return;
     const samples = getCoalescedPointerSamples(event);
     const latestSample = samples[samples.length - 1] ?? event;
-    const visualSample = getPredictedPointerSample(event, latestSample);
     const deltaX = latestSample.clientX - drag.startX;
     const deltaY = latestSample.clientY - drag.startY;
 
@@ -144,14 +161,18 @@ export function moveDragFromPointer(
             return;
         }
         drag.dragging = true;
+        drag.startX = latestSample.clientX;
+        drag.filteredX = latestSample.clientX;
+        drag.filterTime = latestSample.timeStamp;
     }
 
     preventDefault?.();
     updateGestureVelocity(drag, samples, 'clientX');
+    filterDragInput(drag, samples);
     dragFrameRef.current?.schedule(
         Math.min(
             drag.width,
-            Math.max(0, drag.originX + visualSample.clientX - drag.startX)
+            Math.max(0, drag.originX + drag.filteredX - drag.startX)
         )
     );
 }
@@ -220,6 +241,8 @@ export function startDrag(
         captureTarget: event.currentTarget,
         width: contentBounds.width,
         originX: currentDistance,
+        filteredX: event.clientX,
+        filterTime: event.timeStamp,
         startX: event.clientX,
         startY: event.clientY,
         lastPosition: event.clientX,
@@ -260,20 +283,17 @@ export function finishDrag(
         drag.width,
         Math.max(0, drag.originX + latestSample.clientX - drag.startX)
     );
-    const threshold = drag.width * 0.3;
-    const projectedDistance = distance + Math.max(0, drag.velocity) * 180;
     const dismiss =
         !cancelled &&
-        (distance >= threshold ||
-            (distance >= 24 &&
-                (drag.velocity >= 0.55 || projectedDistance >= threshold)));
+        (distance >= dismissDistance ||
+            (distance >= flickDistance && drag.velocity >= flickVelocity));
 
     dragFrameRef.current?.cancel();
     void content.offsetHeight;
     delete content.dataset.dragging;
     delete document.body.dataset.navigationDetailDragging;
     if (dismiss) {
-        const exitDistance = drag.width + dismissOvershoot;
+        const exitDistance = drag.width;
         const duration = dismissDuration;
         const durationValue = `${duration}ms`;
 

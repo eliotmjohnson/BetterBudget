@@ -1,10 +1,15 @@
 .navigation-detail-content[data-state='open'] {
-    animation: navigation-detail-in 0.6s cubic-bezier(0.29, 1, 0.29, 1) both;
+    animation: navigation-detail-in var(--navigation-detail-push-duration)
+        var(--navigation-detail-push-curve) both;
 }
 .navigation-detail-content[data-state='closed'] {
     animation: navigation-detail-out
-        var(--navigation-detail-dismiss-duration, 0.62s)
-        cubic-bezier(0.3, 0.84, 0.21, 1) both;
+        var(--navigation-detail-dismiss-duration, 0.5s)
+        var(--navigation-detail-push-curve) both;
+}
+body:not([data-navigation-detail-state='open'])
+    .navigation-detail-content[data-state='open'] {
+    animation-play-state: paused;
 }
 .navigation-detail-content[data-has-dragged='true'][data-state='open'] {
     animation: none;
@@ -15,13 +20,13 @@
 }
 .navigation-detail-content[data-settling='true'] {
     animation: none;
-    transition: transform 0.41s cubic-bezier(0.29, 1, 0.29, 1);
+    transition: transform 0.4s var(--navigation-detail-return-curve);
 }
 .navigation-detail-content[data-dismissing='true'] {
     animation: none;
     pointer-events: none;
     transition: transform var(--navigation-detail-dismiss-duration)
-        cubic-bezier(0.3, 0.84, 0.21, 1);
+        var(--navigation-detail-push-curve);
 }
 .navigation-detail-handle {
     display: none;

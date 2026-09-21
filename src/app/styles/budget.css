@@ -943,11 +943,12 @@ body > .sortable-drag-overlay * {
     touch-action: pan-y;
 }
 .navigation-detail-overlay[data-state='open'] {
-    animation: fade-in 0.6s cubic-bezier(0.29, 1, 0.29, 1);
+    animation: fade-in var(--navigation-detail-push-duration)
+        var(--navigation-detail-push-curve);
 }
 .navigation-detail-overlay[data-state='closed'] {
-    animation: fade-out var(--navigation-detail-dismiss-duration, 0.62s)
-        cubic-bezier(0.3, 0.84, 0.21, 1) forwards;
+    animation: fade-out var(--navigation-detail-dismiss-duration, 0.5s)
+        var(--navigation-detail-push-curve) forwards;
 }
 .navigation-detail-content {
     position: fixed;
