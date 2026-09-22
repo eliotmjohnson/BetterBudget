@@ -70,36 +70,36 @@ sudo docker exec better-budget-db \
 All resources are in AWS account `563692880710` and region `us-east-2` unless
 otherwise noted.
 
-| Resource                 | Name or identifier                                 | Purpose                                         |
-| ------------------------ | -------------------------------------------------- | ----------------------------------------------- |
-| CloudFront distribution  | `E13RII40P7L8EE`                                   | Public HTTPS application endpoint               |
-| CloudFront hostname      | `ddz00reob9ubc.cloudfront.net`                     | `BETTER_AUTH_URL` and `PRODUCTION_URL`          |
-| CloudFront VPC origin    | `vo_HPi66ME94UUGDNvG59gBcn`                        | Private connection to EC2 on port 80            |
-| EC2 instance             | `better-budget-production` / `i-03455a55b281dbde0` | Single application host                         |
-| EC2 instance type        | `t4g.nano`                                         | Low-cost arm64 production compute               |
-| EC2 private IPv4         | `172.31.32.45`                                     | CloudFront VPC-origin traffic                   |
-| EC2 IPv6                 | `2600:1f16:1049:6a00:cdcb:76c8:fe1d:cea2`          | AWS service traffic and database access         |
-| EC2 root volume          | `vol-034582146e2ccaad7`                            | 8 GiB encrypted gp3 host volume                 |
-| Database container       | `better-budget-db`                                 | PostgreSQL 17 on the application host           |
-| Database image           | `postgres:17-alpine`, digest-pinned                | Pulled from Docker Hub, runs as uid 70          |
-| Database data directory  | `/var/lib/better-budget/postgres`                  | Persistent application data on EBS              |
-| Database TLS material    | `/run/better-budget/postgres-tls`                  | Memory-backed server certificate and key        |
-| Docker network           | `better-budget`                                    | Private application-to-database bridge          |
-| ECR repository           | `better-budget/app`                                | Immutable runtime images, lifecycle-pruned      |
-| Secrets Manager secret   | `better-budget/prod-zALPFC`                        | Database URL, CA, auth, and TLS material        |
-| EC2 IAM role/profile     | `better-budget-ec2-runtime`                        | SSM, secret read, ECR pull, and log write       |
-| EC2 inline IAM policy    | `better-budget-ec2-runtime-access`                 | Account-scoped runtime permissions              |
-| GitHub deployment role   | `better-budget-github-deploy`                      | OIDC image push and SSM deployment              |
-| CloudWatch log group     | `/better-budget/production`                        | Container output with 14-day retention          |
-| CloudWatch alarm         | `better-budget-ec2-system-recovery`                | Recovers the host on AWS hardware failure       |
-| CloudWatch alarm         | `better-budget-ec2-instance-reboot`                | Reboots the host on OS-level check failure      |
-| CloudWatch alarm         | `better-budget-host-memory-low`                    | Available memory under 15 percent for 15 min    |
-| CloudWatch alarm         | `better-budget-host-disk-high`                     | Root volume above 80 percent for 10 minutes     |
-| CloudWatch alarm         | `better-budget-database-unresponsive`              | Database failed `select 1` for 10 minutes       |
-| CloudWatch metrics       | `BetterBudget/Host`                                | Memory, disk, and database health every 5 min   |
-| Alarm notification topic | `better-budget-alarms`                             | Email delivery for every alarm and recovery     |
-| Backup policy            | `policy-0814a8ef0cb72ddd5`                         | Daily root-volume snapshots, 7-day retention    |
-| Backup service role      | `AWSDataLifecycleManagerDefaultRole`               | Lets Data Lifecycle Manager snapshot the volume |
+| Resource                 | Name or identifier                                 | Purpose                                          |
+| ------------------------ | -------------------------------------------------- | ------------------------------------------------ |
+| CloudFront distribution  | `E13RII40P7L8EE`                                   | Public HTTPS application endpoint                |
+| CloudFront hostname      | `ddz00reob9ubc.cloudfront.net`                     | `BETTER_AUTH_URL` and `PRODUCTION_URL`           |
+| CloudFront VPC origin    | `vo_HPi66ME94UUGDNvG59gBcn`                        | Private connection to EC2 on port 80             |
+| EC2 instance             | `better-budget-production` / `i-03455a55b281dbde0` | Single application host                          |
+| EC2 instance type        | `t4g.nano`                                         | Low-cost arm64 production compute                |
+| EC2 private IPv4         | `172.31.32.45`                                     | CloudFront VPC-origin traffic                    |
+| EC2 IPv6                 | `2600:1f16:1049:6a00:cdcb:76c8:fe1d:cea2`          | AWS service traffic and database access          |
+| EC2 root volume          | `vol-034582146e2ccaad7`                            | 8 GiB encrypted gp3 host volume                  |
+| Database container       | `better-budget-db`                                 | PostgreSQL 17 on the application host            |
+| Database image           | `postgres:17-alpine`, digest-pinned                | Pulled from Docker Hub, runs as uid 70           |
+| Database data directory  | `/var/lib/better-budget/postgres`                  | Persistent application data on EBS               |
+| Database TLS material    | `/run/better-budget/postgres-tls`                  | Memory-backed server certificate and key         |
+| Docker network           | `better-budget`                                    | App-to-database bridge, IPv6 NAT for egress      |
+| ECR repository           | `better-budget/app`                                | Immutable runtime images, lifecycle-pruned       |
+| Secrets Manager secret   | `better-budget/prod-zALPFC`                        | Database, auth, TLS, and optional Claude API key |
+| EC2 IAM role/profile     | `better-budget-ec2-runtime`                        | SSM, secret read, ECR pull, and log write        |
+| EC2 inline IAM policy    | `better-budget-ec2-runtime-access`                 | Account-scoped runtime permissions               |
+| GitHub deployment role   | `better-budget-github-deploy`                      | OIDC image push and SSM deployment               |
+| CloudWatch log group     | `/better-budget/production`                        | Container output with 14-day retention           |
+| CloudWatch alarm         | `better-budget-ec2-system-recovery`                | Recovers the host on AWS hardware failure        |
+| CloudWatch alarm         | `better-budget-ec2-instance-reboot`                | Reboots the host on OS-level check failure       |
+| CloudWatch alarm         | `better-budget-host-memory-low`                    | Available memory under 15 percent for 15 min     |
+| CloudWatch alarm         | `better-budget-host-disk-high`                     | Root volume above 80 percent for 10 minutes      |
+| CloudWatch alarm         | `better-budget-database-unresponsive`              | Database failed `select 1` for 10 minutes        |
+| CloudWatch metrics       | `BetterBudget/Host`                                | Memory, disk, and database health every 5 min    |
+| Alarm notification topic | `better-budget-alarms`                             | Email delivery for every alarm and recovery      |
+| Backup policy            | `policy-0814a8ef0cb72ddd5`                         | Daily root-volume snapshots, 7-day retention     |
+| Backup service role      | `AWSDataLifecycleManagerDefaultRole`               | Lets Data Lifecycle Manager snapshot the volume  |
 
 The production secret holds eight fields, six of them read at runtime. The
 application service reads `database_url`, `database_ssl_ca`, and
@@ -214,12 +214,29 @@ version-controlled host definition. On a fresh Amazon Linux 2023 arm64 host it:
   script creates and the disk-backed file is only reached once `zram` fills.
 - Caps journald at 64 MiB on disk and 16 MiB in `/run`, and raises
   `vm.swappiness` to 80 so cold pages leave RAM sooner.
-- Creates the `better-budget` Docker network and the database data directory.
+- Keeps the host's router-advertised IPv6 address and default route alive with
+  forwarding enabled, through a `systemd-networkd` drop-in
+  (`/etc/systemd/network/70-<interface>.network.d/better-budget-accept-ra.conf`,
+  `IPv6AcceptRA=yes`). It is installed before Docker IPv6, because Docker turns
+  IPv6 forwarding on and networkd otherwise stops accepting router
+  advertisements, which would drop the host's only internet path within
+  minutes.
+- Enables Docker IPv6 NAT with `/etc/docker/daemon.json`
+  (`{"experimental": true, "ip6tables": true}`) and restarts Docker when that
+  file changes.
+- Creates the `better-budget` Docker network with IPv6 (ULA subnet
+  `fd62:6275:6467:1::/64`, masqueraded behind the host's global address) and the
+  database data directory. A bootstrap run on a host whose network is still
+  IPv4-only stops both services and recreates it; the data directory is a bind
+  mount and is untouched.
 - Installs `better-budget-db.service`, `better-budget.service`,
   `better-budget-healthcheck.timer`, `better-budget-deploy`,
   `better-budget-set-url`, and `better-budget-owner`.
 - Reads the production Secrets Manager JSON on every service start.
-- Keeps secret material in root-controlled files under memory-backed `/run`.
+- Keeps secret material in root-controlled files under memory-backed `/run`,
+  including the optional `anthropic_api_key` field as
+  `/run/better-budget/secrets/anthropic-api-key`, an empty file when the field is
+  absent, which leaves Better Buddy off.
 - Runs PostgreSQL with `ssl=on`, `shared_buffers=32MB`, `max_connections=10`,
   and a 192 MiB container memory limit, published on the host's IPv6 address and
   on loopback but never on `0.0.0.0`.
@@ -337,6 +354,27 @@ sudo cat /etc/better-budget/image-tag
 curl --fail http://127.0.0.1/api/live
 curl --fail http://127.0.0.1/api/ready
 ```
+
+Better Buddy checks. The key is exported by the container entrypoint, so it is
+visible in the server process's environment but not in a `docker exec` shell;
+check it by presence only, never by printing it:
+
+```bash
+sudo docker exec better-budget node -e "fetch('https://api.anthropic.com/v1/models').then(r=>console.log('egress', r.status)).catch(e=>console.log('egress failed', e.cause?.code || e.message))"
+sudo stat -c %s /run/better-budget/secrets/anthropic-api-key
+sudo ip -6 addr show dev ens5 scope global
+```
+
+`egress 401` means the container reached the Claude API (the probe sends no
+key). A key file of 0 bytes means the secret has no `anthropic_api_key`. The
+address's `valid_lft` should stay in the hundreds of seconds; a lifetime
+counting toward zero means router advertisements are no longer accepted, and
+the networkd drop-in above must be restored before the host loses IPv6.
+
+To add or rotate the Claude API key, edit the `anthropic_api_key` field of the
+production secret, then `sudo systemctl restart better-budget.service`; the
+service rereads the secret on every start. Removing the field turns Better
+Buddy off after the same restart.
 
 Application output is in CloudWatch Logs. The systemd journal contains host
 startup, image pull, and service lifecycle messages.
