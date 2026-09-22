@@ -41,8 +41,84 @@ sessions with public signup disabled; a mobile bottom navigation, desktop side
 navigation, and responsive summary rail; and PGlite, PostgreSQL, and Docker
 development paths.
 
+Version 5 adds Better Buddy, an optional in-app budget assistant driven by Claude.
+
 `docs/agents/product.md` holds the complete implemented-capability inventory.
 Approved design references live in [`docs/design`](./docs/design).
+
+## Version 5 assistant release
+
+Version `5.0.0` adds Better Buddy, a budget assistant: a floating robot button
+on every authenticated page that opens a chat. The person asks about their budget in
+plain language or describes a change, and the assistant reads the month or
+commits the change through the same validated mutation service the interface
+uses. Every existing flow, the database schema, and the authentication model
+are unchanged.
+
+**What it does:**
+
+- Answers questions about the household's budget: planned, spent, available,
+  carry-in, left to budget, expected and received income, transactions, and the
+  month note, for any month.
+- Answers averages, totals, trends, and over-planned questions across up to 24
+  months with exact server-computed figures, for one item, one category, or the
+  whole budget. Over planned counts expenses alone; income into an item is
+  reported separately.
+- Sets planned amounts and carryover; adds, edits, and deletes expense and
+  income transactions (refunds in the data model), including exact splits; adds and edits expected-income sources and
+  records received income; adds and renames categories and items; and writes the
+  month note.
+- Declines anything unrelated to Better Budget, and declines archiving,
+  deleting definitions, copying, clearing, or resetting a month, reordering,
+  deleting income, and backups, pointing to where the person can do those
+  themselves.
+- Holds context for one conversation only. The conversation lives in the
+  browser's memory; **New chat** or a reload starts over, and nothing is stored
+  on the server.
+
+- Can be turned off per device with the **Better Buddy** switch in Settings,
+  stored in the `better-budget-assistant-v1` cookie like the default amount
+  view. It is on by default wherever the server has a key.
+
+**Cost design:** the assistant uses Claude Haiku 4.5, the cheapest current
+model, with extended thinking off and a 1,024-token reply cap. The system
+prompt and the sixteen tool definitions form a frozen prefix of roughly 7,000
+tokens, deliberately above Haiku 4.5's 4,096-token minimum cacheable prefix, so
+it is written to the prompt cache once and then read at a tenth of the input
+price. A second cache breakpoint follows the growing conversation. Tools return
+compact text rather than snapshot JSON, and items, categories, and income
+sources are referenced by name rather than by UUID. Expect roughly $0.002 to
+$0.006 per message. A turn makes at most six model calls, a conversation holds
+at most twenty messages, and each household may start at most forty turns in
+any ten minutes. Set a monthly spend limit on the Anthropic Console as well.
+
+**Required configuration and migration:**
+
+- The assistant is off unless `ANTHROPIC_API_KEY` is set. Without it, the
+  floating button is not rendered and `/api/assistant` answers `unavailable`.
+  Production startup rejects a placeholder key but accepts an absent one.
+- In production the key is the optional `anthropic_api_key` field of the
+  existing Secrets Manager entry. `scripts/aws/bootstrap-ec2.sh` reads it, so
+  the updated host script must be installed over Systems Manager before the key
+  reaches the container.
+- The application container must be able to reach `api.anthropic.com` over
+  HTTPS. The production host has no public IPv4 address and no NAT, so the
+  updated host script gives the `better-budget` Docker network IPv6 with NAT,
+  after first keeping the host's router-advertised IPv6 route alive with
+  forwarding on. `docs/agents/deployment.md` records the order and why.
+- Using the assistant sends the relevant budget data (names, amounts, dates,
+  merchants, and notes) to Anthropic's API.
+
+**Retained boundaries:**
+
+- Every Version 1 non-goal still stands. The assistant is conversational only:
+  it sends no notifications, keeps no memory between conversations, and adds no
+  automation, import, or bank connection.
+- Assistant writes are server-confirmed rather than optimistic, and each one
+  carries a fresh `clientMutationId` and the `expectedVersion` read from the
+  server immediately before it, so every financial invariant, idempotency rule,
+  and conflict check applies unchanged.
+- Every Version 2, 3, and 4 deployment rule is unchanged.
 
 ## Version 4 deployment release
 
@@ -304,28 +380,29 @@ The seed is idempotent: repeated application does not intentionally duplicate th
 
 The example values are in `.env.example`.
 
-| Variable                    | Default/example             | Purpose                                                                                            |
-| --------------------------- | --------------------------- | -------------------------------------------------------------------------------------------------- |
-| `DATABASE_KIND`             | `pglite`                    | Selects `pglite` or `postgres`.                                                                    |
-| `PGLITE_DATA_DIR`           | `.data/pglite`              | File-persistent PGlite directory.                                                                  |
-| `DATABASE_URL`              | Local `postgres://...` URL  | Complete PostgreSQL connection URL. It takes precedence over individual connection variables.      |
-| `DATABASE_HOST`             | `localhost`                 | PostgreSQL host when `DATABASE_URL` is absent.                                                     |
-| `DATABASE_PORT`             | `5432`                      | PostgreSQL port when `DATABASE_URL` is absent.                                                     |
-| `DATABASE_USER`             | `better_budget`             | PostgreSQL user when `DATABASE_URL` is absent.                                                     |
-| `DATABASE_PASSWORD`         | `better_budget`             | PostgreSQL password when `DATABASE_URL` is absent. Never use this development value in production. |
-| `DATABASE_NAME`             | `better_budget`             | PostgreSQL database when `DATABASE_URL` is absent.                                                 |
-| `DATABASE_POOL_SIZE`        | `5`                         | Maximum PostgreSQL connection-pool size. Keep it small for lightweight deployments.                |
-| `DATABASE_SSL`              | `disable` locally           | `disable`, `require`, or `verify-full`. Production requires `verify-full`.                         |
-| `DATABASE_SSL_CA`           | unset                       | Trusted PostgreSQL CA bundle. Production requires the PEM that signed the server certificate.      |
-| `MIGRATIONS_PRESTART`       | unset                       | Set to `true` when the container prestart already applies migrations.                              |
-| `BETTER_AUTH_SECRET`        | development placeholder     | Better Auth signing secret. Production requires a strong random value of at least 32 characters.   |
-| `BETTER_AUTH_URL`           | `http://localhost:3000`     | Public application origin used by Better Auth. Must match the origin being used.                   |
-| `AUTH_BYPASS`               | `true` locally              | Bypasses login in non-production development. Must be `false` in production.                       |
-| `ALLOW_INSECURE_LOCAL_AUTH` | `false`                     | Additional local-container guard for auth bypass. Never enable in production.                      |
-| `APP_BUILD_SHA`             | unset                       | Public build-time Git revision shown in Settings; the production workflow supplies `github.sha`.   |
-| `BOOTSTRAP_OWNER_EMAIL`     | `family@betterbudget.local` | Email used by the one-time shared-owner bootstrap command.                                         |
-| `BOOTSTRAP_OWNER_PASSWORD`  | local placeholder           | Password used only when the bootstrap creates a new owner; minimum 10 characters.                  |
-| `BETTER_BUDGET_BOOTSTRAP`   | command-managed             | Limits the signup exception to the one-time owner command.                                         |
+| Variable                    | Default/example             | Purpose                                                                                                               |
+| --------------------------- | --------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_KIND`             | `pglite`                    | Selects `pglite` or `postgres`.                                                                                       |
+| `PGLITE_DATA_DIR`           | `.data/pglite`              | File-persistent PGlite directory.                                                                                     |
+| `DATABASE_URL`              | Local `postgres://...` URL  | Complete PostgreSQL connection URL. It takes precedence over individual connection variables.                         |
+| `DATABASE_HOST`             | `localhost`                 | PostgreSQL host when `DATABASE_URL` is absent.                                                                        |
+| `DATABASE_PORT`             | `5432`                      | PostgreSQL port when `DATABASE_URL` is absent.                                                                        |
+| `DATABASE_USER`             | `better_budget`             | PostgreSQL user when `DATABASE_URL` is absent.                                                                        |
+| `DATABASE_PASSWORD`         | `better_budget`             | PostgreSQL password when `DATABASE_URL` is absent. Never use this development value in production.                    |
+| `DATABASE_NAME`             | `better_budget`             | PostgreSQL database when `DATABASE_URL` is absent.                                                                    |
+| `DATABASE_POOL_SIZE`        | `5`                         | Maximum PostgreSQL connection-pool size. Keep it small for lightweight deployments.                                   |
+| `DATABASE_SSL`              | `disable` locally           | `disable`, `require`, or `verify-full`. Production requires `verify-full`.                                            |
+| `DATABASE_SSL_CA`           | unset                       | Trusted PostgreSQL CA bundle. Production requires the PEM that signed the server certificate.                         |
+| `MIGRATIONS_PRESTART`       | unset                       | Set to `true` when the container prestart already applies migrations.                                                 |
+| `BETTER_AUTH_SECRET`        | development placeholder     | Better Auth signing secret. Production requires a strong random value of at least 32 characters.                      |
+| `BETTER_AUTH_URL`           | `http://localhost:3000`     | Public application origin used by Better Auth. Must match the origin being used.                                      |
+| `AUTH_BYPASS`               | `true` locally              | Bypasses login in non-production development. Must be `false` in production.                                          |
+| `ALLOW_INSECURE_LOCAL_AUTH` | `false`                     | Additional local-container guard for auth bypass. Never enable in production.                                         |
+| `APP_BUILD_SHA`             | unset                       | Public build-time Git revision shown in Settings; the production workflow supplies `github.sha`.                      |
+| `ANTHROPIC_API_KEY`         | unset                       | Claude API key that enables the budget assistant. Unset hides the assistant; placeholders are rejected in production. |
+| `BOOTSTRAP_OWNER_EMAIL`     | `family@betterbudget.local` | Email used by the one-time shared-owner bootstrap command.                                                            |
+| `BOOTSTRAP_OWNER_PASSWORD`  | local placeholder           | Password used only when the bootstrap creates a new owner; minimum 10 characters.                                     |
+| `BETTER_BUDGET_BOOTSTRAP`   | command-managed             | Limits the signup exception to the one-time owner command.                                                            |
 
 The application also respects standard `NODE_ENV` and `CI` values in their normal contexts.
 
@@ -829,6 +906,7 @@ The database CLI scripts intentionally set the `react-server` Node condition bec
 ├── src/
 │   ├── app/                       App Router pages, metadata, and API routes
 │   │   └── styles/                Stylesheets by area; import order = cascade order
+│   ├── components/assistant/      Floating assistant button and chat sheet
 │   ├── components/auth/           Sign-in form
 │   ├── components/budget/         Budget page views and sheets
 │   ├── components/income/         Income page views, forms, and detail
@@ -841,7 +919,7 @@ The database CLI scripts intentionally set the `react-server` Node condition bec
 │   ├── db/                        Drizzle schema, adapters, migrations, seed
 │   ├── domain/                    Exact money, calculations, and shared types
 │   ├── lib/                       Authentication and supporting libraries
-│   └── server/                    Access checks, contracts, and budget services
+│   └── server/                    Access checks, contracts, budget services, and the assistant
 ├── .claude/                       Project permissions and the /handoff command
 ├── AGENTS.md                      Durable implementation guide for coding agents
 ├── compose.yaml                   PostgreSQL and full-app Compose services
@@ -899,6 +977,15 @@ UI changes should preserve:
 - Usability at 390 x 844 and 1440 x 1000 reference viewports.
 
 ## Troubleshooting
+
+### The assistant button is missing or says it can't be reached
+
+The button appears only when `ANTHROPIC_API_KEY` is set when the server starts;
+add it to `.env.local` and restart `npm run dev`. "Couldn't be reached" means the
+Claude API call failed: check the key, the account's credit, and outbound HTTPS
+to `api.anthropic.com`. The server logs the API status code as
+`[assistant] Claude API error`, and warns with `prompt cache unused` if the
+cached prefix ever falls below the model's minimum.
 
 ### The app opens with old or unexpected data
 

@@ -40,6 +40,22 @@ Each calendar month holds its own budget built from household-scoped category an
 
 Read `docs/agents/product.md` for the complete implemented-capability inventory before adding, removing, or reshaping a user-facing capability.
 
+## Version 5 assistant release
+
+Version `5.0.0` adds Better Buddy, an optional budget assistant: a draggable floating robot button on every authenticated page that opens a chat driven by Claude Haiku 4.5. It answers questions about the household's budget and commits basic changes. The Version 1 financial model, database schema, authentication model, and every Version 2–4 deployment rule are unchanged.
+
+These rules are load-bearing:
+
+- **Assistant writes go through `applyBudgetMutation`.** Every tool builds a `BudgetMutation`, parses it with `mutationSchema`, and commits it with a fresh `clientMutationId` and the `expectedVersion` from a snapshot read immediately before. Never give the assistant a write path around the mutation service, and never add a tool for archiving, deleting definitions, copying, clearing, resetting, reordering, or deleting income without explicit user direction.
+- **Assistant writes are server-confirmed.** The client applies no optimistic patch; it invalidates every cached `budget-snapshot` query after a turn that reports changed months, because carryover can move later months.
+- **The cached prefix is frozen.** `SYSTEM_PROMPT` and `ASSISTANT_TOOLS` must contain no per-request value and must keep a deterministic order, and together they must stay above Haiku 4.5's 4,096-token minimum cacheable prefix, or every request pays full input price. Today's date and the viewed month travel in a text block at the start of each person turn instead. The server warns `prompt cache unused` when a response reads and writes no cache.
+- **The conversation is client-held and stateless on the server.** The browser sends the whole message history each turn; the route validates its shape and size, and the household always comes from the session. Tool results the client sends back only affect the model's context, never authorization.
+- **The assistant is off without `ANTHROPIC_API_KEY`.** The button is not rendered and the route answers `unavailable`. Production validation rejects a placeholder key and accepts an absent one. With a key, the Settings **Better Buddy** switch hides or shows it per device through the `better-budget-assistant-v1` cookie (`parseAssistantPreference` in `src/domain/budget-preferences.ts`); that switch is a display preference, not an access control.
+- **Replies are plain text.** The chat renders no Markdown, so the prompt forbids it and `run.ts` strips `**`/`__` emphasis from model text before it is shown or stored in the history.
+- **Production egress is IPv6 NAT on the Docker network.** The host has no IPv4 egress, so `bootstrap-ec2.sh` gives the `better-budget` network IPv6 with Docker's `ip6tables` NAT. Enabling IPv6 forwarding stops `systemd-networkd` accepting the router advertisements that keep the host's own IPv6 address and route alive, so the `IPv6AcceptRA=yes` drop-in must be installed first; without it the host loses IPv6, and with it Systems Manager and ECR, within minutes. `docs/agents/deployment.md` records the order.
+
+Keep the model on the cheapest current Claude model with thinking omitted unless the user directs otherwise, and keep the per-turn call cap, the conversation cap, and the per-household rate limit.
+
 ## Version 4 deployment release
 
 Version `4.0.0` moved the production host from an x86_64 `t3a.micro` to an arm64 `t4g.nano`. There is no application-source change. The Version 1 product, financial model, authentication model, database schema, and provider-neutral runtime image are unchanged, as is every Version 3 database, TLS, IPv6, and backup rule.
@@ -116,6 +132,7 @@ The repository currently uses:
 - PGlite for the default local database.
 - PostgreSQL 17 for integration/production parity.
 - Zod for boundary validation.
+- The Anthropic TypeScript SDK for the optional budget assistant (Claude Haiku 4.5).
 - Better Auth for email/password sessions.
 - Prettier 3.9.6 for repository-wide source and documentation formatting.
 - ESLint Stylistic 5.10.0 for autofixable structural whitespace rules that do not overlap the Prettier style contract.
@@ -124,7 +141,7 @@ Dependency versions are pinned by `package-lock.json`. Use npm consistently and 
 
 ## Important repository paths
 
-Source lives under `src/`: `app/` routes and route handlers, `domain/` exact money and calculations, `db/` Drizzle schema and seeding, `lib/` Better Auth wiring, `server/` authoritative services. Components are grouped by view — `components/budget/`, `income/`, `organize/`, `transactions/`, `settings/` — alongside `components/shell/` (the authenticated shell, query lifecycle, and optimistic patches), `components/shared/` (primitives more than one view needs), and `components/ui/` (view-agnostic primitives). Supporting directories are `scripts/`, `drizzle/`, `public/`, `docs/agents/`, `docs/design/`, `docs/aws/`, and `.github/workflows/`, plus `Dockerfile`, `compose.yaml`, and `runtime-environment.mjs`.
+Source lives under `src/`: `app/` routes and route handlers, `domain/` exact money and calculations, `db/` Drizzle schema and seeding, `lib/` Better Auth wiring, `server/` authoritative services. Components are grouped by view — `components/budget/`, `income/`, `organize/`, `transactions/`, `settings/`, `assistant/` — alongside `components/shell/` (the authenticated shell, query lifecycle, and optimistic patches), `components/shared/` (primitives more than one view needs), and `components/ui/` (view-agnostic primitives). Supporting directories are `scripts/`, `drizzle/`, `public/`, `docs/agents/`, `docs/design/`, `docs/aws/`, and `.github/workflows/`, plus `Dockerfile`, `compose.yaml`, and `runtime-environment.mjs`.
 
 High-impact files:
 
@@ -143,6 +160,7 @@ High-impact files:
 - `src/server/backup/` — the Settings JSON backup behind `/api/backup`. `schema.ts` validates the file (exact split sums, in-month dates, internal references), `export.ts` builds it, `import-replace.ts` clears the household's budget rows, and `import-merge.ts` plus `import-activity.ts` add whatever the household lacks. Replace is clear-then-merge inside one transaction.
 - `src/server/month-snapshot/` — canonical month snapshot read path. `index.ts` is orchestration only; `queries.ts` holds every database read, `carryover.ts` the chronological carryover chains and balance derivation, `assemble.ts` the category, activity, and receipt view assembly.
 - `src/server/mutation-failures.ts` — mutation-failure class, not-found/conflict helpers.
+- `src/server/assistant/` — the budget assistant. `run.ts` is the Claude tool loop and model settings, `prompt.ts` the frozen system prompt, `tools.ts` the frozen tool definitions, `execute.ts` the tool dispatcher and read tools, `history.ts` the multi-month history read tool, `budget-tools.ts` and `transaction-tools.ts` the write tools, `commit.ts` the shared mutation, money, and month helpers, `resolve.ts` name and transaction-ref resolution, `render.ts` the compact text the model reads, `conversation-schema.ts` the request contract, `config.ts` the key-presence switch, and `rate-limit.ts` the per-household turn guard. `src/app/api/assistant/route.ts` is the endpoint.
 - `src/server/definition-usage.ts` — later-month activity and never-used (permanently deletable) status per definition, shared by the snapshot and the hard-delete handlers.
 - `src/components/shell/use-budget-data.ts` — hydration, retry, reconciliation, sync state.
 - `src/components/shell/optimistic.ts` — optimistic cache patches: clones the snapshot and delegates to `optimistic-patches/`, which mirrors `budget-mutations/` one file per mutation family.
@@ -154,13 +172,14 @@ High-impact files:
 - `src/components/organize/organizer-view.tsx` — category and item structure editing, drag reordering, archive/delete; `organizer-category-section.tsx` renders one category and its items.
 - `src/components/transactions/transactions-view.tsx` — activity scoping, search, inline filters, filter-sheet drafts, applied-filter clearing; `transaction-sheet.tsx` and `transaction-allocation-picker.tsx` are the add/edit flow.
 - `src/components/shared/detail-history.ts` — the shared URL-plus-history-state contract behind every pushed detail view; Budget and Income both build one with `createDetailHistory`. `delete-definition-sheet.tsx` is the Budget-page and organizer delete flow that moves a definition's activity and plan to another item. `use-versioned-draft.ts` keeps inline amount edits and their `expectedVersion` stable across background refetches. `category-icon.tsx`, `category-details-fields.tsx`, `transaction-icon.tsx`, and `budget-view-helpers.ts` are the other cross-view primitives.
+- `src/components/assistant/` — `assistant-launcher.tsx` is the draggable floating button, rendered through `AppShell`'s `floating` slot so it sits outside the animated page content, `better-buddy.png` the transparent 256 px robot icon cut from the approved artwork, `better-buddy-figure.tsx` the floating robot with its gradient halo and floor shadow, `assistant-sheet.tsx` the chat sheet, `keyboard-layout.ts` the chat's on-screen-keyboard fit and motion, and `use-assistant.ts` the in-memory conversation and snapshot invalidation. Styles live in `src/app/styles/assistant.css`. `src/components/settings/settings-assistant-section.tsx` is the Settings switch.
 - `src/components/ui/navigation-detail/` — mobile push navigation, fixed detail chrome, modal fallback. `index.tsx` is the component, `edge-drag.ts` the edge-swipe dismissal gesture, `title-motion.ts` the collapsing-title machinery.
 - `src/components/ui/left-edge-gesture-guard.tsx` — global Safari left-edge history-gesture suppression.
 - `src/components/ui/sheet.tsx` — animated, scroll-contained, drag-dismissible sheets.
 - `src/components/ui/continuous-corners/` — iOS-style continuous corners: `attach.ts` is the shared per-element core, `index.tsx` exports the `useContinuousCorners` hook and `ContinuousControls` (mounted once in `providers.tsx`, owns the button selector list), and `geometry.ts` holds the superellipse corner, capsule-end, and sliver-clip math. The global `corner-shape` rule and its circle/pill opt-out list live in `src/app/styles/tokens.css`.
 - `src/components/ui/sortable-list/` — `index.tsx` holds long-press activation, keyboard reordering, and the hook surface; `drag.ts` the pointer drag, list reflow, and edge auto-scroll.
 - `src/app/globals.css` — the Tailwind import and the ordered `@import` list only.
-- `src/app/styles/` — the rules, split by area (`tokens`, `app-shell`, `budget`, `navigation-detail`, `sheets-and-forms`, `transactions`, `income`, `organize`, `settings`, `sign-in`, `responsive-motion`). **The import order in `globals.css` is the cascade order.** Later files intentionally override earlier ones, so never reorder the imports, and add a new area file at the position its specificity requires — `responsive-motion.css` must stay last.
+- `src/app/styles/` — the rules, split by area (`tokens`, `app-shell`, `budget`, `navigation-detail`, `sheets-and-forms`, `transactions`, `income`, `organize`, `settings`, `sign-in`, `assistant`, `responsive-motion`). **The import order in `globals.css` is the cascade order.** Later files intentionally override earlier ones, so never reorder the imports, and add a new area file at the position its specificity requires — `responsive-motion.css` must stay last.
 
 ### Navigating without reading whole files
 

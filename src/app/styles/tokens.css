@@ -67,7 +67,11 @@
 .search-clear-button,
 .sign-in-bars span,
 .sign-in-bars i,
-.transaction-filter-count {
+.transaction-filter-count,
+.assistant-launcher,
+.assistant-send,
+.assistant-suggestion,
+.assistant-typing span {
     corner-shape: round;
 }
 [data-continuous-border] {

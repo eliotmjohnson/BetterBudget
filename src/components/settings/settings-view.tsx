@@ -17,6 +17,7 @@ import Link from 'next/link';
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Sheet } from '@/components/ui/sheet';
+import { SettingsAssistantSection } from './settings-assistant-section';
 import { SettingsDataSection } from './settings-data-section';
 import {
     APP_BUILD_LABEL,
@@ -30,12 +31,18 @@ import { APP_CURRENCY, type MonthKey } from '@/domain/money';
 import { authClient } from '@/lib/auth-client';
 
 export function SettingsView({
+    assistantAvailable,
+    assistantEnabled,
+    onAssistantEnabledChange,
     defaultBudgetAmountView,
     monthKey,
     onDefaultBudgetAmountViewChange,
     onOrganize,
     onMessage
 }: {
+    assistantAvailable: boolean;
+    assistantEnabled: boolean;
+    onAssistantEnabledChange: (enabled: boolean) => void;
     defaultBudgetAmountView: BudgetAmountView;
     monthKey: MonthKey;
     onDefaultBudgetAmountViewChange: (view: BudgetAmountView) => void;
@@ -182,6 +189,11 @@ export function SettingsView({
                     <ChevronRight size={18} />
                 </Link>
             </div>
+            <SettingsAssistantSection
+                available={assistantAvailable}
+                enabled={assistantEnabled}
+                onEnabledChange={onAssistantEnabledChange}
+            />
             <SettingsDataSection onMessage={onMessage} />
             <h2 className='settings-section-title'>Security</h2>
             <div className='settings-list'>

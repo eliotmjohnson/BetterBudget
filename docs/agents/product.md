@@ -74,4 +74,29 @@ The implemented product supports:
   elsewhere it is absent. It reveals a progress dial from beneath the header,
   refreshes when released past the threshold, and announces the outcome to
   assistive technology under the tab's own name.
+- Better Buddy, an optional budget assistant, present only when
+  `ANTHROPIC_API_KEY` is set: a floating robot button on every authenticated
+  page opens a chat sheet driven by Claude Haiku 4.5. The Settings Assistant
+  section has a per-device **Better Buddy** switch, on by default, that hides
+  or shows it. It answers questions about any month (planned, spent,
+  available, carry-in, left to budget, income, transactions, notes) and across
+  up to 24 months: its `get_history` tool returns exact per-month figures for an
+  item, a category, or the whole budget (planned, expenses only, income into the
+  item, net spent, carry-in, available, and how far expenses alone went over
+  planned) with server-computed totals, averages, and over-planned statistics,
+  so the model never does the arithmetic and makes
+  basic changes described in plain language: planned amounts, carryover,
+  expense and income transaction add/edit/delete with exact splits, income sources and
+  received income, adding and renaming categories and items, and the month
+  note. It speaks the interface's vocabulary rather than the code's: a `refund`
+  transaction is an **income transaction** (money into a budget item, shown as
+  Income on the Transactions page), which it keeps distinct from **received
+  income** recorded against an income source on the Income page, and it asks
+  which one is meant when a request is ambiguous. It refers to budget items by name (`Category / Item` when a name
+  repeats), income sources by name (`Name #2` when a name repeats), and
+  transactions by the first eight characters of their id. It declines
+  unrelated questions and every destructive or structural operation it lacks a
+  tool for, and names where the person can do it. A conversation is held only in
+  the browser's memory; **New chat** or a reload starts over. Assistant writes
+  are server-confirmed and refresh every cached month.
 - File-persistent PGlite development, PostgreSQL parity, and Docker packaging.

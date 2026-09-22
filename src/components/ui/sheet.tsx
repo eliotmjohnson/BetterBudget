@@ -63,13 +63,16 @@ export function Sheet({
     open,
     onOpenChange,
     onExitComplete,
+    onDragDismissStart,
     title,
+    titleAdornment,
     variant = 'standard',
     layer = 'base',
     footer,
     headerAction,
     headerActionVisibility = 'all',
     showHandle = true,
+    showClose = true,
     restoreFocusRef,
     restoreFocusVisible,
     interactionDisabled = false,
@@ -78,13 +81,16 @@ export function Sheet({
     open: boolean;
     onOpenChange: (open: boolean) => void;
     onExitComplete?: () => void;
+    onDragDismissStart?: () => void;
     title: string;
+    titleAdornment?: ReactNode;
     variant?: 'standard' | 'raised-mobile' | 'full-screen-mobile';
     layer?: 'base' | 'nested';
     footer?: ReactNode;
     headerAction?: ReactNode;
     headerActionVisibility?: 'all' | 'mobile';
     showHandle?: boolean;
+    showClose?: boolean;
     restoreFocusRef?: RefObject<HTMLElement | null>;
     restoreFocusVisible?: boolean;
     interactionDisabled?: boolean;
@@ -170,6 +176,7 @@ export function Sheet({
         );
 
         content.dataset.dismissing = 'true';
+        onDragDismissStart?.();
         void content.offsetHeight;
         content.style.transition = transition;
         content.style.transform = translateY(exitDistance);
@@ -326,9 +333,18 @@ export function Sheet({
                             <div className='sheet-handle' aria-hidden='true' />
                         ) : null}
                         <div className='sheet-header'>
-                            <Dialog.Title className='sheet-title'>
-                                {title}
-                            </Dialog.Title>
+                            {titleAdornment ? (
+                                <div className='sheet-title-group'>
+                                    {titleAdornment}
+                                    <Dialog.Title className='sheet-title'>
+                                        {title}
+                                    </Dialog.Title>
+                                </div>
+                            ) : (
+                                <Dialog.Title className='sheet-title'>
+                                    {title}
+                                </Dialog.Title>
+                            )}
                             {headerAction ? (
                                 <div
                                     className='sheet-header-action'
@@ -337,8 +353,9 @@ export function Sheet({
                                     {headerAction}
                                 </div>
                             ) : null}
-                            {!headerAction ||
-                            headerActionVisibility === 'mobile' ? (
+                            {showClose &&
+                            (!headerAction ||
+                                headerActionVisibility === 'mobile') ? (
                                 <Dialog.Close
                                     className='icon-button'
                                     aria-label='Close'

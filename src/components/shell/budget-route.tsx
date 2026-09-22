@@ -2,12 +2,15 @@ import { cookies } from 'next/headers';
 import { BudgetApp } from './app-client';
 import type { AppView } from './app-shell';
 import {
+    ASSISTANT_PREFERENCE_COOKIE,
     BUDGET_AMOUNT_VIEW_COOKIE,
+    parseAssistantPreference,
     parseBudgetAmountView
 } from '@/domain/budget-preferences';
 import { monthKeySchema } from '@/domain/money';
 import { currentMonthKey } from '@/domain/calendar';
 import { requireAccess } from '@/server/access';
+import { assistantConfigured } from '@/server/assistant/config';
 import { getMonthSnapshot } from '@/server/month-snapshot';
 
 export async function BudgetRoute({
@@ -32,6 +35,10 @@ export async function BudgetRoute({
 
     return (
         <BudgetApp
+            assistantAvailable={assistantConfigured()}
+            initialAssistantEnabled={parseAssistantPreference(
+                cookieStore.get(ASSISTANT_PREFERENCE_COOKIE)?.value
+            )}
             initialBudgetAmountView={initialBudgetAmountView}
             initialSnapshot={snapshot}
             view={view}

@@ -26,6 +26,13 @@ Safe optimistic operations currently include:
 
 Server-confirmed operations currently include:
 
+- Every budget-assistant write. The assistant has no optimistic path: each tool
+  reads a fresh snapshot, builds a `BudgetMutation` with a new
+  `clientMutationId` and the `expectedVersion` it just read, and commits it
+  through `applyBudgetMutation`. A conflict or validation failure goes back to
+  the model as a tool error it can retry or explain. After a turn that changed
+  anything, the client invalidates every cached month snapshot.
+
 - Copying a month.
 - Clearing planned amounts.
 - Resetting a budget.

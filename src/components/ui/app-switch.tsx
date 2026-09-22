@@ -11,7 +11,7 @@ export function AppSwitch({
     accessibilityLabel: string;
     checked: boolean;
     onCheckedChange: (checked: boolean) => void;
-    variant: 'budget-view' | 'carryover';
+    variant: 'budget-view' | 'carryover' | 'setting';
 }) {
     return (
         <Switch.Root

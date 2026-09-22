@@ -19,6 +19,9 @@ readonly DOCKER_CONFIG_DIRECTORY='/run/better-budget/docker'
 readonly RUNTIME_SECRET_DIRECTORY='/run/better-budget/secrets'
 readonly DATABASE_CONTAINER_NAME='better-budget-db'
 readonly DATABASE_NETWORK='better-budget'
+readonly DATABASE_NETWORK_IPV6_SUBNET='fd62:6275:6467:1::/64'
+readonly DOCKER_DAEMON_CONFIG='/etc/docker/daemon.json'
+readonly DOCKER_DAEMON_SETTINGS='{"experimental": true, "ip6tables": true}'
 readonly POSTGRES_ROLE='better_budget'
 readonly POSTGRES_DATABASE='better_budget'
 readonly DATABASE_DATA_DIRECTORY='/var/lib/better-budget/postgres'
@@ -163,6 +166,7 @@ ensure_image_present() {
 }
 
 fetch_application_secrets() {
+    local anthropic_api_key
     local auth_secret
     local database_ssl_ca
     local database_url
@@ -178,6 +182,7 @@ fetch_application_secrets() {
     database_url=$(jq --exit-status --raw-output '.database_url' <<<"${secret_json}")
     database_ssl_ca=$(jq --exit-status --raw-output '.database_ssl_ca' <<<"${secret_json}")
     auth_secret=$(jq --exit-status --raw-output '.better_auth_secret' <<<"${secret_json}")
+    anthropic_api_key=$(jq --raw-output '.anthropic_api_key // empty' <<<"${secret_json}")
     unset secret_json
 
     if [[ -z ${database_url} || -z ${database_ssl_ca} || -z ${auth_secret} ]]; then
@@ -188,6 +193,7 @@ fetch_application_secrets() {
     printf '%s' "${database_url}" >"${RUNTIME_SECRET_DIRECTORY}/database-url"
     printf '%s' "${database_ssl_ca}" >"${RUNTIME_SECRET_DIRECTORY}/database-ssl-ca"
     printf '%s' "${auth_secret}" >"${RUNTIME_SECRET_DIRECTORY}/better-auth-secret"
+    printf '%s' "${anthropic_api_key}" >"${RUNTIME_SECRET_DIRECTORY}/anthropic-api-key"
 
     tee "${RUNTIME_SECRET_DIRECTORY}/entrypoint.sh" >/dev/null <<'ENTRYPOINT'
 #!/bin/sh
@@ -195,7 +201,8 @@ set -eu
 DATABASE_URL=$(cat /run/better-budget-secrets/database-url)
 DATABASE_SSL_CA=$(cat /run/better-budget-secrets/database-ssl-ca)
 BETTER_AUTH_SECRET=$(cat /run/better-budget-secrets/better-auth-secret)
-export DATABASE_URL DATABASE_SSL_CA BETTER_AUTH_SECRET
+ANTHROPIC_API_KEY=$(cat /run/better-budget-secrets/anthropic-api-key)
+export DATABASE_URL DATABASE_SSL_CA BETTER_AUTH_SECRET ANTHROPIC_API_KEY
 exec sh -c 'node scripts/validate-production-environment.mjs && node scripts/migrate-production.mjs && node server.js'
 ENTRYPOINT
 
@@ -203,19 +210,68 @@ ENTRYPOINT
     chmod 0400 \
         "${RUNTIME_SECRET_DIRECTORY}/database-url" \
         "${RUNTIME_SECRET_DIRECTORY}/database-ssl-ca" \
-        "${RUNTIME_SECRET_DIRECTORY}/better-auth-secret"
+        "${RUNTIME_SECRET_DIRECTORY}/better-auth-secret" \
+        "${RUNTIME_SECRET_DIRECTORY}/anthropic-api-key"
     chmod 0500 "${RUNTIME_SECRET_DIRECTORY}/entrypoint.sh"
 
     unset database_url
     unset database_ssl_ca
     unset auth_secret
+    unset anthropic_api_key
 }
 
 ensure_database_network() {
     if ! docker network inspect "${DATABASE_NETWORK}" >/dev/null 2>&1; then
-        log "Creating the ${DATABASE_NETWORK} Docker network."
-        docker network create "${DATABASE_NETWORK}" >/dev/null
+        log "Creating the ${DATABASE_NETWORK} Docker network with IPv6."
+        docker network create \
+            --ipv6 \
+            --subnet "${DATABASE_NETWORK_IPV6_SUBNET}" \
+            "${DATABASE_NETWORK}" >/dev/null
     fi
+}
+
+ipv6_default_interface() {
+    ip -6 route show default |
+        awk '{ for (i = 1; i < NF; i++) if ($i == "dev") { print $(i + 1); exit } }'
+}
+
+keep_router_advertisements_with_forwarding() {
+    local interface
+    local drop_in_directory
+
+    interface=$(ipv6_default_interface)
+    [[ -n ${interface} ]] || fail 'The host has no IPv6 default route.'
+    drop_in_directory="/etc/systemd/network/70-${interface}.network.d"
+
+    if [[ -f ${drop_in_directory}/better-budget-accept-ra.conf ]]; then
+        return
+    fi
+    log "Keeping IPv6 router advertisements on ${interface} with forwarding enabled."
+    install -d -m 0755 "${drop_in_directory}"
+    printf '[Network]\nIPv6AcceptRA=yes\n' \
+        >"${drop_in_directory}/better-budget-accept-ra.conf"
+    chmod 0644 "${drop_in_directory}/better-budget-accept-ra.conf"
+    networkctl reload
+}
+
+enable_docker_ipv6() {
+    if [[ $(cat "${DOCKER_DAEMON_CONFIG}" 2>/dev/null) == "${DOCKER_DAEMON_SETTINGS}" ]]; then
+        return
+    fi
+    log 'Enabling Docker IPv6 NAT (ip6tables) and restarting Docker.'
+    install -d -m 0755 "$(dirname "${DOCKER_DAEMON_CONFIG}")"
+    printf '%s\n' "${DOCKER_DAEMON_SETTINGS}" >"${DOCKER_DAEMON_CONFIG}"
+    chmod 0644 "${DOCKER_DAEMON_CONFIG}"
+    systemctl restart docker.service
+}
+
+upgrade_database_network() {
+    if [[ $(docker network inspect --format '{{.EnableIPv6}}' "${DATABASE_NETWORK}" 2>/dev/null) == 'false' ]]; then
+        log "Recreating the ${DATABASE_NETWORK} Docker network with IPv6."
+        systemctl stop "${SERVICE_NAME}" better-budget-db.service
+        docker network rm "${DATABASE_NETWORK}" >/dev/null
+    fi
+    ensure_database_network
 }
 
 ensure_database_directories() {
@@ -855,6 +911,8 @@ bootstrap_host() {
     configure_ssm_dual_stack
     dnf install --assumeyes docker jq
     systemctl enable --now docker.service
+    keep_router_advertisements_with_forwarding
+    enable_docker_ipv6
     aws configure set default.use_dualstack_endpoint true
     create_swap
     constrain_host_memory
@@ -885,7 +943,7 @@ CONFIG
     install_systemd_units
     load_host_config
     ensure_log_group
-    ensure_database_network
+    upgrade_database_network
     ensure_database_directories
     systemctl restart better-budget-db.service
     systemctl restart better-budget.service

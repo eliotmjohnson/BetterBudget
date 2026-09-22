@@ -61,6 +61,9 @@
 .static-row {
     cursor: default;
 }
+.settings-buddy-icon {
+    justify-self: center;
+}
 .scenario-panel {
     display: grid;
     grid-template-columns: 30px 1fr;

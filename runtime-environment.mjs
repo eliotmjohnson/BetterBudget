@@ -63,6 +63,12 @@ function secretIsSecure(value) {
     return !insecureSecretMarkers.some((marker) => normalized.includes(marker));
 }
 
+function anthropicKeyIsValid(value) {
+    if (value === undefined || value.trim() === '') return true;
+
+    return value.startsWith('sk-ant-') && secretIsSecure(value);
+}
+
 function poolSizeIsValid(value) {
     if (value === undefined) return true;
     const parsed = Number(value);
@@ -116,6 +122,10 @@ export function assertValidRuntimeEnvironment(environment = process.env) {
         errors.push('AUTH_BYPASS must be false.');
     if (!localContainer && environment.ALLOW_INSECURE_LOCAL_AUTH !== 'false')
         errors.push('ALLOW_INSECURE_LOCAL_AUTH must be false.');
+    if (!anthropicKeyIsValid(environment.ANTHROPIC_API_KEY))
+        errors.push(
+            'ANTHROPIC_API_KEY must be empty or a real Claude API key.'
+        );
     if (
         environment.BETTER_BUDGET_BOOTSTRAP === 'true' &&
         !isOwnerBootstrap(environment)

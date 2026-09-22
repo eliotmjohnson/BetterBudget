@@ -185,6 +185,49 @@ IPv6 publish is the security-group-gated operator path. GitHub Actions deploys
 only the application image, so changes to the host script must be installed
 separately over Systems Manager.
 
+## Assistant key and egress (Version 5)
+
+The budget assistant needs `ANTHROPIC_API_KEY` in the application container and
+outbound HTTPS from that container to `api.anthropic.com`. Without the key the
+assistant is simply off: the button is not rendered and nothing calls out, so
+deploying Version 5 changes nothing in production until both steps below are
+done, the host script is installed over Systems Manager, and the key is added.
+
+- **The key.** `fetch_application_secrets()` reads the optional
+  `anthropic_api_key` field from the existing Secrets Manager entry, writes it
+  to the memory-backed secret directory beside the other runtime values (an
+  empty file when the field is absent), and the entrypoint exports it. The
+  updated host script must be installed over Systems Manager before the field
+  takes effect, and the application service must restart to pick up a changed
+  key. `runtime-environment.mjs` rejects a placeholder but accepts an empty
+  value.
+- **Egress.** The host has no public IPv4 address and no NAT gateway; its only
+  internet path is IPv6 through the internet gateway, with HTTPS egress to
+  `::/0` already allowed by the security group, and `api.anthropic.com`
+  publishes an AAAA record. The application container reaches it over IPv6 on
+  the `better-budget` network, which `bootstrap_host()` sets up in three steps,
+  in this order:
+    1. `keep_router_advertisements_with_forwarding()` writes a
+       `systemd-networkd` drop-in, `IPv6AcceptRA=yes`, for the interface that
+       holds the IPv6 default route. The host's global address (a DHCPv6 `/128`
+       with a lifetime of minutes) and its default route come from router
+       advertisements, which networkd stops accepting by default once IPv6
+       forwarding is on, and Docker turns forwarding on for an IPv6 network.
+       Without the drop-in the host would lose IPv6 within minutes, and with it
+       Systems Manager, ECR, and every AWS endpoint, since all are reached over
+       IPv6. It must be in place before Docker IPv6 is enabled.
+    2. `enable_docker_ipv6()` writes `/etc/docker/daemon.json` with
+       `experimental` and `ip6tables` (IPv6 NAT is experimental on the Docker 25
+       that Amazon Linux 2023 ships) and restarts Docker.
+    3. `upgrade_database_network()` stops both services and recreates an
+       IPv4-only `better-budget` network with `--ipv6` and the ULA subnet
+       `fd62:6275:6467:1::/64`; Docker masquerades it behind the host's global
+       address. The database's bind-mounted data directory is untouched. Service
+       starts only create the network when it is missing.
+
+    Adding NAT or a public IPv4 address instead is outside the standing
+    deployment rules and needs explicit user direction.
+
 ## Image constraints
 
 The regular production image must remain multi-stage, standalone, non-root, and

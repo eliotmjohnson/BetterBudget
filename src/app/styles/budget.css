@@ -271,7 +271,8 @@
     --app-switch-checked-color: var(--mint);
     --app-switch-checked-shadow: rgb(85 212 155 / 22%);
 }
-.app-switch--carryover {
+.app-switch--carryover,
+.app-switch--setting {
     --app-switch-resting-color: #d8dbe0;
     --app-switch-checked-color: var(--blue);
     --app-switch-checked-shadow: rgb(23 105 224 / 22%);

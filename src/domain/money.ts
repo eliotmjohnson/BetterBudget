@@ -46,6 +46,22 @@ export function formatCurrencyInput(value: Cents | string): string {
     return `${negative ? '-' : ''}$${whole}.${fraction}`;
 }
 
+/**
+ * Parses a non-negative dollar amount such as `12`, `$1,234.5`, or `0.99`
+ * into exact cents, or returns null when the text is not a plain amount.
+ */
+export function parseDollarsToCents(value: string): Cents | null {
+    const match = /^\$?(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?$/.exec(
+        value.trim()
+    );
+
+    if (!match) return null;
+    const whole = BigInt((match[1] ?? '0').replaceAll(',', ''));
+    const fraction = BigInt((match[2] ?? '').padEnd(2, '0'));
+
+    return cents(whole * 100n + fraction);
+}
+
 export function monthLabel(monthKey: MonthKey | string): string {
     const [year, month] = monthKey.split('-').map(Number);
 

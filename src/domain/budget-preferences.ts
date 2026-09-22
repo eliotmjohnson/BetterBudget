@@ -11,3 +11,12 @@ export function parseBudgetAmountView(
         ? value
         : DEFAULT_BUDGET_AMOUNT_VIEW;
 }
+
+export const ASSISTANT_PREFERENCE_COOKIE = 'better-budget-assistant-v1';
+
+/** Better Buddy is on for a device unless that device turned it off. */
+export function parseAssistantPreference(
+    value: string | null | undefined
+): boolean {
+    return value !== 'off';
+}

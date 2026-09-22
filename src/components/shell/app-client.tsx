@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { NavigationDetail } from '@/components/ui/navigation-detail';
 import { useToast } from '@/components/ui/toast-provider';
 import {
+    ASSISTANT_PREFERENCE_COOKIE,
     BUDGET_AMOUNT_VIEW_COOKIE,
     type BudgetAmountView
 } from '@/domain/budget-preferences';
@@ -12,6 +13,7 @@ import type { ActivityEntry, MonthSnapshot } from '@/domain/types';
 import { createUuid } from '@/domain/uuid';
 import type { BudgetMutation } from '@/server/mutation-schema';
 import { AppShell, type AppView } from './app-shell';
+import { AssistantLauncher } from '@/components/assistant/assistant-launcher';
 import { BudgetView } from '@/components/budget/budget-view';
 import { IncomeView } from '@/components/income/income-view';
 import { MonthActionsSheet } from './month-actions-sheet';
@@ -38,11 +40,19 @@ function viewFromPathname(pathname: string, fallback: AppView): AppView {
 
 const organizerHistoryStateKey = 'betterBudgetOrganizerMonth';
 
+function writePreferenceCookie(name: string, value: string) {
+    document.cookie = `${name}=${value}; Path=/; Max-Age=31536000; SameSite=Lax${window.location.protocol === 'https:' ? '; Secure' : ''}`;
+}
+
 export function BudgetApp({
+    assistantAvailable,
+    initialAssistantEnabled,
     initialBudgetAmountView,
     initialSnapshot,
     view
 }: {
+    assistantAvailable: boolean;
+    initialAssistantEnabled: boolean;
     initialBudgetAmountView: BudgetAmountView;
     initialSnapshot: MonthSnapshot;
     view: AppView;
@@ -63,6 +73,9 @@ export function BudgetApp({
         initialBudgetAmountView
     );
     const [budgetAnimationKey, setBudgetAnimationKey] = useState(0);
+    const [assistantEnabled, setAssistantEnabled] = useState(
+        initialAssistantEnabled
+    );
     const budgetMutation = useBudgetMutation(
         snapshot.monthKey,
         optimisticSnapshot,
@@ -193,7 +206,16 @@ export function BudgetApp({
                 monthKey={snapshot.monthKey}
                 onDefaultBudgetAmountViewChange={(nextView) => {
                     setDefaultBudgetAmountView(nextView);
-                    document.cookie = `${BUDGET_AMOUNT_VIEW_COOKIE}=${nextView}; Path=/; Max-Age=31536000; SameSite=Lax${window.location.protocol === 'https:' ? '; Secure' : ''}`;
+                    writePreferenceCookie(BUDGET_AMOUNT_VIEW_COOKIE, nextView);
+                }}
+                assistantAvailable={assistantAvailable}
+                assistantEnabled={assistantEnabled}
+                onAssistantEnabledChange={(enabled) => {
+                    setAssistantEnabled(enabled);
+                    writePreferenceCookie(
+                        ASSISTANT_PREFERENCE_COOKIE,
+                        enabled ? 'on' : 'off'
+                    );
                 }}
                 onOrganize={openOrganizer}
                 onMessage={(message) => showToast({ message })}
@@ -222,6 +244,11 @@ export function BudgetApp({
             online={online}
             syncing={syncing}
             mutationPending={budgetMutation.isPending}
+            floating={
+                assistantAvailable && assistantEnabled ? (
+                    <AssistantLauncher monthKey={snapshot.monthKey} />
+                ) : null
+            }
         >
             {content}
             {settingsSurface ? (

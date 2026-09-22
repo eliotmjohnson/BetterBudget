@@ -66,6 +66,7 @@ export function AppShell({
     online,
     syncing,
     mutationPending,
+    floating,
     children
 }: {
     view: AppView;
@@ -77,6 +78,7 @@ export function AppShell({
     online: boolean;
     syncing: boolean;
     mutationPending: boolean;
+    floating?: ReactNode;
     children: ReactNode;
 }) {
     const router = useRouter();
@@ -212,6 +214,7 @@ export function AppShell({
                 monthKey={monthKey}
                 onNavigate={navigate}
             />
+            {floating}
         </div>
     );
 }
