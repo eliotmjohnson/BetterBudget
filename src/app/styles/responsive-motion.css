@@ -318,7 +318,8 @@
         pointer-events: auto;
         will-change: auto;
     }
-    .navigation-detail-header::before {
+    .navigation-detail-header::before,
+    .navigation-detail-header::after {
         display: none;
     }
     .navigation-detail-header-action {
@@ -492,6 +493,14 @@
     }
     to {
         clip-path: inset(0 0 var(--navigation-detail-collapse-range, 65px) 0);
+    }
+}
+@keyframes navigation-detail-header-shadow {
+    from {
+        --navigation-detail-header-progress: 0;
+    }
+    to {
+        --navigation-detail-header-progress: 1;
     }
 }
 @keyframes navigation-detail-title-collapse {

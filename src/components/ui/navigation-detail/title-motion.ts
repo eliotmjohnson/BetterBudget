@@ -39,6 +39,7 @@ export function clearTitleMotion(content: HTMLElement | null) {
     body?.style.removeProperty('--navigation-detail-expanded-header-height');
     header?.style.removeProperty('--navigation-detail-expanded-header-height');
     header?.style.removeProperty('--navigation-detail-header-collapse-y');
+    header?.style.removeProperty('--navigation-detail-header-progress');
     title?.style.removeProperty('--navigation-detail-title-scale');
     title?.style.removeProperty('--navigation-detail-title-x');
     title?.style.removeProperty('--navigation-detail-title-y');
@@ -295,6 +296,10 @@ function applyTitleMotion(rt: TitleMotionRuntime) {
         '--navigation-detail-header-collapse-y',
         `${directCollapsedDistance.toFixed(3)}px`
     );
+    header.style.setProperty(
+        '--navigation-detail-header-progress',
+        directProgress.toFixed(4)
+    );
 
     // A wrapped title is centered on its own box and the wider single-line box
     // only takes over once the compact layout replaces it, so travel runs to
@@ -334,6 +339,7 @@ function applyTitleMotion(rt: TitleMotionRuntime) {
     content.dataset.navigationDetailMotionDirect = 'true';
     if (rt.titleEditHandoffProgress !== null) {
         void window.getComputedStyle(header, '::before').clipPath;
+        void window.getComputedStyle(header, '::after').transform;
         void window.getComputedStyle(titleElement).transform;
         rt.titleEditHandoffProgress = null;
         rt.schedule();
