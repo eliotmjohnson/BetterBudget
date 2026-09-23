@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronRight, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { useMemo, useState, type RefObject } from 'react';
 import { AppSwitch } from '@/components/ui/app-switch';
 import { CurrencyInput } from '@/components/ui/currency-input';
@@ -12,7 +12,8 @@ import type {
     MonthSnapshot
 } from '@/domain/types';
 import { createUuid } from '@/domain/uuid';
-import { TransactionIcon } from '@/components/shared/transaction-icon';
+import { useTransactionHoldMenu } from '@/components/shared/transaction-hold-menu';
+import { TransactionRow } from '@/components/shared/transaction-row';
 import { TransactionSheet } from '@/components/transactions/transaction-sheet';
 import { useVersionedDraft } from '@/components/shared/use-versioned-draft';
 import {
@@ -109,6 +110,16 @@ export function EditItemForm({
     const [selectedTransaction, setSelectedTransaction] =
         useState<ActivityEntry | null>(null);
     const [editingTransactionOpen, setEditingTransactionOpen] = useState(false);
+    const editTransaction = (entry: TransactionActivityEntry) => {
+        setSelectedTransaction(entry);
+        setEditingTransactionOpen(true);
+    };
+    const holdMenu = useTransactionHoldMenu({
+        monthKey: snapshot.monthKey,
+        mutate,
+        onDelete: onDeleteTransaction,
+        onEdit: editTransaction
+    });
     const itemTransactions = useMemo(
         () =>
             snapshot.activity.flatMap((entry) => {
@@ -241,43 +252,21 @@ export function EditItemForm({
                                 </h4>
                                 <div className='activity-list'>
                                     {rows.map(({ entry, allocation }) => (
-                                        <button
-                                            className='activity-row navigation-detail-transaction-row'
-                                            type='button'
+                                        <TransactionRow
                                             key={entry.id}
-                                            onClick={() => {
-                                                setSelectedTransaction(entry);
-                                                setEditingTransactionOpen(true);
-                                            }}
-                                        >
-                                            <TransactionIcon
-                                                type={entry.type}
-                                                tone={entry.tone}
-                                            />
-                                            <span className='activity-copy'>
-                                                <strong>{entry.title}</strong>
-                                                <span title={entry.subtitle}>
-                                                    {entry.subtitle}
-                                                </span>
-                                                {entry.split ? (
-                                                    <span className='split-tag'>
-                                                        Split
-                                                    </span>
-                                                ) : null}
-                                            </span>
-                                            <span
-                                                className={`activity-amount ${entry.type}`}
-                                            >
-                                                {transactionMoney(
-                                                    entry,
-                                                    allocation.amountCents
-                                                )}
-                                            </span>
-                                            <ChevronRight
-                                                size={17}
-                                                color='#a2a7af'
-                                            />
-                                        </button>
+                                            className='navigation-detail-transaction-row'
+                                            amount={transactionMoney(
+                                                entry,
+                                                allocation.amountCents
+                                            )}
+                                            entry={entry}
+                                            holdMenuProps={holdMenu.getRowProps(
+                                                entry
+                                            )}
+                                            onOpen={() =>
+                                                editTransaction(entry)
+                                            }
+                                        />
                                     ))}
                                 </div>
                             </section>
@@ -285,6 +274,7 @@ export function EditItemForm({
                     )}
                 </div>
             </div>
+            {holdMenu.menu}
             {selectedTransaction ? (
                 <TransactionSheet
                     key={selectedTransaction.id}

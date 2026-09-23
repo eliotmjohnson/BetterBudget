@@ -5,7 +5,7 @@ import { useEffect } from 'react';
 const KEYBOARD_MIN_PX = 100;
 const CHAT_SHEET = '.sheet-content:has([data-buddy-seat])';
 const KEYBOARD_MOTION_MS = 520;
-const KEYBOARD_MOTION = ['height', 'padding-top']
+const KEYBOARD_MOTION = ['height', 'padding-top', 'bottom']
     .map(
         (property) =>
             `${property} ${KEYBOARD_MOTION_MS}ms cubic-bezier(0.32, 0.72, 0, 1)`
@@ -15,8 +15,8 @@ const RAISED = 'data-keyboard-open';
 const heightOf = (element: HTMLElement) =>
     element.getBoundingClientRect().height;
 
-function setHeight(sheet: HTMLElement, height: number) {
-    sheet.style.height = `${height}px`;
+function setHeight(sheet: HTMLElement, height: string) {
+    sheet.style.height = height;
     sheet.style.maxHeight = 'none';
 }
 
@@ -62,21 +62,26 @@ function glideToEnd(body: HTMLElement) {
 /**
  * Animates the sheet's height between its resting size and the visible height
  * above the keyboard. CSS cannot transition out of a content-sized height, so
- * both ends are measured and the sheet travels between them in pixels.
+ * both ends are measured and the sheet travels between them in pixels. The
+ * handle collapses while raised, so its transition is paused while measuring,
+ * or the resting height would be read with the handle mid-collapse.
  */
-function glide(sheet: HTMLElement, target: number | null) {
+function glide(sheet: HTMLElement, target: string | null) {
     const from = heightOf(sheet);
     const raised = target !== null;
+    const handle = sheet.querySelector<HTMLElement>('.sheet-handle');
 
     sheet.style.transition = 'none';
+    handle?.style.setProperty('transition', 'none');
     sheet.toggleAttribute(RAISED, raised);
     if (target === null) clearHeight(sheet);
-    const to = target ?? heightOf(sheet);
+    const to = target ?? `${heightOf(sheet)}px`;
 
     sheet.toggleAttribute(RAISED, !raised);
-    setHeight(sheet, from);
+    setHeight(sheet, `${from}px`);
     void sheet.offsetHeight;
     sheet.style.transition = KEYBOARD_MOTION;
+    handle?.style.removeProperty('transition');
     sheet.toggleAttribute(RAISED, raised);
     setHeight(sheet, to);
 }
@@ -85,8 +90,10 @@ function glide(sheet: HTMLElement, target: number | null) {
  * While the chat is open and the on-screen keyboard is up, fits the sheet to
  * exactly the visible area. iOS Safari scrolls the page up by the keyboard's
  * height to reveal the composer, which already carries the bottom-anchored
- * sheet up onto the keyboard, so only the sheet's height changes: it shrinks to
- * the visible height, which puts its top at the top of the screen.
+ * sheet up onto the keyboard, so the sheet only shrinks to the visible height,
+ * which fills the screen up to its top edge behind the status bar, and drops
+ * the installed app's viewport-shortfall offset so it rests on the keyboard
+ * rather than below it.
  */
 export function useKeyboardLayout(open: boolean) {
     useEffect(() => {
@@ -106,7 +113,7 @@ export function useKeyboardLayout(open: boolean) {
             if (!sheet) return;
             const raised = fullHeight - viewport.height >= KEYBOARD_MIN_PX;
             const wasRaised = sheet.hasAttribute(RAISED);
-            const target = Math.round(viewport.height);
+            const target = `${Math.round(viewport.height)}px`;
 
             if (!raised && !wasRaised) return;
             window.clearTimeout(settleTimer);

@@ -1,15 +1,16 @@
 'use client';
 
-import { ChevronRight, Plus, Search, SlidersHorizontal, X } from 'lucide-react';
+import { Plus, Search, SlidersHorizontal, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Sheet } from '@/components/ui/sheet';
 import { formatCurrency } from '@/domain/money';
 import type { ActivityEntry, MonthSnapshot } from '@/domain/types';
 import type { BudgetMutation } from '@/server/mutation-schema';
-import { TransactionIcon } from '@/components/shared/transaction-icon';
+import { useTransactionHoldMenu } from '@/components/shared/transaction-hold-menu';
+import { TransactionRow } from '@/components/shared/transaction-row';
 import { TransactionSheet } from './transaction-sheet';
 
-type Mutate = (input: BudgetMutation) => void;
+type Mutate = (input: BudgetMutation) => boolean | void;
 type Filter = 'all' | 'expense' | 'refund';
 type SplitFilter = 'all' | 'split' | 'single';
 type TransactionActivityEntry = ActivityEntry & {
@@ -113,6 +114,16 @@ export function TransactionsView({
         null
     );
     const [editingOpen, setEditingOpen] = useState(false);
+    const editTransaction = (entry: TransactionActivityEntry) => {
+        setSelected(entry);
+        setEditingOpen(true);
+    };
+    const holdMenu = useTransactionHoldMenu({
+        monthKey: snapshot.monthKey,
+        mutate,
+        onDelete,
+        onEdit: editTransaction
+    });
     const validItemIds = useMemo(
         () =>
             new Set(
@@ -276,42 +287,19 @@ export function TransactionsView({
                         <h2 className='activity-date'>{dayLabel(date)}</h2>
                         <div className='activity-list'>
                             {entries.map((entry) => (
-                                <button
-                                    className='activity-row'
-                                    type='button'
+                                <TransactionRow
                                     key={entry.id}
-                                    onClick={() => {
-                                        setSelected(entry);
-                                        setEditingOpen(true);
-                                    }}
-                                >
-                                    <TransactionIcon
-                                        type={entry.type}
-                                        tone={entry.tone}
-                                    />
-                                    <span className='activity-copy'>
-                                        <strong>{entry.title}</strong>
-                                        <span title={entry.subtitle}>
-                                            {entry.subtitle}
-                                        </span>
-                                        {entry.split ? (
-                                            <span className='split-tag'>
-                                                Split
-                                            </span>
-                                        ) : null}
-                                    </span>
-                                    <span
-                                        className={`activity-amount ${entry.type}`}
-                                    >
-                                        {money(entry)}
-                                    </span>
-                                    <ChevronRight size={17} color='#a2a7af' />
-                                </button>
+                                    amount={money(entry)}
+                                    entry={entry}
+                                    holdMenuProps={holdMenu.getRowProps(entry)}
+                                    onOpen={() => editTransaction(entry)}
+                                />
                             ))}
                         </div>
                     </section>
                 ))
             )}
+            {holdMenu.menu}
             <TransactionSheet
                 open={adding}
                 onOpenChange={setAdding}

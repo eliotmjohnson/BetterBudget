@@ -6,9 +6,9 @@
     z-index: 40;
     top: clamp(
         calc(env(safe-area-inset-top) + 76px),
-        calc(var(--assistant-y, 0.68) * 100dvh),
+        calc(var(--assistant-y, 0.68) * var(--viewport-height)),
         calc(
-            100dvh - var(--assistant-launcher-bottom-reserve) -
+            var(--viewport-height) - var(--assistant-launcher-bottom-reserve) -
                 var(--assistant-launcher-size)
         )
     );
@@ -280,8 +280,20 @@
 }
 @media (width < 760px) {
     .sheet-content[data-keyboard-open]:has([data-buddy-seat]) {
-        padding-top: calc(12px + env(safe-area-inset-top));
+        bottom: 0;
+        padding-top: calc(env(safe-area-inset-top) + 4px);
         border-radius: 0;
+    }
+    .sheet-content:has([data-buddy-seat]) .sheet-handle {
+        transition:
+            height 520ms cubic-bezier(0.32, 0.72, 0, 1),
+            margin-bottom 520ms cubic-bezier(0.32, 0.72, 0, 1),
+            opacity 260ms ease;
+    }
+    .sheet-content[data-keyboard-open]:has([data-buddy-seat]) .sheet-handle {
+        height: 0;
+        margin-bottom: 0;
+        opacity: 0;
     }
     .sheet-content[data-keyboard-open]:has([data-buddy-seat]) .sheet-footer {
         padding-bottom: 12px;

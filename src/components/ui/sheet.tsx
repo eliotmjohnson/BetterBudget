@@ -36,7 +36,7 @@ function renderedOffset(content: HTMLElement) {
     return new DOMMatrixReadOnly(getComputedStyle(content).transform).m42;
 }
 
-function restoreSheetFocus(target: HTMLElement, focusVisible: boolean) {
+export function restoreSheetFocus(target: HTMLElement, focusVisible: boolean) {
     if (!focusVisible) target.dataset.sheetRestoredFocus = 'true';
     target.focus({ preventScroll: true });
     if (focusVisible) return;

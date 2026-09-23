@@ -933,7 +933,7 @@ The database CLI scripts intentionally set the `react-server` Node condition bec
 │   ├── components/settings/       Settings page
 │   ├── components/shell/          App shell, query lifecycle, optimistic patches
 │   ├── components/shared/         Primitives more than one view needs
-│   ├── components/ui/             Sheet, gesture, sortable, input, and corner primitives
+│   ├── components/ui/             Sheet, gesture, sortable, hold-menu, input, and corner primitives
 │   ├── db/                        Drizzle schema, adapters, migrations, seed
 │   ├── domain/                    Exact money, calculations, and shared types
 │   ├── lib/                       Authentication and supporting libraries
@@ -947,7 +947,7 @@ The database CLI scripts intentionally set the `react-server` Node condition bec
 
 ## PWA and accessibility
 
-The application installs as **Better Budget** with white-background `any` and maskable icons, white theme/background metadata, safe-area support, and standalone display configuration. To verify installation behavior, use a production build or a browser environment that permits local PWA installation; installed icon changes can remain cached by iOS and may require removing and reinstalling the home-screen app.
+The application installs as **Better Budget** with white-background `any` and maskable icons, white theme/background metadata, safe-area support, and standalone display configuration. The installed iOS app runs edge to edge under the status bar (`statusBarStyle: 'black-translucent'` in `src/app/layout.tsx`), so every top-anchored surface pads itself by `env(safe-area-inset-top)`, and full-height or bottom-anchored surfaces use `--viewport-height` and `--viewport-shortfall` from `tokens.css` to reach the real bottom edge (iOS otherwise sizes the installed app's viewport a status bar short). iOS reads the status-bar style when the app is added to the home screen, so a change to it only appears after removing and re-adding the app. To verify installation behavior, use a production build or a browser environment that permits local PWA installation; installed icon changes can remain cached by iOS and may require removing and reinstalling the home-screen app.
 
 On mobile, the app intentionally disables pinch/double-tap page zoom, text
 selection, touch callouts, document-level pull-to-refresh, and cancelable Safari

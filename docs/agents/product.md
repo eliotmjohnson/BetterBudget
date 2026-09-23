@@ -24,7 +24,7 @@ The implemented product supports:
   over".
 - Cents-first currency inputs that always display a formatted value such as `$200.57`; typing digits shifts them through the decimal places without requiring a decimal point.
 - Expense and refund transactions, including exact splits across budget items.
-- Adding transactions globally or from a line-item detail with that item preselected, editing transactions, soft deleting, and undoing transaction deletion.
+- Adding transactions globally or from a line-item detail with that item preselected, editing transactions, duplicating them into the same date and allocations, soft deleting, and undoing transaction deletion. Transaction rows on the Transactions page and in a line-item detail open a hold menu (Edit, Duplicate, Delete) on a touch hold, right-click, or the keyboard context-menu key; a plain tap still opens the edit sheet.
 - Expected-income sources with editable names, icons, colors, and expected amounts plus one or more dated received-income receipts.
   When a month has no income sources, the Income page shows a guided empty
   state with an action that opens the add-source flow.

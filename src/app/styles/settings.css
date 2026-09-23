@@ -128,8 +128,8 @@
 }
 
 .sign-in-screen {
-    height: 100dvh;
-    min-height: 100dvh;
+    height: var(--viewport-height);
+    min-height: var(--viewport-height);
     display: grid;
     place-items: center;
     overflow-y: auto;
@@ -139,7 +139,7 @@
 }
 .sign-in-card {
     width: min(100%, 390px);
-    min-height: min(844px, calc(100dvh - 40px));
+    min-height: min(844px, calc(var(--viewport-height) - 40px));
     display: flex;
     flex-direction: column;
     justify-content: center;
