@@ -963,7 +963,13 @@ node scripts/generate-ios-startup-images.mjs
 
 It is a deliberate one-time asset command with no npm script. `sharp` is a
 declared devDependency for exactly this purpose. Regenerate and commit the
-output only when the source icon or the viewport list changes.
+output only when the source icon, the viewport list, or the launch layout
+changes.
+
+The source icon carries white padding around its glyph, so
+the generator trims it once to measure the glyph's visible bounds and spaces and
+centers the title against the glyph rather than the icon's full square. Without
+that, the fixed gap reads roughly three times larger than it is.
 
 UI changes should preserve:
 

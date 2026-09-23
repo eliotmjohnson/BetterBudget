@@ -27,7 +27,7 @@ function escapeXml(value) {
         .replaceAll("'", '&apos;');
 }
 
-function launchImageSvg(width, height, pixelRatio, iconDataUrl) {
+function launchImageSvg(width, height, pixelRatio, icon) {
     const logicalWidth = width / pixelRatio;
     const logicalHeight = height / pixelRatio;
     const isLandscape = logicalWidth > logicalHeight;
@@ -41,11 +41,14 @@ function launchImageSvg(width, height, pixelRatio, iconDataUrl) {
     );
     const gap = isLandscape ? 10 : 16;
     const titleHeight = fontSize * 1.15;
-    const groupHeight = iconSize + gap + titleHeight;
+    const glyphTop = iconSize * icon.glyphTop;
+    const glyphHeight = iconSize * (icon.glyphBottom - icon.glyphTop);
+    const groupHeight = glyphHeight + gap + titleHeight;
     const groupCenter = logicalHeight * (isLandscape ? 0.49 : 0.44);
     const groupTop = groupCenter - groupHeight / 2;
     const iconX = (logicalWidth - iconSize) / 2;
-    const titleBaseline = groupTop + iconSize + gap + fontSize * 0.88;
+    const iconY = groupTop - glyphTop;
+    const titleBaseline = groupTop + glyphHeight + gap + fontSize * 0.88;
     const title = escapeXml('Better Budget');
 
     return `
@@ -53,7 +56,7 @@ function launchImageSvg(width, height, pixelRatio, iconDataUrl) {
             width="${width}" height="${height}"
             viewBox="0 0 ${logicalWidth} ${logicalHeight}">
             <rect width="100%" height="100%" fill="#ffffff"/>
-            <image href="${iconDataUrl}" x="${iconX}" y="${groupTop}"
+            <image href="${icon.dataUrl}" x="${iconX}" y="${iconY}"
                 width="${iconSize}" height="${iconSize}"/>
             <text x="50%" y="${titleBaseline}" text-anchor="middle"
                 fill="#15191f" font-family="SF Pro Display, Helvetica Neue, Arial, sans-serif"
@@ -63,10 +66,24 @@ function launchImageSvg(width, height, pixelRatio, iconDataUrl) {
     `;
 }
 
-async function generateLaunchImage(width, height, pixelRatio, iconDataUrl) {
+async function measureIcon(iconBuffer) {
+    const { height } = await sharp(iconBuffer).metadata();
+    const { info } = await sharp(iconBuffer)
+        .trim({ threshold: 10 })
+        .toBuffer({ resolveWithObject: true });
+    const glyphTopPixels = -info.trimOffsetTop;
+
+    return {
+        dataUrl: `data:image/png;base64,${iconBuffer.toString('base64')}`,
+        glyphTop: glyphTopPixels / height,
+        glyphBottom: (glyphTopPixels + info.height) / height
+    };
+}
+
+async function generateLaunchImage(width, height, pixelRatio, icon) {
     const filename = `launch-${width}x${height}.png`;
     const outputPath = path.join(outputDirectory, filename);
-    const svg = launchImageSvg(width, height, pixelRatio, iconDataUrl);
+    const svg = launchImageSvg(width, height, pixelRatio, icon);
 
     await sharp(Buffer.from(svg))
         .png({ compressionLevel: 9, palette: true, quality: 100 })
@@ -74,11 +91,11 @@ async function generateLaunchImage(width, height, pixelRatio, iconDataUrl) {
 }
 
 async function main() {
-    const [icon, viewportJson] = await Promise.all([
+    const [iconBuffer, viewportJson] = await Promise.all([
         readFile(iconPath),
         readFile(viewportPath, 'utf8')
     ]);
-    const iconDataUrl = `data:image/png;base64,${icon.toString('base64')}`;
+    const icon = await measureIcon(iconBuffer);
     const viewports = JSON.parse(viewportJson);
     const images = new Map();
 
@@ -101,7 +118,7 @@ async function main() {
     await mkdir(outputDirectory, { recursive: true });
     await Promise.all(
         [...images.values()].map(({ width, height, pixelRatio }) =>
-            generateLaunchImage(width, height, pixelRatio, iconDataUrl)
+            generateLaunchImage(width, height, pixelRatio, icon)
         )
     );
 }
