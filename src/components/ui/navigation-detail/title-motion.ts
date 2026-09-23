@@ -20,6 +20,12 @@ const titleRevealProgress = 0.65; // Matches the 65% collapse keyframe stop.
 const reducedMotionExpandThreshold = 8;
 const headerShadowFadeDistance = 24;
 
+export const scrollDrivenMotionSupported = () =>
+    CSS.supports('animation-timeline: --navigation-detail-scroll') &&
+    CSS.supports('animation-range: 0px 1px') &&
+    CSS.supports('scroll-timeline: --navigation-detail-scroll block') &&
+    CSS.supports('timeline-scope: --navigation-detail-scroll');
+
 export function clearTitleMotion(content: HTMLElement | null) {
     if (!content) return;
 
@@ -392,11 +398,7 @@ export function setupTitleMotion(
     const reducedMotionQuery = window.matchMedia(
         '(prefers-reduced-motion: reduce)'
     );
-    const supportsScrollDrivenMotion =
-        CSS.supports('animation-timeline: --navigation-detail-scroll') &&
-        CSS.supports('animation-range: 0px 1px') &&
-        CSS.supports('scroll-timeline: --navigation-detail-scroll block') &&
-        CSS.supports('timeline-scope: --navigation-detail-scroll');
+    const supportsScrollDrivenMotion = scrollDrivenMotionSupported();
     let titleEditTransitionNeeded = false;
     let titleEditTransitionTimer: ReturnType<typeof setTimeout> | null = null;
     const rt: TitleMotionRuntime = {

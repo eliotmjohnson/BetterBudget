@@ -16,7 +16,10 @@ import { TransactionIcon } from '@/components/shared/transaction-icon';
 import { TransactionSheet } from '@/components/transactions/transaction-sheet';
 import { useVersionedDraft } from '@/components/shared/use-versioned-draft';
 import {
-    fitAmountStyle,
+    ItemRemainingCard,
+    ItemRemainingStrip
+} from '@/components/budget/item-remaining-summary';
+import {
     money,
     type Mutate,
     type MutateConfirmed
@@ -122,18 +125,6 @@ export function EditItemForm({
         () => Map.groupBy(itemTransactions, ({ entry }) => entry.occurredOn),
         [itemTransactions]
     );
-    const remainingCents = BigInt(item.availableCents);
-    const remainingState =
-        remainingCents < 0n
-            ? 'negative'
-            : remainingCents > 0n
-              ? 'positive'
-              : 'neutral';
-    const remainingLabel =
-        remainingCents < 0n ? 'Over budget this month' : 'Remaining this month';
-    const remainingAmount = money(
-        (remainingCents < 0n ? -remainingCents : remainingCents).toString()
-    );
     const commitPlanned = async () => {
         const plannedCents = planned || '0';
 
@@ -158,19 +149,7 @@ export function EditItemForm({
 
     return (
         <div className='navigation-detail-form'>
-            <div className='line-item-remaining' data-state={remainingState}>
-                <span className='line-item-remaining-label'>
-                    {remainingLabel}
-                </span>
-                <strong style={fitAmountStyle(remainingAmount)}>
-                    {remainingAmount}
-                </strong>
-                <span className='line-item-remaining-note'>
-                    {remainingCents < 0n
-                        ? "Beyond this month's available funds"
-                        : "Available after this month's activity"}
-                </span>
-            </div>
+            <ItemRemainingCard item={item} />
             <div className='field'>
                 <label htmlFor='item-planned'>Planned amount</label>
                 <CurrencyInput
@@ -447,6 +426,7 @@ export function EditItemDetails({
             open={item !== null}
             onOpenChange={onOpenChange}
             restoreFocusRef={restoreFocusRef}
+            summary={<ItemRemainingStrip item={renderedItem} />}
             title={renderedItem.name}
             titleContent={
                 <EditableItemTitle

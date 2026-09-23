@@ -22,6 +22,7 @@ import {
     type EdgeDragContext,
     type EdgeDragState
 } from './edge-drag';
+import { clearSummaryMotion, setupSummaryMotion } from './summary-motion';
 import {
     clearTitleMotion,
     mobileMedia,
@@ -65,6 +66,7 @@ export function NavigationDetail({
     restoreFocusRef,
     restoreFocusPreferenceRef,
     restoreFocusVisible,
+    summary,
     title,
     titleContent
 }: {
@@ -77,6 +79,7 @@ export function NavigationDetail({
     restoreFocusRef?: RefObject<HTMLElement | null>;
     restoreFocusPreferenceRef?: RefObject<boolean>;
     restoreFocusVisible?: boolean;
+    summary?: ReactNode;
     title: string;
     titleContent?: ReactNode;
 }) {
@@ -97,6 +100,7 @@ export function NavigationDetail({
     const titleSelectionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
         null
     );
+    const summaryRef = useRef<HTMLDivElement>(null);
     const settleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const motionCleanupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
@@ -202,6 +206,19 @@ export function NavigationDetail({
         });
     }, [contentReady, open, title]);
 
+    const hasSummary = summary !== undefined;
+
+    useLayoutEffect(() => {
+        if (!open || !hasSummary) return;
+
+        return setupSummaryMotion({
+            bodyRef,
+            contentRef,
+            headerRef,
+            summaryRef
+        });
+    }, [contentReady, hasSummary, open, title]);
+
     useEffect(() => {
         return () => {
             resetSettleTimer();
@@ -215,6 +232,7 @@ export function NavigationDetail({
                 cancelAnimationFrame(enterFrameRef.current);
             clearTitleSelectionTimer();
             clearTitleMotion(contentRef.current);
+            clearSummaryMotion(contentRef.current);
             clearBaseMotion();
         };
     }, []);
@@ -247,6 +265,10 @@ export function NavigationDetail({
                         floatingAction
                             ? ' navigation-detail-content--with-floating-action'
                             : ''
+                    }${
+                        hasSummary
+                            ? ' navigation-detail-content--with-summary'
+                            : ''
                     }`}
                     onAnimationEnd={(event) => {
                         if (
@@ -255,6 +277,7 @@ export function NavigationDetail({
                         ) {
                             activeRef.current = false;
                             clearTitleMotion(event.currentTarget);
+                            clearSummaryMotion(event.currentTarget);
                             motionCleanupTimerRef.current = setTimeout(() => {
                                 clearBaseMotion();
                                 motionCleanupTimerRef.current = null;
@@ -404,6 +427,17 @@ export function NavigationDetail({
                             <X size={22} strokeWidth={2} />
                         </Dialog.Close>
                     </header>
+                    {hasSummary ? (
+                        <div
+                            ref={summaryRef}
+                            className='navigation-detail-summary'
+                            aria-hidden='true'
+                        >
+                            <div className='navigation-detail-summary-inner'>
+                                {summary}
+                            </div>
+                        </div>
+                    ) : null}
                     <div ref={bodyRef} className='navigation-detail-body'>
                         {children}
                     </div>
