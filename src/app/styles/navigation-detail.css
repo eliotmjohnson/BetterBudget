@@ -92,8 +92,11 @@ body:not([data-navigation-detail-state='open'])
     flex: 0 0 auto;
     margin-left: -5px;
 }
-/* An unregistered custom property animates discretely, which snapped the
-   wrapped tail away at the midpoint of a scroll-driven collapse. */
+@property --navigation-detail-title-progress {
+    syntax: '<number>';
+    inherits: false;
+    initial-value: 0;
+}
 @property --navigation-detail-title-tail {
     syntax: '<number>';
     inherits: false;
@@ -263,6 +266,32 @@ body:not([data-navigation-detail-state='open'])
                 [data-navigation-detail-motion-direct]
             )
             .navigation-detail-title {
+            transform: translate3d(
+                    calc(
+                        var(--navigation-detail-title-motion-x, 0px) *
+                            min(var(--navigation-detail-title-progress), 0.65) +
+                            (
+                                var(--navigation-detail-title-rest-x, 0px) -
+                                    var(
+                                        --navigation-detail-title-motion-x,
+                                        0px
+                                    ) *
+                                    0.65
+                            ) *
+                            var(--navigation-detail-title-head)
+                    ),
+                    calc(
+                        var(--navigation-detail-title-compact-y, 0px) *
+                            var(--navigation-detail-title-progress)
+                    ),
+                    0
+                )
+                scale(
+                    calc(
+                        1 + (20 / 46 - 1) *
+                            var(--navigation-detail-title-progress)
+                    )
+                );
             animation: navigation-detail-title-collapse linear both;
             animation-timeline: --navigation-detail-scroll;
             animation-range: 0px var(--navigation-detail-collapse-range, 65px);
