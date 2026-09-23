@@ -1,6 +1,10 @@
 import { useId } from 'react';
 import { cn } from '@/lib/utils';
 
+export const brandCoinDollarCurve =
+    'M779 658c-15-14-50-17-71-3-23 16-16 39 9 47l43 12c29 8 34 31 13 48-22 17-59 13-78-2';
+export const brandCoinDollarStem = 'M742 638v140';
+
 export function BrandMark({
     compact = false,
     className
@@ -92,7 +96,7 @@ export function BrandMark({
                     strokeWidth='30'
                 />
                 <path
-                    d='M779 658c-15-14-50-17-71-3-23 16-16 39 9 47l43 12c29 8 34 31 13 48-22 17-59 13-78-2'
+                    d={brandCoinDollarCurve}
                     fill='none'
                     stroke='#FFFFFF'
                     strokeWidth='27'
@@ -100,7 +104,7 @@ export function BrandMark({
                     strokeLinejoin='round'
                 />
                 <path
-                    d='M742 638v140'
+                    d={brandCoinDollarStem}
                     fill='none'
                     stroke='#FFFFFF'
                     strokeWidth='23'

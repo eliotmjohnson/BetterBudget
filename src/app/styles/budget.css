@@ -627,6 +627,22 @@ body > .sortable-drag-overlay * {
 .budget-row .progress-track {
     margin-left: 0;
 }
+.budget-row-progress {
+    position: relative;
+    margin-top: 7px;
+}
+.budget-row-progress .progress-track {
+    margin-top: 0;
+}
+.carryover-coin {
+    position: absolute;
+    top: 50%;
+    right: 0;
+    width: 12px;
+    height: 12px;
+    transform: translateY(-50%);
+    pointer-events: none;
+}
 .budget-add-item {
     width: 100%;
     min-height: 44px;

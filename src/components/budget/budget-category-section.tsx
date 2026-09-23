@@ -14,6 +14,7 @@ import { createUuid } from '@/domain/uuid';
 import { CategoryIcon } from '@/components/shared/category-icon';
 import { money, type Mutate } from '@/components/shared/budget-view-helpers';
 import { PlanInput } from './budget-item-editors';
+import { CarryoverCoin } from './carryover-coin';
 
 export const remainingAvailableProgress = (
     remaining: bigint,
@@ -125,6 +126,9 @@ export function BudgetCategorySection({
                                 BigInt(item.spentCents)
                             );
                             const overBudget = available < 0n;
+                            const balanceText = overBudget
+                                ? `${money((-available).toString())} over budget`
+                                : `${money(item.availableCents)} remaining`;
                             const pendingItem =
                                 item.definitionId.startsWith('optimistic-');
 
@@ -200,29 +204,36 @@ export function BudgetCategorySection({
                                                     </button>
                                                 )}
                                             </div>
-                                            <div
-                                                className={
-                                                    overBudget
-                                                        ? 'progress-track progress-track--negative'
-                                                        : 'progress-track'
-                                                }
-                                                role='progressbar'
-                                                aria-label={`${item.name} remaining`}
-                                                aria-valuemin={0}
-                                                aria-valuemax={100}
-                                                aria-valuenow={Math.round(fill)}
-                                                aria-valuetext={
-                                                    overBudget
-                                                        ? `${money((-available).toString())} over budget`
-                                                        : `${money(item.availableCents)} remaining`
-                                                }
-                                            >
+                                            <div className='budget-row-progress'>
                                                 <div
-                                                    className='progress-fill'
-                                                    style={{
-                                                        width: `${fill}%`
-                                                    }}
-                                                />
+                                                    className={
+                                                        overBudget
+                                                            ? 'progress-track progress-track--negative'
+                                                            : 'progress-track'
+                                                    }
+                                                    role='progressbar'
+                                                    aria-label={`${item.name} remaining`}
+                                                    aria-valuemin={0}
+                                                    aria-valuemax={100}
+                                                    aria-valuenow={Math.round(
+                                                        fill
+                                                    )}
+                                                    aria-valuetext={
+                                                        item.carryoverEnabled
+                                                            ? `${balanceText}, carries over`
+                                                            : balanceText
+                                                    }
+                                                >
+                                                    <div
+                                                        className='progress-fill'
+                                                        style={{
+                                                            width: `${fill}%`
+                                                        }}
+                                                    />
+                                                </div>
+                                                {item.carryoverEnabled ? (
+                                                    <CarryoverCoin />
+                                                ) : null}
                                             </div>
                                         </div>
                                     </SwipeReveal>

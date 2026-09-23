@@ -736,6 +736,8 @@
     color: var(--ink);
 }
 .bordered-icon {
+    width: 46px;
+    height: 46px;
     flex: 0 0 auto;
     border: 1px solid var(--line);
     border-radius: calc(12px * var(--corner-radius-scale));

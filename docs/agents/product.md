@@ -18,7 +18,10 @@ The implemented product supports:
 - Adding, editing, reordering, archiving, and conditionally deleting categories and items. Deleting a category or item that has transactions in the selected month or later opens a delete sheet that requires a destination budget item for that activity and offers to move the planned amount too; a definition with only a plan offers the move as optional. Permanent deletion appears only for definitions that were never used. The Budget page retains creation, direct category name/icon/color editing, and item swipe deletion. The Settings organizer is a focused, collapsible Budget-style list with compact 56 px category headers and 44 px item rows for category appearance and item-name editing, history-preserving deletion, permanent deletion of unused definitions, and reordering; it intentionally does not create structure. A 350 ms long-press on a category header or item row starts reordering on both surfaces, with a lifted pointer-following preview, an in-list placeholder, and animated neighboring rows. There are no visible drag grips.
 - Planned amount editing and forward-looking per-month carryover settings. A
   month's switch sends its ending balance to the immediately following month;
-  it does not change that month's inbound balance.
+  it does not change that month's inbound balance. Budget rows whose carryover
+  is on cap the right end of their progress bar with the Better Budget dollar
+  coin from the logo, with no text; the bar's accessible value adds "carries
+  over".
 - Cents-first currency inputs that always display a formatted value such as `$200.57`; typing digits shifts them through the decimal places without requiring a decimal point.
 - Expense and refund transactions, including exact splits across budget items.
 - Adding transactions globally or from a line-item detail with that item preselected, editing transactions, soft deleting, and undoing transaction deletion.

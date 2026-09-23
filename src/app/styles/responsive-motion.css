@@ -59,6 +59,10 @@
     .inline-money-input {
         font-size: 17px;
     }
+    .carryover-coin {
+        width: 16px;
+        height: 16px;
+    }
     .money-cell,
     .inline-money-input {
         width: auto;
