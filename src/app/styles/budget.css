@@ -754,7 +754,17 @@ body > .sortable-drag-overlay * {
     pointer-events: none;
 }
 .bottom-nav-surface[data-continuous-corners] {
-    box-shadow: var(--bottom-nav-shadow);
+    box-shadow: none;
+}
+.bottom-nav-shadow {
+    position: absolute;
+    z-index: -1;
+    inset: 1px;
+    border-radius: 999px;
+    box-shadow:
+        0 10px 32px rgb(28 39 58 / 16%),
+        0 2px 8px rgb(28 39 58 / 8%);
+    pointer-events: none;
 }
 .bottom-nav-lens-glass[data-continuous-corners] {
     box-shadow: none;

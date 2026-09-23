@@ -5,6 +5,7 @@ import {
     useId,
     useLayoutEffect,
     useState,
+    type CSSProperties,
     type ReactNode
 } from 'react';
 import { attachContinuousCorners, type ContinuousShape } from './attach';
@@ -26,6 +27,22 @@ export function useContinuousCorners<T extends HTMLElement>() {
     }, [element]);
 
     return [setElement, element ? shape : null] as const;
+}
+
+export function continuousMask({
+    outline,
+    width,
+    height
+}: ContinuousShape): CSSProperties {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><path d="${outline}"/></svg>`;
+    const image = `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+
+    return {
+        maskImage: image,
+        maskRepeat: 'no-repeat',
+        WebkitMaskImage: image,
+        WebkitMaskRepeat: 'no-repeat'
+    };
 }
 
 const continuousControls = [

@@ -46,6 +46,7 @@
     --corner-radius-scale: 1;
 }
 [data-continuous-corners],
+.bottom-nav-shadow,
 .month-picker-grid button[data-current='true']::after,
 .icon-button,
 .app-switch,

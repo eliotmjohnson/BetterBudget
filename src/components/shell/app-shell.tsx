@@ -20,6 +20,7 @@ import {
 import { BrandMark } from '@/components/brand-mark';
 import {
     ContinuousStroke,
+    continuousMask,
     useContinuousCorners
 } from '@/components/ui/continuous-corners';
 import { shiftMonth, type MonthKey } from '@/domain/money';
@@ -245,7 +246,12 @@ function BottomNav({
             aria-label='Primary navigation'
             style={{ '--bottom-nav-index': activeIndex } as CSSProperties}
         >
-            <span ref={surfaceRef} className='bottom-nav-surface'>
+            <span className='bottom-nav-shadow' aria-hidden='true' />
+            <span
+                ref={surfaceRef}
+                className='bottom-nav-surface'
+                style={surfaceShape ? continuousMask(surfaceShape) : undefined}
+            >
                 {surfaceShape ? (
                     <ContinuousStroke
                         shape={surfaceShape}
@@ -272,6 +278,17 @@ function BottomNav({
                                     stopColor='#fff'
                                     stopOpacity='0.7'
                                 />
+                            </linearGradient>
+                        )}
+                    />
+                ) : null}
+                {surfaceShape ? (
+                    <ContinuousStroke
+                        shape={surfaceShape}
+                        width={0.5}
+                        gradient={(id) => (
+                            <linearGradient id={id}>
+                                <stop stopColor='rgb(28 39 58 / 6%)' />
                             </linearGradient>
                         )}
                     />
