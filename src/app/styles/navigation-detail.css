@@ -62,7 +62,7 @@ body:not([data-navigation-detail-state='open'])
     pointer-events: none;
     will-change: clip-path;
 }
-@property --navigation-detail-header-progress {
+@property --navigation-detail-header-shadow {
     syntax: '<number>';
     inherits: true;
     initial-value: 0;
@@ -71,7 +71,7 @@ body:not([data-navigation-detail-state='open'])
     content: '';
     position: absolute;
     z-index: 0;
-    top: 100%;
+    top: calc(100% - var(--navigation-detail-collapse-range, 0px));
     right: 0;
     left: 0;
     height: 10px;
@@ -81,12 +81,7 @@ body:not([data-navigation-detail-state='open'])
         rgb(21 25 31 / 3%) 4px,
         rgb(21 25 31 / 0%)
     );
-    opacity: var(--navigation-detail-header-progress);
-    transform: translate3d(
-        0,
-        calc(-1 * var(--navigation-detail-header-collapse-y, 0px)),
-        0
-    );
+    opacity: var(--navigation-detail-header-shadow);
     pointer-events: none;
 }
 .navigation-detail-header-action {
@@ -256,9 +251,7 @@ body:not([data-navigation-detail-state='open'])
 }
 .navigation-detail-content[data-navigation-detail-title-edit-transition='true']
     .navigation-detail-header::after {
-    transition:
-        transform 0.36s cubic-bezier(0.4, 0, 0.2, 1),
-        opacity 0.36s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: opacity 0.36s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .navigation-detail-content[data-navigation-detail-title-edit-transition='true']
     .navigation-detail-title {
@@ -299,17 +292,10 @@ body:not([data-navigation-detail-state='open'])
                 [data-navigation-detail-motion-direct]
             )
             .navigation-detail-header::after {
-            transform: translate3d(
-                0,
-                calc(
-                    -1 * var(--navigation-detail-collapse-range, 65px) *
-                        var(--navigation-detail-header-progress)
-                ),
-                0
-            );
             animation: navigation-detail-header-shadow linear both;
             animation-timeline: --navigation-detail-scroll;
-            animation-range: 0px var(--navigation-detail-collapse-range, 65px);
+            animation-range: var(--navigation-detail-collapse-range, 65px)
+                calc(var(--navigation-detail-collapse-range, 65px) + 24px);
         }
         .navigation-detail-content[data-navigation-detail-scroll-driven]:not(
                 [data-navigation-detail-motion-direct]

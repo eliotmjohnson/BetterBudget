@@ -497,10 +497,10 @@
 }
 @keyframes navigation-detail-header-shadow {
     from {
-        --navigation-detail-header-progress: 0;
+        --navigation-detail-header-shadow: 0;
     }
     to {
-        --navigation-detail-header-progress: 1;
+        --navigation-detail-header-shadow: 1;
     }
 }
 @keyframes navigation-detail-title-collapse {

@@ -18,6 +18,7 @@ const titleCompactScale = 20 / 46;
 const titleTailFadeProgress = 0.5;
 const titleRevealProgress = 0.65; // Matches the 65% collapse keyframe stop.
 const reducedMotionExpandThreshold = 8;
+const headerShadowFadeDistance = 24;
 
 export function clearTitleMotion(content: HTMLElement | null) {
     if (!content) return;
@@ -39,7 +40,7 @@ export function clearTitleMotion(content: HTMLElement | null) {
     body?.style.removeProperty('--navigation-detail-expanded-header-height');
     header?.style.removeProperty('--navigation-detail-expanded-header-height');
     header?.style.removeProperty('--navigation-detail-header-collapse-y');
-    header?.style.removeProperty('--navigation-detail-header-progress');
+    header?.style.removeProperty('--navigation-detail-header-shadow');
     title?.style.removeProperty('--navigation-detail-title-scale');
     title?.style.removeProperty('--navigation-detail-title-x');
     title?.style.removeProperty('--navigation-detail-title-y');
@@ -235,6 +236,22 @@ function readTitleMotion(rt: TitleMotionRuntime, ignoreEditing = false) {
 
     return { collapsedDistance, progress };
 }
+function headerShadow(
+    rt: TitleMotionRuntime,
+    progress: number,
+    collapseRange: number
+) {
+    if (progress < 1) return 0;
+    if (rt.reducedMotionQuery.matches) return 1;
+
+    return Math.min(
+        1,
+        Math.max(
+            0,
+            (rt.body.scrollTop - collapseRange) / headerShadowFadeDistance
+        )
+    );
+}
 function applyTitleMotion(rt: TitleMotionRuntime) {
     const {
         content,
@@ -297,8 +314,8 @@ function applyTitleMotion(rt: TitleMotionRuntime) {
         `${directCollapsedDistance.toFixed(3)}px`
     );
     header.style.setProperty(
-        '--navigation-detail-header-progress',
-        directProgress.toFixed(4)
+        '--navigation-detail-header-shadow',
+        headerShadow(rt, directProgress, collapseRange).toFixed(4)
     );
 
     // A wrapped title is centered on its own box and the wider single-line box
@@ -339,7 +356,6 @@ function applyTitleMotion(rt: TitleMotionRuntime) {
     content.dataset.navigationDetailMotionDirect = 'true';
     if (rt.titleEditHandoffProgress !== null) {
         void window.getComputedStyle(header, '::before').clipPath;
-        void window.getComputedStyle(header, '::after').transform;
         void window.getComputedStyle(titleElement).transform;
         rt.titleEditHandoffProgress = null;
         rt.schedule();
