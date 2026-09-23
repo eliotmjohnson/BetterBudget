@@ -92,6 +92,24 @@ $0.006 per message. A turn makes at most six model calls, a conversation holds
 at most twenty messages, and each household may start at most forty turns in
 any ten minutes. Set a monthly spend limit on the Anthropic Console as well.
 
+**Claude API failures:** the SDK retries rate limits, overloads, server errors,
+and dropped connections twice before a call fails. A failed call is logged as
+`[assistant] Claude API error` with its status, error type, request ID, and
+message, and the chat shows one of three replies: a 429 says the assistant is
+busy; a rejected key, a permission error, or an exhausted credit balance (a
+`billing_error`, or a 400 whose message names the credit balance) says the
+Claude account needs attention, because retrying cannot fix it; anything else
+says the assistant could not be reached. A turn has a 25-second deadline shared
+by every model call and retry. It must stay below the CloudFront origin read
+timeout (30 seconds on the live distribution) and the browser's 35-second
+request timeout, or CloudFront answers 504 while the server keeps working and
+committing changes after the chat has given up. A failed reply offers **Try
+again** while it is the latest message and the failure was `unavailable` or
+`rate_limited`; it resends the same message without repeating it in the
+transcript. When a call fails after a tool has already committed a change in that turn,
+the turn succeeds with a reply saying it was cut off, so the client still
+refreshes the changed months and the conversation keeps the tool calls it made.
+
 **Required configuration and migration:**
 
 - The assistant is off unless `ANTHROPIC_API_KEY` is set. Without it, the

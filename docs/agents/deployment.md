@@ -228,6 +228,13 @@ done, the host script is installed over Systems Manager, and the key is added.
     Adding NAT or a public IPv4 address instead is outside the standing
     deployment rules and needs explicit user direction.
 
+- **Origin read timeout.** The CloudFront origin read timeout is 30 seconds
+  (the default, verified on distribution `E13RII40P7L8EE` in September 2026).
+  `TURN_DEADLINE_MS` in `src/server/assistant/run.ts` is 25 seconds so a Better
+  Buddy turn always answers before CloudFront gives up; lowering the CloudFront
+  timeout, or raising the deadline past it, lets CloudFront return 504 while
+  the turn keeps running and committing changes the chat never reports.
+
 ## Image constraints
 
 The regular production image must remain multi-stage, standalone, non-root, and

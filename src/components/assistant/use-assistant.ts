@@ -14,9 +14,11 @@ export interface TranscriptEntry {
     role: 'user' | 'assistant';
     text: string;
     failed?: boolean;
+    retryText?: string;
 }
 
-const REQUEST_TIMEOUT_MS = 60_000;
+const REQUEST_TIMEOUT_MS = 35_000;
+const RETRYABLE_CODES = new Set(['unavailable', 'rate_limited']);
 
 async function requestTurn(
     month: MonthKey,
@@ -43,8 +45,8 @@ async function requestTurn(
             ok: false,
             code: 'unavailable',
             message: navigator.onLine
-                ? 'The assistant didn’t respond. Try again.'
-                : 'You’re offline. Reconnect to use the assistant.'
+                ? 'Better Buddy didn’t respond. Try again.'
+                : 'You’re offline. Reconnect to use Better Buddy.'
         };
     } finally {
         window.clearTimeout(timeout);
@@ -62,18 +64,11 @@ export function useAssistant(monthKey: MonthKey) {
     const conversationRef = useRef(0);
     const [transcript, setTranscript] = useState<TranscriptEntry[]>([]);
     const [pending, setPending] = useState(false);
-    const send = async (text: string) => {
-        const trimmed = text.trim();
-
-        if (!trimmed || pending) return;
+    const request = async (text: string) => {
         const conversation = conversationRef.current;
 
         setPending(true);
-        setTranscript((current) => [
-            ...current,
-            { id: createUuid(), role: 'user', text: trimmed }
-        ]);
-        const result = await requestTurn(monthKey, historyRef.current, trimmed);
+        const result = await requestTurn(monthKey, historyRef.current, text);
 
         if (result.ok && result.changedMonths.length)
             void queryClient.invalidateQueries({
@@ -84,14 +79,38 @@ export function useAssistant(monthKey: MonthKey) {
             historyRef.current = [...historyRef.current, ...result.appended];
         setTranscript((current) => [
             ...current,
-            {
-                id: createUuid(),
-                role: 'assistant',
-                text: result.ok ? result.reply : result.message,
-                failed: !result.ok
-            }
+            result.ok
+                ? { id: createUuid(), role: 'assistant', text: result.reply }
+                : {
+                      id: createUuid(),
+                      role: 'assistant',
+                      text: result.message,
+                      failed: true,
+                      retryText: RETRYABLE_CODES.has(result.code)
+                          ? text
+                          : undefined
+                  }
         ]);
         setPending(false);
+    };
+    const send = async (text: string) => {
+        const trimmed = text.trim();
+
+        if (!trimmed || pending) return;
+        setTranscript((current) => [
+            ...current,
+            { id: createUuid(), role: 'user', text: trimmed }
+        ]);
+        await request(trimmed);
+    };
+    const retry = async () => {
+        const failed = transcript.at(-1);
+
+        if (!failed?.retryText || pending) return;
+        setTranscript((current) =>
+            current.filter((entry) => entry.id !== failed.id)
+        );
+        await request(failed.retryText);
     };
     const reset = () => {
         conversationRef.current += 1;
@@ -100,5 +119,5 @@ export function useAssistant(monthKey: MonthKey) {
         setPending(false);
     };
 
-    return { transcript, pending, send, reset };
+    return { transcript, pending, send, retry, reset };
 }

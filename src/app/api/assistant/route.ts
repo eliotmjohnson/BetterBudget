@@ -30,10 +30,10 @@ export async function POST(request: Request) {
         return failure(
             401,
             'unauthorized',
-            'Sign in again to use the assistant.'
+            'Sign in again to use Better Buddy.'
         );
     if (!assistantConfigured())
-        return failure(503, 'unavailable', 'The assistant isn’t set up yet.');
+        return failure(503, 'unavailable', 'Better Buddy isn’t set up yet.');
     const raw = await request.text().catch(() => '');
 
     if (raw.length > MAX_BODY_BYTES)
@@ -84,16 +84,30 @@ export async function POST(request: Request) {
     } catch (error) {
         if (!(error instanceof AssistantUnavailableError)) console.error(error);
 
-        return error instanceof AssistantUnavailableError && error.rateLimited
-            ? failure(
-                  429,
-                  'rate_limited',
-                  'The assistant is busy right now. Try again in a minute.'
-              )
-            : failure(
-                  503,
-                  'unavailable',
-                  'The assistant couldn’t be reached. Try again shortly.'
-              );
+        const reason =
+            error instanceof AssistantUnavailableError
+                ? error.reason
+                : 'unreachable';
+
+        switch (reason) {
+            case 'rate_limited':
+                return failure(
+                    429,
+                    'rate_limited',
+                    'Better Buddy is busy right now. Try again in a minute.'
+                );
+            case 'account':
+                return failure(
+                    503,
+                    'unavailable',
+                    'Better Buddy’s Claude account needs attention. Check the Anthropic API key and credit balance.'
+                );
+            case 'unreachable':
+                return failure(
+                    503,
+                    'unavailable',
+                    'Better Buddy couldn’t be reached. Try again shortly.'
+                );
+        }
     }
 }

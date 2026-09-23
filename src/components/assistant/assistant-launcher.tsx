@@ -261,6 +261,7 @@ export function AssistantLauncher({ monthKey }: { monthKey: MonthKey }) {
                 transcript={assistant.transcript}
                 pending={assistant.pending}
                 onSend={(text) => void assistant.send(text)}
+                onRetry={() => void assistant.retry()}
                 onReset={assistant.reset}
             />
         </>

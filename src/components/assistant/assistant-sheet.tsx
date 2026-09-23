@@ -1,12 +1,14 @@
 'use client';
 
-import { ArrowUp } from 'lucide-react';
+import { ArrowUp, RotateCcw } from 'lucide-react';
 import {
+    Fragment,
     useCallback,
     useEffect,
     useRef,
     useState,
     type KeyboardEvent,
+    type ReactNode,
     type RefObject
 } from 'react';
 import { Sheet } from '@/components/ui/sheet';
@@ -24,21 +26,31 @@ const suggestions = [
  * Mounts with the sheet each time it opens and remembers which messages were
  * already there, so only messages that arrive while it is open animate in.
  */
-function TranscriptMessages({ transcript }: { transcript: TranscriptEntry[] }) {
+function TranscriptMessages({
+    transcript,
+    retryAction
+}: {
+    transcript: TranscriptEntry[];
+    retryAction: ReactNode;
+}) {
     const [shownAtOpen] = useState(
         () => new Set(transcript.map((entry) => entry.id))
     );
 
-    return transcript.map((entry) => (
-        <p
-            key={entry.id}
-            className='assistant-message'
-            data-role={entry.role}
-            data-failed={entry.failed ? 'true' : undefined}
-            data-entering={shownAtOpen.has(entry.id) ? undefined : 'true'}
-        >
-            {entry.text}
-        </p>
+    return transcript.map((entry, index) => (
+        <Fragment key={entry.id}>
+            <p
+                className='assistant-message'
+                data-role={entry.role}
+                data-failed={entry.failed ? 'true' : undefined}
+                data-entering={shownAtOpen.has(entry.id) ? undefined : 'true'}
+            >
+                {entry.text}
+            </p>
+            {entry.retryText && index === transcript.length - 1
+                ? retryAction
+                : null}
+        </Fragment>
     ));
 }
 
@@ -50,6 +62,7 @@ export function AssistantSheet({
     transcript,
     pending,
     onSend,
+    onRetry,
     onReset
 }: {
     open: boolean;
@@ -59,6 +72,7 @@ export function AssistantSheet({
     transcript: TranscriptEntry[];
     pending: boolean;
     onSend: (text: string) => void;
+    onRetry: () => void;
     onReset: () => void;
 }) {
     const [draft, setDraft] = useState('');
@@ -170,7 +184,21 @@ export function AssistantSheet({
                     role='log'
                     aria-live='polite'
                 >
-                    <TranscriptMessages transcript={transcript} />
+                    <TranscriptMessages
+                        transcript={transcript}
+                        retryAction={
+                            pending ? null : (
+                                <button
+                                    type='button'
+                                    className='text-button assistant-retry'
+                                    onClick={onRetry}
+                                >
+                                    <RotateCcw size={16} strokeWidth={2.4} />
+                                    Try again
+                                </button>
+                            )
+                        }
+                    />
                     {pending ? (
                         <p
                             className='assistant-message assistant-typing'

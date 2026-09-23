@@ -11,12 +11,44 @@ import { ASSISTANT_TOOLS } from './tools';
 const MODEL = 'claude-haiku-4-5';
 const MAX_OUTPUT_TOKENS = 1_024;
 const MAX_MODEL_CALLS = 6;
+const TURN_DEADLINE_MS = 25_000;
+const INTERRUPTED_REPLY =
+    'I made changes but was cut off before I could finish. Check the budget before asking me to continue.';
+
+/**
+ * Why the Claude API failed a call: `account` covers a missing credit balance
+ * and a rejected key, which retrying cannot fix.
+ */
+type AssistantUnavailableReason = 'rate_limited' | 'account' | 'unreachable';
 
 /** The Claude API could not be reached or refused the request. */
 export class AssistantUnavailableError extends Error {
-    constructor(readonly rateLimited: boolean) {
+    constructor(readonly reason: AssistantUnavailableReason) {
         super('The assistant is unavailable.');
     }
+}
+
+const ACCOUNT_ERROR_TYPES = new Set([
+    'authentication_error',
+    'billing_error',
+    'permission_error'
+]);
+
+function unavailableReason(
+    error: InstanceType<typeof Anthropic.APIError>
+): AssistantUnavailableReason {
+    if (error.status === 429 || error.type === 'rate_limit_error')
+        return 'rate_limited';
+    if (
+        (error.type && ACCOUNT_ERROR_TYPES.has(error.type)) ||
+        error.status === 401 ||
+        error.status === 402 ||
+        error.status === 403 ||
+        (error.status === 400 && /credit balance/i.test(error.message))
+    )
+        return 'account';
+
+    return 'unreachable';
 }
 
 let client: Anthropic | null = null;
@@ -62,22 +94,25 @@ function toHistoryContent(
     });
 }
 
-async function callModel(messages: AssistantMessage[]) {
+async function callModel(messages: AssistantMessage[], signal: AbortSignal) {
     try {
-        const response = await getClient().messages.create({
-            model: MODEL,
-            max_tokens: MAX_OUTPUT_TOKENS,
-            system: [
-                {
-                    type: 'text',
-                    text: SYSTEM_PROMPT,
-                    cache_control: { type: 'ephemeral' }
-                }
-            ],
-            tools: ASSISTANT_TOOLS,
-            cache_control: { type: 'ephemeral' },
-            messages
-        });
+        const response = await getClient().messages.create(
+            {
+                model: MODEL,
+                max_tokens: MAX_OUTPUT_TOKENS,
+                system: [
+                    {
+                        type: 'text',
+                        text: SYSTEM_PROMPT,
+                        cache_control: { type: 'ephemeral' }
+                    }
+                ],
+                tools: ASSISTANT_TOOLS,
+                cache_control: { type: 'ephemeral' },
+                messages
+            },
+            { signal }
+        );
         const { usage } = response;
 
         if (
@@ -91,9 +126,13 @@ async function callModel(messages: AssistantMessage[]) {
         return response;
     } catch (error) {
         if (error instanceof Anthropic.APIError) {
-            console.error(`[assistant] Claude API error ${error.status}`);
+            const reason = unavailableReason(error);
 
-            throw new AssistantUnavailableError(error.status === 429);
+            console.error(
+                `[assistant] Claude API error ${error.status ?? 'connection'} ${error.type ?? 'unknown'} (${reason}, request ${error.requestID ?? 'none'}): ${error.message}`
+            );
+
+            throw new AssistantUnavailableError(reason);
         }
 
         throw error;
@@ -140,9 +179,24 @@ export async function runAssistantTurn({
             ]
         }
     ];
+    const signal = AbortSignal.timeout(TURN_DEADLINE_MS);
 
     for (let call = 0; call < MAX_MODEL_CALLS; call += 1) {
-        const response = await callModel([...history, ...appended]);
+        let response: Anthropic.Message;
+
+        try {
+            response = await callModel([...history, ...appended], signal);
+        } catch (error) {
+            if (!context.changedMonths.size) throw error;
+            if (!(error instanceof AssistantUnavailableError))
+                console.error(error);
+            appended.push({
+                role: 'assistant',
+                content: [{ type: 'text', text: INTERRUPTED_REPLY }]
+            });
+
+            break;
+        }
         const toolUses =
             response.stop_reason === 'tool_use'
                 ? response.content.filter(

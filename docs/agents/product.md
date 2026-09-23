@@ -98,5 +98,7 @@ The implemented product supports:
   unrelated questions and every destructive or structural operation it lacks a
   tool for, and names where the person can do it. A conversation is held only in
   the browser's memory; **New chat** or a reload starts over. Assistant writes
-  are server-confirmed and refresh every cached month.
+  are server-confirmed and refresh every cached month. Its error replies name
+  Better Buddy, never "the assistant", and when the latest reply is an outage or
+  rate-limit failure it offers **Try again**, which resends the same message.
 - File-persistent PGlite development, PostgreSQL parity, and Docker packaging.

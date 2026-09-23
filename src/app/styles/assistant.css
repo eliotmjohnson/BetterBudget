@@ -208,6 +208,14 @@
     background: color-mix(in srgb, var(--coral) 14%, white);
     color: #9c2f35;
 }
+.assistant-retry {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    align-self: flex-start;
+    margin: -4px 0 0 2px;
+    padding-inline: 8px;
+}
 .assistant-typing {
     display: flex;
     gap: 5px;
