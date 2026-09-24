@@ -10,7 +10,7 @@ import {
     type ReactNode
 } from 'react';
 import { restoreSheetFocus } from '../sheet';
-import { beginHoldPress, followHeldPointer } from './press';
+import { beginHoldPress, followHeldPointer, type HoldStart } from './press';
 import { HoldMenuSurface, type HoldMenuAction, type OpenMenu } from './surface';
 
 export type { HoldMenuAction } from './surface';
@@ -20,6 +20,26 @@ export type HoldMenuTriggerProps = {
     onContextMenu: (event: MouseEvent<HTMLElement>) => void;
     onPointerDown: (event: PointerEvent<HTMLElement>) => void;
 };
+
+/**
+ * The trigger's box without its own transform. A held row is still easing
+ * back from its pressed 0.97 scale when the menu opens, so its bounding rect
+ * would be about 3% too small; the transform scales around the center, so the
+ * center is kept and the untransformed border-box size is restored.
+ */
+function untransformedRect(trigger: HTMLElement) {
+    const rect = trigger.getBoundingClientRect();
+    const style = getComputedStyle(trigger);
+    const width = parseFloat(style.width);
+    const height = parseFloat(style.height);
+
+    return new DOMRect(
+        rect.left + rect.width / 2 - width / 2,
+        rect.top + rect.height / 2 - height / 2,
+        width,
+        height
+    );
+}
 
 type GetTriggerProps = (
     label: string,
@@ -33,6 +53,7 @@ export function useHoldMenu(): {
     const [menu, setMenu] = useState<OpenMenu | null>(null);
     const [open, setOpen] = useState(false);
     const [highlighted, setHighlighted] = useState<string | null>(null);
+    const [exitForAction, setExitForAction] = useState(false);
     const openRef = useRef(false);
     const menuRef = useRef<OpenMenu | null>(null);
     const panelRef = useRef<HTMLDivElement | null>(null);
@@ -44,16 +65,20 @@ export function useHoldMenu(): {
         openRef.current = false;
         stopFollowingRef.current?.();
         stopFollowingRef.current = null;
-        if (menuRef.current) delete menuRef.current.trigger.dataset.holdOpen;
         setHighlighted(null);
         setOpen(false);
+    }, []);
+    const revealTrigger = useCallback(() => {
+        if (menuRef.current && !openRef.current)
+            delete menuRef.current.trigger.dataset.holdOpen;
     }, []);
     const select = useCallback(
         (action: HoldMenuAction) => {
             const trigger = menuRef.current?.trigger;
 
-            if (!trigger) return;
+            if (!trigger || !openRef.current) return;
             pendingActionRef.current = () => action.onSelect(trigger);
+            setExitForAction(true);
             close();
         },
         [close]
@@ -76,27 +101,29 @@ export function useHoldMenu(): {
         trigger: HTMLElement,
         label: string,
         groups: () => HoldMenuAction[][],
-        heldPointerId: number | null
+        held: HoldStart | null
     ) => {
         if (openRef.current) return;
+        if (menuRef.current) delete menuRef.current.trigger.dataset.holdOpen;
         const next: OpenMenu = {
-            focusVisible:
-                heldPointerId === null && trigger.matches(':focus-visible'),
+            focusVisible: held === null && trigger.matches(':focus-visible'),
             groups: groups(),
+            held: held !== null,
             id: (menuRef.current?.id ?? 0) + 1,
+            inDialog: trigger.closest('[role="dialog"]') !== null,
             label,
-            rect: trigger.getBoundingClientRect(),
+            rect: untransformedRect(trigger),
             trigger
         };
 
         openRef.current = true;
         menuRef.current = next;
-        trigger.dataset.holdOpen = 'true';
         setMenu(next);
         setHighlighted(null);
+        setExitForAction(false);
         setOpen(true);
-        if (heldPointerId === null) return;
-        stopFollowingRef.current = followHeldPointer(heldPointerId, {
+        if (held === null) return;
+        stopFollowingRef.current = followHeldPointer(held, {
             onMove: (clientX, clientY) =>
                 setHighlighted(actionAt(clientX, clientY)?.key ?? null),
             onRelease: (clientX, clientY) => {
@@ -149,7 +176,7 @@ export function useHoldMenu(): {
             cancelPressRef.current = beginHoldPress(
                 trigger,
                 { clientX, clientY, pointerId },
-                () => show(trigger, label, groups, pointerId)
+                (latest) => show(trigger, label, groups, latest)
             );
         }
     });
@@ -158,11 +185,13 @@ export function useHoldMenu(): {
         getTriggerProps,
         menu: menu ? (
             <HoldMenuSurface
+                exitForAction={exitForAction}
                 highlighted={highlighted}
                 menu={menu}
                 open={open}
                 panelRef={panelRef}
                 onClose={close}
+                onExitComplete={revealTrigger}
                 onSelect={select}
             />
         ) : null

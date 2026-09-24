@@ -1,6 +1,7 @@
 const holdDuration = 450;
 const holdMovementTolerance = 8;
-const releaseClickWindow = 600;
+const releaseClickWindow = 350;
+const selectionSlop = 10;
 
 export type HoldStart = {
     clientX: number;
@@ -11,9 +12,10 @@ export type HoldStart = {
 export function beginHoldPress(
     element: HTMLElement,
     start: HoldStart,
-    onHold: () => void
+    onHold: (held: HoldStart) => void
 ) {
     let finished = false;
+    let latest = start;
     const finish = () => {
         if (finished) return;
         finished = true;
@@ -24,8 +26,9 @@ export function beginHoldPress(
         delete element.dataset.holdPending;
     };
     const onMove = (event: PointerEvent) => {
+        if (event.pointerId !== start.pointerId) return;
+        latest = { ...start, clientX: event.clientX, clientY: event.clientY };
         if (
-            event.pointerId === start.pointerId &&
             Math.hypot(
                 event.clientX - start.clientX,
                 event.clientY - start.clientY
@@ -38,7 +41,7 @@ export function beginHoldPress(
     };
     const timer = window.setTimeout(() => {
         finish();
-        if (element.isConnected) onHold();
+        if (element.isConnected) onHold(latest);
     }, holdDuration);
 
     element.dataset.holdPending = 'true';
@@ -55,6 +58,11 @@ function swallowReleaseClick() {
         window.removeEventListener('click', swallow, true);
     };
     const swallow = (event: MouseEvent) => {
+        if (
+            event.target instanceof Element &&
+            event.target.closest('[data-hold-menu-key]')
+        )
+            return;
         event.preventDefault();
         event.stopPropagation();
         remove();
@@ -65,7 +73,7 @@ function swallowReleaseClick() {
 }
 
 export function followHeldPointer(
-    pointerId: number,
+    { clientX: originX, clientY: originY, pointerId }: HoldStart,
     {
         onMove,
         onRelease
@@ -75,6 +83,7 @@ export function followHeldPointer(
     }
 ) {
     let following = true;
+    let armed = false;
     const stop = () => {
         if (!following) return;
         following = false;
@@ -84,13 +93,18 @@ export function followHeldPointer(
         window.removeEventListener('touchmove', holdStill);
     };
     const move = (event: PointerEvent) => {
-        if (event.pointerId === pointerId) onMove(event.clientX, event.clientY);
+        if (event.pointerId !== pointerId) return;
+        armed ||=
+            Math.hypot(event.clientX - originX, event.clientY - originY) >
+            selectionSlop;
+        if (armed) onMove(event.clientX, event.clientY);
     };
     const release = (event: PointerEvent) => {
         if (event.pointerId !== pointerId) return;
         stop();
         swallowReleaseClick();
-        if (event.type === 'pointerup') onRelease(event.clientX, event.clientY);
+        if (event.type === 'pointerup' && armed)
+            onRelease(event.clientX, event.clientY);
     };
     const holdStill = (event: TouchEvent) => {
         if (event.cancelable) event.preventDefault();

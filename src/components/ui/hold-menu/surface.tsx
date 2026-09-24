@@ -3,6 +3,7 @@
 import * as Dialog from '@radix-ui/react-dialog';
 import {
     useCallback,
+    type CSSProperties,
     type KeyboardEvent,
     type ReactNode,
     type RefObject
@@ -21,7 +22,9 @@ export type HoldMenuAction = {
 export type OpenMenu = {
     focusVisible: boolean;
     groups: HoldMenuAction[][];
+    held: boolean;
     id: number;
+    inDialog: boolean;
     label: string;
     rect: DOMRect;
     trigger: HTMLElement;
@@ -39,6 +42,10 @@ function clonePreview(trigger: HTMLElement) {
     clone.setAttribute('tabindex', '-1');
 
     return clone;
+}
+
+function hideTrigger(trigger: HTMLElement) {
+    trigger.dataset.holdOpen = 'true';
 }
 
 function focusSibling(panel: HTMLElement, key: string) {
@@ -72,6 +79,11 @@ function placeMenu(layer: HTMLElement, panel: HTMLElement, trigger: DOMRect) {
         '--hold-menu-preview-shift',
         `${placement.previewShift}px`
     );
+    layer.style.setProperty(
+        '--hold-menu-settle-duration',
+        placement.previewShift === 0 ? '0.26s' : '0.42s'
+    );
+    layer.dataset.travel = placement.previewShift === 0 ? 'false' : 'true';
     panel.style.top = `${placement.menuTop}px`;
     panel.style.left = `${placement.menuLeft}px`;
     panel.dataset.origin = placement.menuOrigin;
@@ -79,16 +91,20 @@ function placeMenu(layer: HTMLElement, panel: HTMLElement, trigger: DOMRect) {
 }
 
 export function HoldMenuSurface({
+    exitForAction,
     highlighted,
     menu,
     onClose,
+    onExitComplete,
     onSelect,
     open,
     panelRef
 }: {
+    exitForAction: boolean;
     highlighted: string | null;
     menu: OpenMenu;
     onClose: () => void;
+    onExitComplete: () => void;
     onSelect: (action: HoldMenuAction) => void;
     open: boolean;
     panelRef: RefObject<HTMLDivElement | null>;
@@ -106,7 +122,9 @@ export function HoldMenuSurface({
     );
     const setPreviewRef = useCallback(
         (element: HTMLDivElement | null) => {
-            element?.replaceChildren(clonePreview(menu.trigger));
+            if (!element) return;
+            element.replaceChildren(clonePreview(menu.trigger));
+            hideTrigger(menu.trigger);
         },
         [menu]
     );
@@ -130,10 +148,16 @@ export function HoldMenuSurface({
             }}
         >
             <Dialog.Portal>
-                <Dialog.Overlay className='hold-menu-overlay' />
+                <Dialog.Overlay
+                    className='hold-menu-overlay'
+                    data-exit={exitForAction ? 'action' : undefined}
+                />
                 <Dialog.Content
                     key={menu.id}
                     className='hold-menu-layer'
+                    data-exit={exitForAction ? 'action' : undefined}
+                    data-held={menu.held ? 'true' : undefined}
+                    data-context={menu.inDialog ? 'dialog' : 'page'}
                     aria-describedby={undefined}
                     onOpenAutoFocus={(event) => {
                         event.preventDefault();
@@ -149,6 +173,13 @@ export function HoldMenuSurface({
                     onClick={(event) => {
                         if (event.target === event.currentTarget) onClose();
                     }}
+                    onAnimationEnd={(event) => {
+                        if (
+                            event.target === event.currentTarget &&
+                            event.currentTarget.dataset.state === 'closed'
+                        )
+                            onExitComplete();
+                    }}
                 >
                     <Dialog.Title className='sr-only'>
                         {menu.label}
@@ -158,13 +189,17 @@ export function HoldMenuSurface({
                         className='hold-menu-preview'
                         aria-hidden='true'
                         inert
-                        style={{
-                            top: menu.rect.top,
-                            left: menu.rect.left - previewInset,
-                            width: menu.rect.width + previewInset * 2,
-                            height: menu.rect.height,
-                            paddingInline: previewInset
-                        }}
+                        style={
+                            {
+                                '--hold-menu-row-left': `${menu.rect.left}px`,
+                                '--hold-menu-row-width': `${menu.rect.width}px`,
+                                top: menu.rect.top,
+                                left: menu.rect.left - previewInset,
+                                width: menu.rect.width + previewInset * 2,
+                                height: menu.rect.height,
+                                paddingInline: previewInset
+                            } as CSSProperties
+                        }
                     />
                     <div
                         ref={setPanelRef}

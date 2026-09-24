@@ -79,7 +79,8 @@
 .assistant-launcher,
 .assistant-send,
 .assistant-suggestion,
-.assistant-typing span {
+.assistant-typing span,
+.hold-menu-item {
     corner-shape: round;
 }
 [data-continuous-border] {
