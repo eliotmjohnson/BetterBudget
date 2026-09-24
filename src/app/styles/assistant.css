@@ -279,10 +279,18 @@
     cursor: default;
 }
 @media (width < 760px) {
+    .sheet-content:has([data-buddy-seat]) {
+        --assistant-status-overlap: 8px;
+        box-shadow:
+            0 0 0 0 #fff,
+            0 -22px 55px rgb(19 28 45 / 18%);
+    }
     .sheet-content[data-keyboard-open]:has([data-buddy-seat]) {
-        bottom: 0;
-        padding-top: calc(env(safe-area-inset-top) + 4px);
         border-radius: 0;
+        box-shadow:
+            0 calc(var(--assistant-status-overlap) - env(safe-area-inset-top)) 0
+                0 #fff,
+            0 -22px 55px rgb(19 28 45 / 18%);
     }
     .sheet-content:has([data-buddy-seat]) .sheet-handle {
         transition:
@@ -294,6 +302,7 @@
         height: 0;
         margin-bottom: 0;
         opacity: 0;
+        transition-delay: 60ms;
     }
     .sheet-content[data-keyboard-open]:has([data-buddy-seat]) .sheet-footer {
         padding-bottom: 12px;

@@ -737,7 +737,7 @@ body > .sortable-drag-overlay * {
             var(--bottom-nav-padding)
     );
     left: round(down, (100% - var(--bottom-nav-width)) / 2, 1px);
-    bottom: calc(var(--bottom-nav-offset) - var(--viewport-shortfall));
+    bottom: var(--bottom-nav-offset);
     width: var(--bottom-nav-width);
     height: var(--bottom-nav-bar-height);
     display: grid;
@@ -936,7 +936,7 @@ body > .sortable-drag-overlay * {
     pointer-events: auto;
     left: 16px;
     right: 16px;
-    bottom: calc(var(--bottom-nav-height) + 12px - var(--viewport-shortfall));
+    bottom: calc(var(--bottom-nav-height) + 12px);
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -965,7 +965,7 @@ body > .sortable-drag-overlay * {
 .navigation-detail-overlay {
     position: fixed;
     z-index: 70;
-    inset: 0 0 calc(-1 * var(--viewport-shortfall));
+    inset: 0;
     background: transparent;
     touch-action: pan-y;
 }

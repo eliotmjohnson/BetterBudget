@@ -33,13 +33,11 @@
     --capsule-smoothing: 0.3;
     --corner-radius-scale: 1;
     --viewport-height: 100dvh;
-    --viewport-shortfall: 0px;
 }
 
 @media (display-mode: standalone) {
     :root {
         --viewport-height: 100lvh;
-        --viewport-shortfall: calc(100lvh - 100dvh);
     }
 }
 

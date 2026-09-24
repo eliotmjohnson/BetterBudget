@@ -16,7 +16,7 @@
 
 .hold-menu-overlay {
     position: fixed;
-    inset: 0 0 calc(-1 * var(--viewport-shortfall));
+    inset: 0;
     z-index: 75;
     background: rgb(214 219 228 / 38%);
     backdrop-filter: blur(16px) saturate(1.4);
@@ -35,7 +35,7 @@
 
 .hold-menu-layer {
     position: fixed;
-    inset: 0 0 calc(-1 * var(--viewport-shortfall));
+    inset: 0;
     z-index: 76;
     padding: max(12px, env(safe-area-inset-top))
         max(12px, env(safe-area-inset-right))
