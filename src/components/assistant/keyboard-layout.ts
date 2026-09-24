@@ -18,7 +18,7 @@ const RAISED = 'data-keyboard-open';
 const heightOf = (element: HTMLElement) =>
     element.getBoundingClientRect().height;
 const belowStatusBar = (visibleHeight: number) =>
-    `calc(${visibleHeight}px - env(safe-area-inset-top) + var(--assistant-status-overlap))`;
+    `calc(${visibleHeight}px - var(--safe-area-top) + var(--assistant-status-overlap))`;
 
 function setHeight(sheet: HTMLElement, height: string) {
     sheet.style.height = height;

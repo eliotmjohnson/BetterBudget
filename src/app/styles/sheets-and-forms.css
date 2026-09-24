@@ -44,7 +44,7 @@
     width: 100%;
     height: var(--viewport-height);
     max-height: var(--viewport-height);
-    padding-top: calc(12px + env(safe-area-inset-top));
+    padding-top: calc(12px + var(--safe-area-top));
     border-radius: 0;
 }
 .sheet-content:focus {

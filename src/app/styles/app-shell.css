@@ -160,6 +160,7 @@
     }
 }
 .app-content--enter > * {
+    transform-origin: 50% min(50%, calc(var(--viewport-height) / 2));
     animation: page-enter 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 .app-content--slide-forward > *,
@@ -199,7 +200,7 @@
     align-items: center;
     gap: 6px;
     min-height: 62px;
-    padding: max(6px, env(safe-area-inset-top)) 12px 4px;
+    padding: max(6px, var(--safe-area-top)) 12px 4px;
     background: #fff;
     border-bottom: 1px solid var(--line);
 }

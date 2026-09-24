@@ -78,6 +78,7 @@ export function BudgetSummaryCard({ snapshot }: { snapshot: MonthSnapshot }) {
                 '--summary-arc-progress-length',
                 `${renderedLength}px`
             );
+            path.setAttribute('data-measured', 'true');
         };
 
         updateProgressLength();

@@ -29,7 +29,10 @@
 .summary-arc-progress {
     stroke-dasharray: var(--summary-arc-progress-length, 0px) 1000px;
 }
-.budget-bars-enter .summary-arc-progress {
+.summary-arc-progress:not([data-measured]) {
+    visibility: hidden;
+}
+.budget-bars-enter .summary-arc-progress[data-measured] {
     animation: summary-arc-in 0.9s cubic-bezier(0.29, 1, 0.29, 1) 0.08s both;
 }
 .summary-focus {
@@ -894,7 +897,7 @@ body > .sortable-drag-overlay * {
 .sync-indicator {
     position: fixed;
     z-index: 60;
-    top: calc(env(safe-area-inset-top) + 12px);
+    top: calc(var(--safe-area-top) + 12px);
     left: 50%;
     transform: translateX(-50%);
     display: inline-flex;

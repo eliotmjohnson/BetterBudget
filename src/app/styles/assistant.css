@@ -5,7 +5,7 @@
     position: fixed;
     z-index: 40;
     top: clamp(
-        calc(env(safe-area-inset-top) + 76px),
+        calc(var(--safe-area-top) + 76px),
         calc(var(--assistant-y, 0.68) * var(--viewport-height)),
         calc(
             var(--viewport-height) - var(--assistant-launcher-bottom-reserve) -
@@ -288,8 +288,8 @@
     .sheet-content[data-keyboard-open]:has([data-buddy-seat]) {
         border-radius: 0;
         box-shadow:
-            0 calc(var(--assistant-status-overlap) - env(safe-area-inset-top)) 0
-                0 #fff,
+            0 calc(var(--assistant-status-overlap) - var(--safe-area-top)) 0 0
+                #fff,
             0 -22px 55px rgb(19 28 45 / 18%);
     }
     .sheet-content:has([data-buddy-seat]) .sheet-handle {
@@ -434,6 +434,26 @@
     }
     .assistant-launcher[data-side='left'] {
         left: calc(190px + var(--assistant-launcher-inset));
+    }
+}
+@media (min-width: 760px) and (max-height: 500px) and (orientation: landscape) and (pointer: coarse) {
+    .assistant-launcher {
+        --assistant-launcher-inset: 10px;
+        transition:
+            transform 420ms cubic-bezier(0.3, 0.84, 0.21, 1),
+            left var(--island-shift-motion),
+            right var(--island-shift-motion);
+    }
+    .assistant-launcher[data-side='right'] {
+        right: max(
+            var(--assistant-launcher-inset),
+            calc(var(--island-inset-right) + 8px)
+        );
+    }
+    .assistant-launcher[data-side='left'] {
+        left: calc(
+            190px + var(--island-inset-left) + var(--assistant-launcher-inset)
+        );
     }
 }
 @media (prefers-reduced-motion: reduce) {

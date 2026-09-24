@@ -42,7 +42,7 @@
     position: fixed;
     inset: 0;
     z-index: 76;
-    padding: max(12px, env(safe-area-inset-top))
+    padding: max(12px, var(--safe-area-top))
         max(12px, env(safe-area-inset-right))
         max(12px, env(safe-area-inset-bottom))
         max(12px, env(safe-area-inset-left));
