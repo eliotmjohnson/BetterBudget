@@ -88,6 +88,11 @@
     .sheet-content[data-variant='raised-mobile'] {
         min-height: min(310px, 52dvh);
     }
+    .sheet-content[data-variant='capped-mobile'] {
+        max-height: calc(
+            var(--viewport-height) - max(6px, var(--safe-area-top)) - 77px
+        );
+    }
     body[data-navigation-detail-state] .app-frame {
         backface-visibility: hidden;
         will-change: transform;

@@ -28,7 +28,7 @@ export function TransactionSheet({
     mutate,
     transaction = null,
     onDelete,
-    variant = 'standard'
+    variant = 'capped-mobile'
 }: {
     initialItemId?: string;
     open: boolean;
@@ -38,7 +38,7 @@ export function TransactionSheet({
     mutate: Mutate;
     transaction?: ActivityEntry | null;
     onDelete?: (transaction: ActivityEntry) => void;
-    variant?: 'standard' | 'full-screen-mobile';
+    variant?: 'capped-mobile' | 'full-screen-mobile';
 }) {
     const items = useMemo(
         () => snapshot.categories.flatMap((category) => category.items),

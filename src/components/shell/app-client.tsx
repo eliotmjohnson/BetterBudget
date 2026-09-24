@@ -76,6 +76,13 @@ export function BudgetApp({
     const [assistantEnabled, setAssistantEnabled] = useState(
         initialAssistantEnabled
     );
+    const changeAssistantEnabled = (enabled: boolean) => {
+        setAssistantEnabled(enabled);
+        writePreferenceCookie(
+            ASSISTANT_PREFERENCE_COOKIE,
+            enabled ? 'on' : 'off'
+        );
+    };
     const budgetMutation = useBudgetMutation(
         snapshot.monthKey,
         optimisticSnapshot,
@@ -210,13 +217,7 @@ export function BudgetApp({
                 }}
                 assistantAvailable={assistantAvailable}
                 assistantEnabled={assistantEnabled}
-                onAssistantEnabledChange={(enabled) => {
-                    setAssistantEnabled(enabled);
-                    writePreferenceCookie(
-                        ASSISTANT_PREFERENCE_COOKIE,
-                        enabled ? 'on' : 'off'
-                    );
-                }}
+                onAssistantEnabledChange={changeAssistantEnabled}
                 onOrganize={openOrganizer}
                 onMessage={(message) => showToast({ message })}
             />
@@ -246,7 +247,18 @@ export function BudgetApp({
             mutationPending={budgetMutation.isPending}
             floating={
                 assistantAvailable && assistantEnabled ? (
-                    <AssistantLauncher monthKey={snapshot.monthKey} />
+                    <AssistantLauncher
+                        monthKey={snapshot.monthKey}
+                        onBeamUp={() => {
+                            changeAssistantEnabled(false);
+                            showToast({
+                                message:
+                                    'Better Buddy flew home. Bring him back in Settings.',
+                                actionLabel: 'Undo',
+                                action: () => changeAssistantEnabled(true)
+                            });
+                        }}
+                    />
                 ) : null
             }
         >

@@ -81,7 +81,9 @@ The implemented product supports:
   `ANTHROPIC_API_KEY` is set: a floating robot button on every authenticated
   page opens a chat sheet driven by Claude Haiku 4.5. The Settings Assistant
   section has a per-device **Better Buddy** switch, on by default, that hides
-  or shows it. It answers questions about any month (planned, spent,
+  or shows it. Dragging him into the beam of the spaceship that drops in during
+  any drag beams him aboard and flies him away, which turns that same switch
+  off, with an **Undo** toast. It answers questions about any month (planned, spent,
   available, carry-in, left to budget, income, transactions, notes) and across
   up to 24 months: its `get_history` tool returns exact per-month figures for an
   item, a category, or the whole budget (planned, expenses only, income into the

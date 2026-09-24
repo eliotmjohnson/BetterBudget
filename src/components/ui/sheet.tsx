@@ -84,7 +84,8 @@ export function Sheet({
     onDragDismissStart?: () => void;
     title: string;
     titleAdornment?: ReactNode;
-    variant?: 'standard' | 'raised-mobile' | 'full-screen-mobile';
+    variant?:
+        'standard' | 'raised-mobile' | 'capped-mobile' | 'full-screen-mobile';
     layer?: 'base' | 'nested';
     footer?: ReactNode;
     headerAction?: ReactNode;

@@ -954,9 +954,12 @@ body > .sortable-drag-overlay * {
     animation: rise-in 200ms ease-out;
 }
 .toast button {
+    flex: 0 0 auto;
+    display: inline-grid;
+    place-items: center;
     min-width: 42px;
     min-height: 36px;
-    padding: 0 8px;
+    padding: 0 10px;
     border: 0;
     border-radius: calc(9px * var(--corner-radius-scale));
     background: rgb(255 255 255 / 13%);
