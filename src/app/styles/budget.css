@@ -847,6 +847,7 @@ body > .sortable-drag-overlay * {
 }
 :root:has(.budget-row-grid .inline-money-input:focus) .bottom-nav {
     visibility: hidden;
+    transition: visibility 0s linear 0.15s;
 }
 :root:has(.budget-row-grid .inline-money-input:focus) .budget-balance-strip {
     translate: 0 calc(-100% - var(--budget-balance-shadow-reach));

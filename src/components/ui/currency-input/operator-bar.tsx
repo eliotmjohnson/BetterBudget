@@ -82,17 +82,21 @@ function fullViewportHeight(viewport: VisualViewport) {
     return fullViewport.height;
 }
 
-type KeyboardFrame = { top: number; height: number };
+type ViewportFrame = { offsetTop: number; height: number; keyboard: number };
+
+const keyboardUp = (frame: ViewportFrame | null): frame is ViewportFrame =>
+    frame !== null && frame.keyboard >= KEYBOARD_MIN_PX;
 
 /**
- * Tracks the on-screen keyboard's top edge in layout-viewport pixels and its
- * height, or null while no coarse-pointer keyboard is up or the page is
- * pinch-zoomed. Once docked it keeps its frame through moves smaller than
- * `KEYBOARD_JITTER_PX`, so the few-pixel nudges iOS makes as focus moves
- * between inputs do not shift the bar.
+ * Tracks the visual viewport (its offset into the layout viewport, its
+ * height, and the keyboard height it leaves) while `active`. A pinch-zoomed
+ * page counts as having no keyboard. While the keyboard stays up, moves of
+ * its top edge or height smaller than `KEYBOARD_JITTER_PX` keep the previous
+ * frame, so the few-pixel nudges iOS makes as focus moves between inputs do
+ * not shift the bar.
  */
-function useKeyboardFrame(active: boolean) {
-    const [frame, setFrame] = useState<KeyboardFrame | null>(null);
+function useViewportFrame(active: boolean) {
+    const [frame, setFrame] = useState<ViewportFrame | null>(null);
 
     useEffect(() => {
         const viewport = window.visualViewport;
@@ -104,17 +108,27 @@ function useKeyboardFrame(active: boolean) {
         )
             return;
         const update = () => {
-            const height = fullViewportHeight(viewport) - viewport.height;
-            const top = viewport.offsetTop + viewport.height;
+            const next = {
+                offsetTop: viewport.offsetTop,
+                height: viewport.height,
+                keyboard:
+                    viewport.scale > 1.01
+                        ? 0
+                        : fullViewportHeight(viewport) - viewport.height
+            };
 
-            setFrame((docked) =>
-                height < KEYBOARD_MIN_PX || viewport.scale > 1.01
-                    ? null
-                    : docked &&
-                        Math.abs(docked.top - top) < KEYBOARD_JITTER_PX &&
-                        Math.abs(docked.height - height) < KEYBOARD_JITTER_PX
-                      ? docked
-                      : { top, height }
+            setFrame((current) =>
+                keyboardUp(current) &&
+                keyboardUp(next) &&
+                Math.abs(
+                    current.offsetTop +
+                        current.height -
+                        next.offsetTop -
+                        next.height
+                ) < KEYBOARD_JITTER_PX &&
+                Math.abs(current.keyboard - next.keyboard) < KEYBOARD_JITTER_PX
+                    ? current
+                    : next
             );
         };
 
@@ -132,15 +146,18 @@ function useKeyboardFrame(active: boolean) {
     return frame;
 }
 
-type ShownBar = { state: CalculatorState; frame: KeyboardFrame };
+type ShownBar = { state: CalculatorState; screenTop: number; keyboard: number };
 
 /**
  * The one calculator bar, mounted once in the providers and docked above the
  * on-screen number pad for whichever money input currently owns it. Once the
  * keyboard is up it slides in from the right, and it slides down with the
- * keyboard when the input lets go or the keyboard closes; switching between inputs only swaps its contents,
- * so it never remounts or flashes. Every control presses without moving focus
- * off the input, which would commit a half-typed expression.
+ * keyboard when the input lets go or the keyboard closes; switching between
+ * inputs only swaps its contents, so it never remounts or flashes. While
+ * closing it holds the keyboard's last on-screen top edge against the live
+ * viewport offset, so the jump iOS makes when it drops the keyboard's page
+ * scroll does not carry the bar off with it. Every control presses without
+ * moving focus off the input, which would commit a half-typed expression.
  */
 export function CalculatorBar() {
     const state = useSyncExternalStore(
@@ -148,79 +165,94 @@ export function CalculatorBar() {
         currentCalculator,
         () => null
     );
-    const frame = useKeyboardFrame(state !== null);
     const [last, setLast] = useState<ShownBar | null>(null);
-    const open = state !== null && frame !== null;
+    const viewport = useViewportFrame(state !== null || last !== null);
+    const open = state !== null && keyboardUp(viewport);
 
-    if (open && (last?.state !== state || last?.frame !== frame))
-        setLast({ state, frame });
+    if (
+        open &&
+        (last?.state !== state ||
+            last?.screenTop !== viewport.height ||
+            last?.keyboard !== viewport.keyboard)
+    )
+        setLast({
+            state,
+            screenTop: viewport.height,
+            keyboard: viewport.keyboard
+        });
 
-    const shown = open ? { state, frame } : last;
+    const shown = open
+        ? { state, screenTop: viewport.height, keyboard: viewport.keyboard }
+        : last;
 
     if (!shown) return null;
     const { calculating, fill, preview, onFill, onKey } = shown.state;
 
     return createPortal(
-        <div
-            className='calculator-bar'
-            data-calculator-bar=''
-            data-state={open ? 'open' : 'closing'}
-            role='toolbar'
-            aria-label='Calculator'
-            style={
-                {
-                    top: shown.frame.top,
-                    '--calculator-keyboard-height': `${shown.frame.height}px`
-                } as CSSProperties
-            }
-            onAnimationEnd={(event) => {
-                if (event.target === event.currentTarget && !open)
-                    setLast(null);
-            }}
-        >
-            {fill && !calculating ? (
-                <button
-                    className='calculator-bar-fill'
-                    type='button'
-                    tabIndex={-1}
-                    aria-label={fill.label}
-                    {...pressHandlers(onFill)}
-                >
-                    <span className='calculator-bar-fill-caption'>
-                        {fill.caption}
-                    </span>
-                    <strong
-                        style={
-                            {
-                                '--amount-chars': fill.amount.length
-                            } as CSSProperties
-                        }
-                    >
-                        {fill.amount}
-                    </strong>
-                </button>
-            ) : (
-                <output className='calculator-bar-preview'>{preview}</output>
-            )}
-            <div className='calculator-bar-keys'>
-                {KEYS.map(({ key, label, glyph }) => (
+        <div className='calculator-dock'>
+            <div
+                className='calculator-bar'
+                data-calculator-bar=''
+                data-state={open ? 'open' : 'closing'}
+                role='toolbar'
+                aria-label='Calculator'
+                style={
+                    {
+                        top: (viewport?.offsetTop ?? 0) + shown.screenTop,
+                        '--calculator-keyboard-height': `${shown.keyboard}px`
+                    } as CSSProperties
+                }
+                onAnimationEnd={(event) => {
+                    if (event.target === event.currentTarget && !open)
+                        setLast(null);
+                }}
+            >
+                {fill && !calculating ? (
                     <button
-                        key={key}
-                        className='calculator-bar-key'
+                        className='calculator-bar-fill'
                         type='button'
                         tabIndex={-1}
-                        aria-label={label}
-                        aria-disabled={
-                            !calculating && (key === '.' || key === '=')
-                                ? true
-                                : undefined
-                        }
-                        data-key={key}
-                        {...pressHandlers(() => onKey(key))}
+                        aria-label={fill.label}
+                        {...pressHandlers(onFill)}
                     >
-                        {glyph}
+                        <span className='calculator-bar-fill-caption'>
+                            {fill.caption}
+                        </span>
+                        <strong
+                            style={
+                                {
+                                    '--amount-chars': fill.amount.length
+                                } as CSSProperties
+                            }
+                        >
+                            {fill.amount}
+                        </strong>
                     </button>
-                ))}
+                ) : (
+                    <output className='calculator-bar-preview'>
+                        {preview}
+                    </output>
+                )}
+                <div className='calculator-bar-keys'>
+                    {KEYS.map(({ key, label, glyph }) => (
+                        <button
+                            key={key}
+                            className='calculator-bar-key'
+                            type='button'
+                            tabIndex={-1}
+                            aria-label={label}
+                            aria-disabled={
+                                !calculating && (key === '.' || key === '=')
+                                    ? true
+                                    : undefined
+                            }
+                            data-key={key}
+                            {...pressHandlers(() => onKey(key))}
+                        >
+                            {glyph}
+                        </button>
+                    ))}
+                </div>
             </div>
         </div>,
         document.body

@@ -1,8 +1,14 @@
-.calculator-bar {
+.calculator-dock {
     position: fixed;
+    z-index: 80;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+.calculator-bar {
+    position: absolute;
     right: 0;
     left: 0;
-    z-index: 80;
     display: flex;
     align-items: center;
     gap: 4px;
