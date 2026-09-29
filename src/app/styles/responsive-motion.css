@@ -894,6 +894,16 @@
         transform: scale(1, 1);
     }
 }
+@keyframes calculator-bar-in {
+    from {
+        translate: 0 calc(var(--calculator-keyboard-height, 0px) + 100%);
+    }
+}
+@keyframes calculator-bar-out {
+    to {
+        translate: 0 calc(var(--calculator-keyboard-height, 0px) + 100%);
+    }
+}
 @keyframes bottom-nav-enter {
     from {
         transform: translate3d(0, var(--bottom-nav-hidden-offset), 0);

@@ -136,6 +136,7 @@
     );
     opacity: min(1, calc(var(--budget-balance-progress) * 3));
     pointer-events: none;
+    transition: translate 0.35s cubic-bezier(0.45, 0, 0.2, 1);
 }
 .budget-balance-strip {
     height: 100%;
@@ -159,6 +160,7 @@
         0
     );
     pointer-events: auto;
+    transition: translate 0.35s cubic-bezier(0.45, 0, 0.2, 1);
     will-change: transform;
 }
 .budget-balance-arc {
@@ -843,18 +845,19 @@ body > .sortable-drag-overlay * {
     animation: bottom-nav-enter 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.08s
         backwards;
 }
-:root:has(.budget-row-grid .inline-money-input:focus) .bottom-nav {
-    visibility: hidden;
+.bottom-nav {
+    transition: translate 0.34s cubic-bezier(0.32, 0.72, 0, 1);
 }
-@media (max-width: 759.98px) {
-    .mobile-header,
-    .budget-balance-clip {
-        transition: translate 0.35s cubic-bezier(0.45, 0, 0.2, 1);
-    }
-    :root:has(.budget-row-grid .inline-money-input:focus) .mobile-header,
-    :root:has(.budget-row-grid .inline-money-input:focus) .budget-balance-clip {
-        translate: 0 calc(-1 * (var(--safe-area-top) + 150px));
-    }
+:root:has(.calculator-bar[data-state='open']) .bottom-nav {
+    translate: 0 var(--bottom-nav-hidden-offset);
+}
+:root:has(.budget-row-grid .inline-money-input:focus) .budget-balance-strip {
+    translate: 0 calc(-100% - var(--budget-balance-shadow-reach));
+    pointer-events: none;
+}
+:root:has(.budget-row-grid .inline-money-input:focus)
+    .budget-balance-clip::after {
+    translate: 0 -100%;
 }
 @media (pointer: coarse) {
     :root:has(.budget-row-grid .inline-money-input:focus)

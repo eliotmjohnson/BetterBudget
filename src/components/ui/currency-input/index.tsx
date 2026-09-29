@@ -1,6 +1,7 @@
 'use client';
 
 import {
+    useEffect,
     useLayoutEffect,
     useRef,
     useState,
@@ -22,11 +23,8 @@ import {
     operatorForKey,
     startExpression
 } from './expression-edit';
-import {
-    OperatorBar,
-    type OperatorBarFill,
-    type OperatorBarKey
-} from './operator-bar';
+import { publishCalculator, releaseCalculator } from './calculator-store';
+import type { OperatorBarFill, OperatorBarKey } from './operator-bar';
 
 type CurrencyInputProps = Omit<
     ComponentPropsWithoutRef<'input'>,
@@ -89,6 +87,7 @@ export function CurrencyInput({
 }: CurrencyInputProps) {
     const [expression, setExpression] = useState<string | null>(null);
     const [focused, setFocused] = useState(false);
+    const [owner] = useState(() => ({}));
     const result =
         expression === null ? null : evaluateMoneyExpression(expression);
     const inputRef = useRef<HTMLInputElement>(null);
@@ -118,6 +117,29 @@ export function CurrencyInput({
         else if (expression !== null)
             updateExpression(appendToExpression(expression, key));
     };
+    const fillValue = () => {
+        if (!fill) return;
+        setExpression(null);
+        if (fill.valueCents !== value) onValueChange(fill.valueCents);
+    };
+
+    useLayoutEffect(() => {
+        if (!focused) return;
+        publishCalculator(owner, {
+            calculating: expression !== null,
+            fill: fill ?? null,
+            preview:
+                expression === null
+                    ? ''
+                    : result === null
+                      ? '—'
+                      : formatCurrency(result),
+            onFill: fillValue,
+            onKey: pressKey
+        });
+    });
+    useEffect(() => () => releaseCalculator(owner), [owner]);
+
     const changeAmount = (text: string) => {
         if (expression !== null) {
             updateExpression(applyExpressionEdit(expression, text));
@@ -163,6 +185,7 @@ export function CurrencyInput({
                 onChange={(event) => changeAmount(event.currentTarget.value)}
                 onBlur={(event) => {
                     setFocused(false);
+                    releaseCalculator(owner);
                     setExpression(null);
                     onBlur?.(event);
                 }}
@@ -193,25 +216,6 @@ export function CurrencyInput({
                         moveCaretToEnd(event.currentTarget);
                     }
                 }}
-            />
-            <OperatorBar
-                active={focused}
-                calculating={expression !== null}
-                fill={fill}
-                onFill={() => {
-                    if (!fill) return;
-                    setExpression(null);
-                    if (fill.valueCents !== value)
-                        onValueChange(fill.valueCents);
-                }}
-                preview={
-                    expression === null
-                        ? ''
-                        : result === null
-                          ? '—'
-                          : formatCurrency(result)
-                }
-                onKey={pressKey}
             />
         </>
     );

@@ -1,9 +1,20 @@
 'use client';
 
 import { Divide, Equal, Minus, Plus, X } from 'lucide-react';
-import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
+import {
+    useEffect,
+    useState,
+    useSyncExternalStore,
+    type CSSProperties,
+    type ReactNode
+} from 'react';
 import { createPortal } from 'react-dom';
 import type { MoneyOperator } from '@/domain/money-expression';
+import {
+    currentCalculator,
+    subscribeCalculator,
+    type CalculatorState
+} from './calculator-store';
 
 export type OperatorBarKey = MoneyOperator | '.' | '=';
 
@@ -70,12 +81,15 @@ function fullViewportHeight(viewport: VisualViewport) {
     return fullViewport.height;
 }
 
+type KeyboardFrame = { top: number; height: number };
+
 /**
- * Tracks the top edge of the on-screen keyboard in layout-viewport pixels,
- * or null while no coarse-pointer keyboard is up or the page is pinch-zoomed.
+ * Tracks the on-screen keyboard's top edge in layout-viewport pixels and its
+ * height, or null while no coarse-pointer keyboard is up or the page is
+ * pinch-zoomed.
  */
-function useKeyboardTop(active: boolean) {
-    const [keyboardTop, setKeyboardTop] = useState<number | null>(null);
+function useKeyboardFrame(active: boolean) {
+    const [frame, setFrame] = useState<KeyboardFrame | null>(null);
 
     useEffect(() => {
         const viewport = window.visualViewport;
@@ -87,12 +101,12 @@ function useKeyboardTop(active: boolean) {
         )
             return;
         const update = () => {
-            const keyboardUp =
-                fullViewportHeight(viewport) - viewport.height >=
-                    KEYBOARD_MIN_PX && viewport.scale <= 1.01;
+            const height = fullViewportHeight(viewport) - viewport.height;
 
-            setKeyboardTop(
-                keyboardUp ? viewport.offsetTop + viewport.height : null
+            setFrame(
+                height >= KEYBOARD_MIN_PX && viewport.scale <= 1.01
+                    ? { top: viewport.offsetTop + viewport.height, height }
+                    : null
             );
         };
 
@@ -103,47 +117,60 @@ function useKeyboardTop(active: boolean) {
         return () => {
             viewport.removeEventListener('resize', update);
             viewport.removeEventListener('scroll', update);
-            setKeyboardTop(null);
+            setFrame(null);
         };
     }, [active]);
 
-    return keyboardTop;
+    return frame;
 }
 
-/**
- * The calculator keys docked above the on-screen number pad while a currency
- * input is focused, plus the optional fill amount. Every control presses
- * without moving focus off the input, which would commit a half-typed
- * expression.
- */
-export function OperatorBar({
-    active,
-    calculating,
-    fill,
-    preview,
-    onFill,
-    onKey
-}: {
-    active: boolean;
-    calculating: boolean;
-    fill?: OperatorBarFill | null;
-    preview: string;
-    onFill?: () => void;
-    onKey: (key: OperatorBarKey) => void;
-}) {
-    const keyboardTop = useKeyboardTop(active);
+type ShownBar = { state: CalculatorState; frame: KeyboardFrame };
 
-    if (keyboardTop === null) return null;
+/**
+ * The one calculator bar, mounted once in the providers and docked above the
+ * on-screen number pad for whichever money input currently owns it. It slides
+ * up from below the keyboard when it opens and back down when the input lets
+ * go or the keyboard closes; switching between inputs only swaps its contents,
+ * so it never remounts or flashes. Every control presses without moving focus
+ * off the input, which would commit a half-typed expression.
+ */
+export function CalculatorBar() {
+    const state = useSyncExternalStore(
+        subscribeCalculator,
+        currentCalculator,
+        () => null
+    );
+    const frame = useKeyboardFrame(state !== null);
+    const [last, setLast] = useState<ShownBar | null>(null);
+    const open = state !== null && frame !== null;
+
+    if (open && (last?.state !== state || last?.frame !== frame))
+        setLast({ state, frame });
+
+    const shown = open ? { state, frame } : last;
+
+    if (!shown) return null;
+    const { calculating, fill, preview, onFill, onKey } = shown.state;
 
     return createPortal(
         <div
             className='calculator-bar'
             data-calculator-bar=''
+            data-state={open ? 'open' : 'closing'}
             role='toolbar'
             aria-label='Calculator'
-            style={{ top: keyboardTop }}
+            style={
+                {
+                    top: shown.frame.top,
+                    '--calculator-keyboard-height': `${shown.frame.height}px`
+                } as CSSProperties
+            }
+            onAnimationEnd={(event) => {
+                if (event.target === event.currentTarget && !open)
+                    setLast(null);
+            }}
         >
-            {fill && onFill && !calculating ? (
+            {fill && !calculating ? (
                 <button
                     className='calculator-bar-fill'
                     type='button'

@@ -16,7 +16,13 @@
     touch-action: none;
     user-select: none;
     -webkit-user-select: none;
-    animation: fade-in 0.18s ease-out;
+}
+.calculator-bar[data-state='open'] {
+    animation: calculator-bar-in 0.34s cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+.calculator-bar[data-state='closing'] {
+    pointer-events: none;
+    animation: calculator-bar-out 0.34s cubic-bezier(0.32, 0.72, 0, 1) forwards;
 }
 @supports not (backdrop-filter: blur(1px)) {
     .calculator-bar {
@@ -73,11 +79,6 @@
     opacity: 0.4;
 }
 
-@media (prefers-reduced-motion: reduce) {
-    .calculator-bar {
-        animation: none;
-    }
-}
 .calculator-bar-fill {
     flex: 1;
     min-width: 0;
