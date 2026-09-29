@@ -66,6 +66,10 @@ body:not([data-navigation-detail-state='open'])
     pointer-events: none;
     will-change: clip-path;
 }
+.navigation-detail-content[data-navigation-detail-scrolled]
+    .navigation-detail-header::before {
+    pointer-events: auto;
+}
 @property --navigation-detail-header-shadow {
     syntax: '<number>';
     inherits: true;
@@ -509,6 +513,7 @@ body:not([data-navigation-detail-state='open'])
         ),
         0
     );
+    pointer-events: auto;
     will-change: transform;
 }
 .line-item-remaining-strip {

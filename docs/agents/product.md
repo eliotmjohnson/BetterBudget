@@ -22,6 +22,7 @@ The implemented product supports:
   is on cap the right end of their progress bar with the Better Budget dollar
   coin from the logo, with no text; the bar's accessible value adds "carries
   over".
+- On phones, the month's Left to budget (or Over budget) amount stays in view: once the Budget summary card's amount scrolls under the header, a compact strip styled like the card slides down from beneath the header, as the remaining-this-month strip does in a line-item detail.
 - Cents-first currency inputs that always display a formatted value such as `$200.57`; typing digits shifts them through the decimal places without requiring a decimal point. Every money input also works as a calculator: typing an operator, or tapping one on the bar docked above the iOS number pad, extends the current amount into an expression such as `$120.00 + 5` whose result is what gets saved.
 - Expense and refund transactions, including exact splits across budget items.
 - Adding transactions globally or from a line-item detail with that item preselected, editing transactions, duplicating them into the same date and allocations, soft deleting, and undoing transaction deletion. Transaction rows on the Transactions page and in a line-item detail open a hold menu (Edit, Duplicate, Delete) on a touch hold, right-click, or the keyboard context-menu key; a plain tap still opens the edit sheet.

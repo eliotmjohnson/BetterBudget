@@ -23,6 +23,7 @@ import {
     type EdgeDragContext,
     type EdgeDragState
 } from './edge-drag';
+import { setupHeaderCover } from './header-cover';
 import { clearSummaryMotion, setupSummaryMotion } from './summary-motion';
 import {
     clearTitleMotion,
@@ -213,6 +214,12 @@ export function NavigationDetail({
             summaryRef
         });
     }, [contentReady, hasSummary, open, title]);
+
+    useLayoutEffect(() => {
+        if (!open) return;
+
+        return setupHeaderCover(bodyRef.current, contentRef.current);
+    }, [contentReady, open]);
 
     useEffect(() => {
         return () => {

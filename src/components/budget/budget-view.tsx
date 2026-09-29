@@ -25,6 +25,7 @@ import type {
     Mutate,
     MutateConfirmed
 } from '@/components/shared/budget-view-helpers';
+import { BudgetBalanceStrip } from './budget-balance-strip';
 import { EditItemDetails } from './budget-item-editors';
 import { BudgetCategorySection } from './budget-category-section';
 import { BudgetRail } from './budget-rail';
@@ -158,6 +159,7 @@ export function BudgetView({
             ref={budgetLayoutRef}
             className='screen budget-layout budget-bars-enter'
         >
+            <BudgetBalanceStrip snapshot={snapshot} />
             <div className='budget-main'>
                 <BudgetSummaryCard snapshot={snapshot} />
                 {snapshot.categories.length === 0 ? (

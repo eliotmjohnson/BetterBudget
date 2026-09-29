@@ -19,14 +19,28 @@ export function budgetBalanceView(snapshot: MonthSnapshot) {
     };
 }
 
-export function BudgetSummaryCard({ snapshot }: { snapshot: MonthSnapshot }) {
-    const summaryArcProgressRef = useRef<SVGPathElement>(null);
-    const [cornersRef] = useContinuousCorners<HTMLDivElement>();
+export const summaryArcTrack = 'M18 108 A98 98 0 0 1 214 108';
+
+export function summaryArcProgress(snapshot: MonthSnapshot) {
     const summaryAvailable = snapshot.categories.reduce(
         (total, category) => total + BigInt(category.availableCents),
         0n
     );
-    const summarySpent = BigInt(snapshot.summary.spentCents);
+    const progress = remainingAvailableProgress(
+        summaryAvailable,
+        BigInt(snapshot.summary.spentCents)
+    );
+    const angle = Math.PI + (Math.PI * progress) / 100;
+
+    return {
+        progress,
+        path: `M18 108 A98 98 0 0 1 ${116 + 98 * Math.cos(angle)} ${108 + 98 * Math.sin(angle)}`
+    };
+}
+
+export function BudgetSummaryCard({ snapshot }: { snapshot: MonthSnapshot }) {
+    const summaryArcProgressRef = useRef<SVGPathElement>(null);
+    const [cornersRef] = useContinuousCorners<HTMLDivElement>();
     const {
         isOverBudget,
         label: budgetBalanceLabel,
@@ -43,10 +57,8 @@ export function BudgetSummaryCard({ snapshot }: { snapshot: MonthSnapshot }) {
             50 - Math.max(0, budgetBalance.length - 9) * 3
         )}px`
     } as CSSProperties;
-    const progress = remainingAvailableProgress(summaryAvailable, summarySpent);
-    const summaryArcProgressAngle = Math.PI + (Math.PI * progress) / 100;
-    const summaryArcProgressEndX = 116 + 98 * Math.cos(summaryArcProgressAngle);
-    const summaryArcProgressEndY = 108 + 98 * Math.sin(summaryArcProgressAngle);
+    const { progress, path: summaryArcProgressPath } =
+        summaryArcProgress(snapshot);
 
     useLayoutEffect(() => {
         const path = summaryArcProgressRef.current;
@@ -98,7 +110,7 @@ export function BudgetSummaryCard({ snapshot }: { snapshot: MonthSnapshot }) {
                     aria-hidden='true'
                 >
                     <path
-                        d='M18 108 A98 98 0 0 1 214 108'
+                        d={summaryArcTrack}
                         pathLength='100'
                         fill='none'
                         stroke='#eef0f3'
@@ -110,7 +122,7 @@ export function BudgetSummaryCard({ snapshot }: { snapshot: MonthSnapshot }) {
                         <path
                             ref={summaryArcProgressRef}
                             className='summary-arc-progress'
-                            d={`M18 108 A98 98 0 0 1 ${summaryArcProgressEndX} ${summaryArcProgressEndY}`}
+                            d={summaryArcProgressPath}
                             fill='none'
                             stroke='#5a91ed'
                             strokeWidth='18'
@@ -123,6 +135,7 @@ export function BudgetSummaryCard({ snapshot }: { snapshot: MonthSnapshot }) {
                     <span className='summary-label'>{budgetBalanceLabel}</span>
                     <strong
                         className={`summary-amount${isOverBudget ? ' budget-balance-over' : ''}`}
+                        data-budget-balance-anchor
                     >
                         {budgetBalance}
                     </strong>

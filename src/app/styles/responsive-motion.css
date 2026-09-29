@@ -88,6 +88,16 @@
 }
 
 @media (max-width: 759.98px) {
+    .budget-balance-dock {
+        position: sticky;
+        z-index: 10;
+        top: 0;
+        display: block;
+        height: 0;
+    }
+    .app-content:has(.budget-balance-dock) {
+        scroll-padding-top: calc(var(--pull-band-height) + 44px);
+    }
     .sheet-content[data-variant='raised-mobile'] {
         min-height: min(310px, 52dvh);
     }
@@ -722,6 +732,14 @@
         --navigation-detail-title-progress: 1;
         --navigation-detail-title-tail: 0;
         --navigation-detail-title-head: 1;
+    }
+}
+@keyframes budget-balance-reveal {
+    from {
+        --budget-balance-progress: 0;
+    }
+    to {
+        --budget-balance-progress: 1;
     }
 }
 @keyframes navigation-detail-summary-reveal {

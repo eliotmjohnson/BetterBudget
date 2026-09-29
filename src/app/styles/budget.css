@@ -103,6 +103,78 @@
 .desktop-summary-copy {
     display: none;
 }
+@property --budget-balance-progress {
+    syntax: '<number>';
+    inherits: true;
+    initial-value: 0;
+}
+.budget-balance-dock {
+    display: none;
+}
+.budget-balance-clip {
+    --budget-balance-shadow-reach: 40px;
+    position: absolute;
+    top: 0;
+    right: -18px;
+    left: -18px;
+    height: 44px;
+    clip-path: inset(0 0 calc(-1 * var(--budget-balance-shadow-reach)) 0);
+    pointer-events: none;
+}
+.budget-balance-strip {
+    height: 100%;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 18px;
+    border: 1px solid var(--line);
+    border-top: 0;
+    border-radius: 0 0 calc(16px * var(--corner-radius-scale))
+        calc(16px * var(--corner-radius-scale));
+    background: #fff;
+    box-shadow: 0 8px 28px rgb(36 46 64 / 5%);
+    transform: translate3d(
+        0,
+        calc(
+            (var(--budget-balance-progress) - 1) *
+                (100% + var(--budget-balance-shadow-reach))
+        ),
+        0
+    );
+    pointer-events: auto;
+    will-change: transform;
+}
+.budget-balance-arc {
+    width: 30px;
+    height: 16px;
+    flex: 0 0 auto;
+    overflow: visible;
+}
+.budget-balance-strip .summary-label {
+    min-width: 0;
+    flex: 1;
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.budget-balance-strip .summary-amount {
+    font-size: 20px;
+    letter-spacing: -0.04em;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+@supports (animation-timeline: scroll()) and (animation-range: 0px 1px) {
+    @media (prefers-reduced-motion: no-preference) {
+        .budget-balance-clip {
+            animation: budget-balance-reveal linear both;
+            animation-timeline: scroll(nearest block);
+            animation-range: var(--budget-balance-start, 0px)
+                var(--budget-balance-end, 1px);
+        }
+    }
+}
 
 .primary-button {
     min-height: 48px;

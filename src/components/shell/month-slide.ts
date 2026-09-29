@@ -17,6 +17,28 @@ type MonthSlideCapture = {
 let capture: MonthSlideCapture | null = null;
 let activeLayer: HTMLElement | null = null;
 
+/**
+ * Copies each `data-scroll-progress` element's current progress onto its
+ * clone, because the slide-out layer stops every animation and would drop a
+ * scroll-driven value back to its initial one.
+ */
+function freezeScrollProgress(content: HTMLElement, clone: HTMLElement) {
+    const selector = '[data-scroll-progress]';
+    const clones = clone.querySelectorAll<HTMLElement>(selector);
+
+    content
+        .querySelectorAll<HTMLElement>(selector)
+        .forEach((element, index) => {
+            const property = element.dataset.scrollProgress;
+
+            if (!property) return;
+            clones[index]?.style.setProperty(
+                property,
+                getComputedStyle(element).getPropertyValue(property)
+            );
+        });
+}
+
 export function captureMonthSlide(sourceMonthKey: string) {
     const content = document.querySelector('.app-content');
 
@@ -27,6 +49,7 @@ export function captureMonthSlide(sourceMonthKey: string) {
 
     clone.className = 'page-slide-out';
     clone.removeAttribute('style');
+    freezeScrollProgress(content, clone);
     capture = {
         content: clone,
         sourceMonthKey,

@@ -1,12 +1,11 @@
 'use client';
 
 import type { RefObject } from 'react';
+import {
+    trackDockedSummary,
+    type DockedSummaryRange
+} from '@/components/ui/docked-summary';
 import { mobileMedia, scrollDrivenMotionSupported } from './title-motion';
-
-interface SummaryRange {
-    start: number;
-    end: number;
-}
 
 const shadowReach = 40;
 const anchorSelector = '[data-navigation-detail-summary-anchor]';
@@ -31,7 +30,7 @@ function measureSummaryRange(
     body: HTMLElement,
     content: HTMLElement,
     header: HTMLElement
-): SummaryRange | null {
+): DockedSummaryRange | null {
     const back = header.querySelector<HTMLElement>('.navigation-detail-back');
     const anchor = body.querySelector<HTMLElement>(anchorSelector);
 
@@ -85,67 +84,17 @@ export function setupSummaryMotion(
 
     if (!body || !content || !header || !summary) return;
 
-    const mobileQuery = window.matchMedia(mobileMedia);
-    const reducedMotionQuery = window.matchMedia(
-        '(prefers-reduced-motion: reduce)'
-    );
-    const supportsScrollDrivenMotion = scrollDrivenMotionSupported();
-    let range: SummaryRange | null = null;
-    let reducedMotionShown = false;
-    let animationFrame: number | null = null;
-    const measure = () => {
-        range = mobileQuery.matches
-            ? measureSummaryRange(body, content, header)
-            : null;
-    };
-    const apply = () => {
-        animationFrame = null;
-        if (!range) {
-            summary.style.removeProperty(progressProperty);
-
-            return;
-        }
-        if (supportsScrollDrivenMotion && !reducedMotionQuery.matches) return;
-
-        const scrollTop = Math.max(0, body.scrollTop);
-        let progress = Math.min(
-            1,
-            Math.max(0, (scrollTop - range.start) / (range.end - range.start))
-        );
-
-        if (reducedMotionQuery.matches) {
-            if (scrollTop >= range.end) reducedMotionShown = true;
-            else if (scrollTop <= range.start) reducedMotionShown = false;
-            progress = reducedMotionShown ? 1 : 0;
-        }
-        summary.style.setProperty(progressProperty, progress.toFixed(4));
-    };
-    const schedule = () => {
-        if (animationFrame !== null) return;
-        animationFrame = window.requestAnimationFrame(apply);
-    };
-    const remeasure = () => {
-        measure();
-        schedule();
-    };
-    const resizeObserver = new ResizeObserver(remeasure);
-    const anchor = body.querySelector<HTMLElement>(anchorSelector);
-
-    body.addEventListener('scroll', schedule, { passive: true });
-    mobileQuery.addEventListener('change', remeasure);
-    reducedMotionQuery.addEventListener('change', schedule);
-    resizeObserver.observe(content);
-    resizeObserver.observe(header);
-    if (anchor) resizeObserver.observe(anchor);
-    measure();
-    apply();
-
-    return () => {
-        body.removeEventListener('scroll', schedule);
-        mobileQuery.removeEventListener('change', remeasure);
-        reducedMotionQuery.removeEventListener('change', schedule);
-        resizeObserver.disconnect();
-        if (animationFrame !== null)
-            window.cancelAnimationFrame(animationFrame);
-    };
+    return trackDockedSummary({
+        measure: () => measureSummaryRange(body, content, header),
+        media: mobileMedia,
+        observed: [
+            content,
+            header,
+            body.querySelector<HTMLElement>(anchorSelector)
+        ],
+        progressProperty,
+        scrollDriven: scrollDrivenMotionSupported(),
+        scroller: body,
+        summary
+    });
 }
