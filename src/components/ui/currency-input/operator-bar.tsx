@@ -1,7 +1,7 @@
 'use client';
 
 import { Divide, Equal, Minus, Plus, X } from 'lucide-react';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import type { MoneyOperator } from '@/domain/money-expression';
 
@@ -154,7 +154,15 @@ export function OperatorBar({
                     <span className='calculator-bar-fill-caption'>
                         {fill.caption}
                     </span>
-                    <strong>{fill.amount}</strong>
+                    <strong
+                        style={
+                            {
+                                '--amount-chars': fill.amount.length
+                            } as CSSProperties
+                        }
+                    >
+                        {fill.amount}
+                    </strong>
                 </button>
             ) : (
                 <output className='calculator-bar-preview'>{preview}</output>

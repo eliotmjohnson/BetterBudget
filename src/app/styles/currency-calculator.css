@@ -87,7 +87,8 @@
     justify-items: start;
     gap: 1px;
     margin-right: 2px;
-    padding: 0 10px;
+    padding: 0 8px;
+    container-type: inline-size;
     border-radius: calc(12px * var(--corner-radius-scale));
     background: #eaf2ff;
     color: var(--blue);
@@ -111,8 +112,10 @@
     line-height: 1.1;
 }
 .calculator-bar-fill strong {
-    font-size: 16px;
-    font-variant-numeric: tabular-nums;
+    font-size: max(
+        11px,
+        min(16px, calc(100cqi / (var(--amount-chars, 1) * 0.56)))
+    );
     font-weight: 780;
     letter-spacing: -0.02em;
     line-height: 1.1;
