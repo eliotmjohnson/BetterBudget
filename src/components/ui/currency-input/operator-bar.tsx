@@ -165,7 +165,9 @@ type ShownBar = { state: CalculatorState; screenTop: number; keyboard: number };
  * closing it holds the keyboard's last on-screen top edge against the live
  * viewport offset, so the jump iOS makes when it drops the keyboard's page
  * scroll does not carry the bar off with it. Every control presses without
- * moving focus off the input, which would commit a half-typed expression.
+ * moving focus off the input, which would commit a half-typed expression. A
+ * tapped fill chip stays in place and fades out rather than leaving the page
+ * under the finger that pressed it.
  */
 export function CalculatorBar() {
     const state = useSyncExternalStore(
@@ -174,6 +176,7 @@ export function CalculatorBar() {
         () => null
     );
     const [last, setLast] = useState<ShownBar | null>(null);
+    const [spentFill, setSpentFill] = useState<OperatorBarFill | null>(null);
     const viewport = useViewportFrame(state !== null || last !== null);
     const open = state !== null && keyboardUp(viewport);
 
@@ -195,6 +198,10 @@ export function CalculatorBar() {
 
     if (!shown) return null;
     const { calculating, fill, preview, onFill, onKey } = shown.state;
+    const liveFill = calculating ? null : fill;
+
+    if (liveFill && spentFill && liveFill !== spentFill) setSpentFill(null);
+    const chip = liveFill ?? (calculating ? null : spentFill);
 
     return createPortal(
         <div className='calculator-dock'>
@@ -211,29 +218,36 @@ export function CalculatorBar() {
                     } as CSSProperties
                 }
                 onAnimationEnd={(event) => {
-                    if (event.target === event.currentTarget && !open)
-                        setLast(null);
+                    if (event.target !== event.currentTarget || open) return;
+                    setLast(null);
+                    setSpentFill(null);
                 }}
             >
-                {fill && !calculating ? (
+                {chip ? (
                     <button
                         className='calculator-bar-fill'
                         type='button'
                         tabIndex={-1}
-                        aria-label={fill.label}
-                        {...pressHandlers(onFill)}
+                        aria-label={chip.label}
+                        aria-hidden={chip === liveFill ? undefined : true}
+                        data-state={chip === liveFill ? 'live' : 'spent'}
+                        onAnimationEnd={() => setSpentFill(null)}
+                        {...pressHandlers(() => {
+                            setSpentFill(chip);
+                            onFill();
+                        })}
                     >
                         <span className='calculator-bar-fill-caption'>
-                            {fill.caption}
+                            {chip.caption}
                         </span>
                         <strong
                             style={
                                 {
-                                    '--amount-chars': fill.amount.length
+                                    '--amount-chars': chip.amount.length
                                 } as CSSProperties
                             }
                         >
-                            {fill.amount}
+                            {chip.amount}
                         </strong>
                     </button>
                 ) : (

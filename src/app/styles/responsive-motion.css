@@ -905,6 +905,11 @@
         translate: 100% 0;
     }
 }
+@keyframes calculator-fill-spent {
+    to {
+        opacity: 0;
+    }
+}
 @keyframes calculator-bar-out {
     60% {
         opacity: 1;
