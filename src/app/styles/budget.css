@@ -136,6 +136,7 @@
     );
     opacity: min(1, calc(var(--budget-balance-progress) * 3));
     pointer-events: none;
+    transition: translate 0.35s cubic-bezier(0.45, 0, 0.2, 1);
 }
 .budget-balance-strip {
     height: 100%;
@@ -159,6 +160,7 @@
         0
     );
     pointer-events: auto;
+    transition: translate 0.35s cubic-bezier(0.45, 0, 0.2, 1);
     will-change: transform;
 }
 .budget-balance-arc {
@@ -845,6 +847,21 @@ body > .sortable-drag-overlay * {
 }
 :root:has(.budget-row-grid .inline-money-input:focus) .bottom-nav {
     visibility: hidden;
+}
+:root:has(.budget-row-grid .inline-money-input:focus) .budget-balance-strip {
+    translate: 0 calc(-100% - var(--budget-balance-shadow-reach));
+    pointer-events: none;
+}
+:root:has(.budget-row-grid .inline-money-input:focus)
+    .budget-balance-clip::after {
+    translate: 0 -100%;
+}
+@media (pointer: coarse) {
+    :root:has(.budget-row-grid .inline-money-input:focus)
+        .assistant-launcher[data-arrived] {
+        pointer-events: none;
+        animation: buddy-leave 380ms cubic-bezier(0.55, 0, 0.8, 0.3) forwards;
+    }
 }
 .bottom-nav-surface {
     position: absolute;
