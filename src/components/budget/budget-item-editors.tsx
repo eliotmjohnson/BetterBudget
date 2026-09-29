@@ -6,6 +6,7 @@ import { AppSwitch } from '@/components/ui/app-switch';
 import { CurrencyInput } from '@/components/ui/currency-input';
 import { NavigationDetail } from '@/components/ui/navigation-detail';
 import {
+    pinPageWhileFocused,
     revealAboveKeyboard,
     stillFocusHandlers,
     veilNativeFocus
@@ -154,6 +155,7 @@ export function PlanInput({
             {...stillFocusHandlers}
             onFocus={(event) => {
                 veilNativeFocus(event.currentTarget);
+                pinPageWhileFocused(event.currentTarget);
                 startEditing();
                 markEditingPlan(true);
                 revealAboveKeyboard(

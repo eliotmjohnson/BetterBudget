@@ -207,6 +207,25 @@ function lendScrollRoom(scroller: HTMLElement, distance: number) {
 }
 
 /**
+ * Holds the page at the top while `field` has focus. After each edit the
+ * browser scrolls the page, not just the list, to keep the caret in view, and
+ * nothing can ask it not to; putting the page back from the `scroll` event
+ * lands before that frame is painted, so the page does not visibly move.
+ */
+export function pinPageWhileFocused(field: HTMLElement) {
+    const pin = () => {
+        if (window.scrollX !== 0 || window.scrollY !== 0) window.scrollTo(0, 0);
+    };
+    const stop = () => {
+        window.removeEventListener('scroll', pin);
+        field.removeEventListener('blur', stop);
+    };
+
+    window.addEventListener('scroll', pin);
+    field.addEventListener('blur', stop);
+}
+
+/**
  * Once the on-screen keyboard reports its size, smoothly scrolls `scroller`
  * just far enough that the focused money field clears the keyboard and the
  * calculator bar docked above it. It measures against the visual viewport, so
