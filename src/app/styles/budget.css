@@ -137,7 +137,6 @@
     opacity: min(1, calc(var(--budget-balance-progress) * 3));
     pointer-events: none;
     transition: translate 0.35s cubic-bezier(0.45, 0, 0.2, 1);
-    will-change: translate;
 }
 .budget-balance-strip {
     height: 100%;
