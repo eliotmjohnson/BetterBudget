@@ -127,11 +127,11 @@
     top: 0;
     right: 0;
     left: 0;
-    height: 10px;
+    height: 4px;
     background: linear-gradient(
         to bottom,
         rgb(21 25 31 / 10%),
-        rgb(21 25 31 / 3%) 4px,
+        rgb(21 25 31 / 3%) 1.5px,
         rgb(21 25 31 / 0%)
     );
     opacity: min(1, calc(var(--budget-balance-progress) * 3));
