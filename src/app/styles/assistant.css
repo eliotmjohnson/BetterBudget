@@ -5,15 +5,19 @@
     --assistant-launcher-top-reserve: calc(
         max(6px, var(--safe-area-top)) + 56px
     );
-    position: fixed;
-    z-index: 40;
-    top: clamp(
+    --assistant-launcher-top: clamp(
         var(--assistant-launcher-top-reserve),
         calc(var(--assistant-y, 1) * var(--viewport-height)),
         calc(
             var(--viewport-height) - var(--assistant-launcher-bottom-reserve) -
                 var(--assistant-launcher-size)
         )
+    );
+    position: fixed;
+    z-index: 40;
+    bottom: calc(
+        var(--viewport-height) - var(--assistant-launcher-top) -
+            var(--assistant-launcher-size)
     );
     width: var(--assistant-launcher-size);
     height: var(--assistant-launcher-size);
