@@ -906,8 +906,12 @@
     }
 }
 @keyframes calculator-bar-out {
+    60% {
+        opacity: 1;
+    }
     to {
-        translate: 0 calc(var(--calculator-keyboard-height, 0px) + 100%);
+        translate: 0 var(--calculator-keyboard-height, 0px);
+        opacity: 0;
     }
 }
 @keyframes bottom-nav-enter {

@@ -28,7 +28,8 @@
 }
 .calculator-bar[data-state='closing'] {
     pointer-events: none;
-    animation: calculator-bar-out 0.34s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+    animation: calculator-bar-out 0.22s cubic-bezier(0.15, 0.15, 0.3, 0.9)
+        forwards;
 }
 @supports not (backdrop-filter: blur(1px)) {
     .calculator-bar {
