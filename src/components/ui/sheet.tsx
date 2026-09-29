@@ -25,10 +25,12 @@ interface DragState {
     pointerId: number;
     originY: number;
     startY: number;
+    height: number;
     track: PointerTrack;
 }
 
 const settleDuration = 400;
+const settleCurve = 'cubic-bezier(0.29, 1, 0.29, 1)';
 const exitOvershoot = 64;
 const translateY = (distance: number) => `translate3d(0, ${distance}px, 0)`;
 
@@ -121,9 +123,27 @@ export function Sheet({
     );
 
     useEffect(() => {
-        if (!open) dragRef.current = null;
+        if (!open) {
+            dragRef.current = null;
+
+            return;
+        }
+        let enterFrame = requestAnimationFrame(() => {
+            enterFrame = requestAnimationFrame(() => {
+                if (overlayRef.current) overlayRef.current.dataset.entered = '';
+            });
+        });
+
+        return () => cancelAnimationFrame(enterFrame);
     }, [open]);
 
+    const fadeOverlay = (progress: number, transition = 'none') => {
+        const overlay = overlayRef.current;
+
+        if (!overlay) return;
+        overlay.style.transition = transition;
+        overlay.style.opacity = String(1 - Math.min(1, Math.max(0, progress)));
+    };
     const completeDragDismissal = (content: HTMLDivElement) => {
         if (content.dataset.dismissing !== 'true') return;
 
@@ -149,18 +169,25 @@ export function Sheet({
         const latestSample = samples[samples.length - 1] ?? event.nativeEvent;
 
         recordPointerSamples(drag.track, samples);
-        content.style.transform = translateY(
-            Math.max(0, drag.originY + latestSample.clientY - drag.startY)
+        const offset = Math.max(
+            0,
+            drag.originY + latestSample.clientY - drag.startY
         );
+
+        content.style.transform = translateY(offset);
+        fadeOverlay(offset / drag.height);
     };
     const settleDrag = (content: HTMLDivElement) => {
         content.style.removeProperty('transition');
         content.dataset.settling = 'true';
         void content.offsetHeight;
         content.style.transform = translateY(0);
+        fadeOverlay(0, `opacity ${settleDuration}ms ${settleCurve}`);
         settleTimerRef.current = setTimeout(() => {
             delete content.dataset.settling;
             content.style.removeProperty('transform');
+            overlayRef.current?.style.removeProperty('opacity');
+            overlayRef.current?.style.removeProperty('transition');
             settleTimerRef.current = null;
         }, settleDuration);
     };
@@ -171,7 +198,7 @@ export function Sheet({
     ) => {
         const exitDistance =
             content.getBoundingClientRect().height + exitOvershoot;
-        const { duration, transition } = exitMotion(
+        const { curve, duration, transition } = exitMotion(
             exitDistance - offset,
             velocity
         );
@@ -181,6 +208,7 @@ export function Sheet({
         void content.offsetHeight;
         content.style.transition = transition;
         content.style.transform = translateY(exitDistance);
+        fadeOverlay(1, `opacity ${duration}ms ${curve}`);
         dismissTimerRef.current = setTimeout(
             () => completeDragDismissal(content),
             duration + 80
@@ -253,6 +281,7 @@ export function Sheet({
             pointerId: event.pointerId,
             originY: offset,
             startY: event.clientY,
+            height: content.getBoundingClientRect().height,
             track: createPointerTrack(event.nativeEvent, 'clientY')
         };
     };

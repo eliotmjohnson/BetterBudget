@@ -29,7 +29,7 @@ const settleDuration = 500;
 const dismissDistance = 150;
 const flickDistance = 24;
 const flickVelocity = 0.55;
-const restingParallax = 128;
+const restingParallaxRatio = 0.25;
 const translateX = (distance: number) => `translate3d(${distance}px, 0, 0)`;
 
 function findAppFrame() {
@@ -38,6 +38,27 @@ function findAppFrame() {
 
 function renderedDistance(content: HTMLDivElement, width: number) {
     return Math.min(width, Math.max(0, content.getBoundingClientRect().left));
+}
+
+function findOverlay(content: HTMLDivElement) {
+    const previous = content.previousElementSibling;
+
+    return previous instanceof HTMLElement &&
+        previous.classList.contains('navigation-detail-overlay')
+        ? previous
+        : null;
+}
+
+function writeOverlayOpacity(
+    content: HTMLDivElement,
+    progress: number,
+    transition = 'none'
+) {
+    const overlay = findOverlay(content);
+
+    if (!overlay) return;
+    overlay.style.transition = transition;
+    overlay.style.opacity = String(1 - progress);
 }
 
 function writeLayerPositions(
@@ -50,7 +71,9 @@ function writeLayerPositions(
 
     content.style.transform = translateX(distance);
     if (frame)
-        frame.style.transform = translateX(-restingParallax * (1 - progress));
+        frame.style.transform = translateX(
+            -restingParallaxRatio * width * (1 - progress)
+        );
 }
 
 export function clearBaseMotion() {
@@ -93,11 +116,20 @@ function settleDrag(
     delete document.body.dataset.navigationDetailDragging;
     void content.offsetHeight;
     writeLayerPositions(content, frame, 0, width);
+    writeOverlayOpacity(
+        content,
+        0,
+        `opacity ${settleDuration}ms var(--navigation-detail-push-curve)`
+    );
     settleTimerRef.current = setTimeout(() => {
+        const overlay = findOverlay(content);
+
         delete content.dataset.settling;
         delete document.body.dataset.navigationDetailSettling;
         content.style.removeProperty('transform');
         frame?.style.removeProperty('transform');
+        overlay?.style.removeProperty('opacity');
+        overlay?.style.removeProperty('transition');
         settleTimerRef.current = null;
     }, settleDuration);
 }
@@ -166,15 +198,13 @@ export function moveDrag(
     }
 
     event.preventDefault();
-    writeLayerPositions(
-        content,
-        drag.frame,
-        Math.min(
-            drag.width,
-            Math.max(0, drag.originX + latestSample.clientX - drag.startX)
-        ),
-        drag.width
+    const distance = Math.min(
+        drag.width,
+        Math.max(0, drag.originX + latestSample.clientX - drag.startX)
     );
+
+    writeLayerPositions(content, drag.frame, distance, drag.width);
+    writeOverlayOpacity(content, distance / drag.width);
 }
 
 export function startDrag(
@@ -239,7 +269,7 @@ function dismissDrag(
     drag: EdgeDragState,
     { distance, velocity }: { distance: number; velocity: number }
 ) {
-    const { duration, transition } = exitMotion(
+    const { curve, duration, transition } = exitMotion(
         drag.width - distance,
         velocity
     );
@@ -249,6 +279,7 @@ function dismissDrag(
     content.style.transition = transition;
     if (drag.frame) drag.frame.style.transition = transition;
     writeLayerPositions(content, drag.frame, drag.width, drag.width);
+    writeOverlayOpacity(content, 1, `opacity ${duration}ms ${curve}`);
     ctx.dismissTimerRef.current = setTimeout(
         () => completeDragDismissal(ctx, content),
         duration + 80

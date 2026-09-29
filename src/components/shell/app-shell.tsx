@@ -166,6 +166,7 @@ export function AppShell({
                     </div>
                     <button
                         className='icon-button'
+                        data-action={view === 'budget' ? 'month' : 'settings'}
                         onClick={onMonthActions}
                         disabled={mutationPending}
                         aria-label={

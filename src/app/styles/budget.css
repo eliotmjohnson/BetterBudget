@@ -975,12 +975,16 @@ body > .sortable-drag-overlay * {
     position: fixed;
     z-index: 70;
     inset: 0;
-    background: transparent;
+    background: var(--overlay-dim);
     touch-action: pan-y;
 }
 .navigation-detail-overlay[data-state='open'] {
     animation: fade-in var(--navigation-detail-push-duration)
         var(--navigation-detail-push-curve);
+}
+body:not([data-navigation-detail-state='open'])
+    .navigation-detail-overlay[data-state='open'] {
+    animation-play-state: paused;
 }
 .navigation-detail-overlay[data-state='closed'] {
     animation: fade-out var(--navigation-detail-dismiss-duration, 0.5s)

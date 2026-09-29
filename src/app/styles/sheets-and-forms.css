@@ -2,7 +2,7 @@
     position: fixed;
     inset: 0;
     z-index: 70;
-    background: transparent;
+    background: var(--overlay-dim);
     backface-visibility: hidden;
     transform: translateZ(0);
     will-change: opacity;
@@ -12,6 +12,9 @@
 }
 .sheet-overlay[data-state='open'] {
     animation: fade-in 0.6s cubic-bezier(0.29, 1, 0.29, 1);
+}
+.sheet-overlay[data-state='open']:not([data-entered]) {
+    animation-play-state: paused;
 }
 .sheet-overlay[data-state='closed'] {
     animation: fade-out var(--sheet-dismiss-duration, 0.45s)

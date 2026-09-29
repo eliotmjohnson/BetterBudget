@@ -164,6 +164,9 @@
         grid-row: 1;
         justify-self: start;
     }
+    .mobile-header > .icon-button[data-action='settings'] {
+        display: none;
+    }
     .month-switcher {
         grid-column: 2;
         grid-row: 1;
@@ -174,7 +177,7 @@
         min-width: 140px;
     }
     .app-content {
-        width: min(100%, 1040px);
+        width: 100%;
     }
     .screen {
         padding: 24px 26px 48px;
@@ -183,6 +186,8 @@
         display: none;
     }
     .budget-layout {
+        max-width: 1040px;
+        margin-inline: auto;
         display: grid;
         grid-template-columns: minmax(0, 1fr) 260px;
         gap: 18px;
@@ -236,6 +241,12 @@
         animation: desktop-amount-bar-in 1.1s cubic-bezier(0.29, 1, 0.29, 1)
             0.08s both;
     }
+    .column-labels {
+        font-size: 11px;
+    }
+    .category-header {
+        grid-template-columns: minmax(0, 1fr) 44px;
+    }
     .desktop-bar strong {
         color: var(--ink);
         font-size: 11px;
@@ -243,7 +254,7 @@
     }
     .right-rail {
         position: sticky;
-        top: calc(98px + var(--pull-band-height));
+        top: 24px;
         border: 1px solid var(--line);
         border-radius: calc(16px * var(--corner-radius-scale));
         overflow: hidden;
@@ -282,6 +293,43 @@
         gap: 12px;
         padding: 7px 0;
         font-size: 12px;
+    }
+    .rail-activity {
+        width: calc(100% + 16px);
+        display: grid;
+        grid-template-columns: 44px minmax(0, 1fr) auto;
+        margin-inline: -8px;
+        padding-inline: 8px;
+        border: 0;
+        border-radius: calc(8px * var(--corner-radius-scale));
+        background: transparent;
+        color: var(--ink);
+        text-align: left;
+        cursor: pointer;
+    }
+    .rail-activity:hover {
+        background: var(--soft);
+    }
+    .rail-activity strong {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .rail-empty {
+        margin: 0;
+        color: var(--muted);
+        font-size: 12px;
+    }
+    .rail-primary-action {
+        width: 100%;
+        min-height: 44px;
+        font-size: 14px;
+    }
+    .budget-primary-action {
+        display: none;
+    }
+    .budget-list-toolbar {
+        margin-block: 18px;
     }
     .rail-stat span,
     .rail-activity span {
@@ -470,12 +518,81 @@
     }
 }
 
+@media (min-width: 760px) and (max-width: 1019.98px) {
+    .budget-summary {
+        display: block;
+        min-height: 0;
+    }
+    .budget-summary .summary-arc,
+    .budget-summary .summary-stats {
+        display: grid;
+    }
+    .budget-summary .desktop-summary-copy,
+    .budget-summary .desktop-bars {
+        display: none;
+    }
+}
+
+@media (max-width: 1099.98px) {
+    .desktop-sidebar .brand-lockup {
+        display: flex;
+        justify-content: center;
+        min-width: 0;
+        padding: 0 0 22px;
+    }
+    .desktop-sidebar .brand-wordmark {
+        display: none;
+    }
+    [data-amount-view] > .amount-column--spent,
+    [data-amount-view='planned'] > .amount-column--available,
+    [data-amount-view='available'] > .amount-column--planned {
+        display: none;
+    }
+}
+
 @media (min-width: 1100px) {
     .app-frame {
         grid-template-columns: 210px minmax(0, 1fr);
     }
     .screen {
         padding-inline: 34px;
+    }
+    .budget-layout {
+        max-width: min(1200px, 100% - 100px);
+        grid-template-columns: minmax(0, 1fr) 280px;
+        gap: 24px;
+    }
+    .budget-summary {
+        margin-bottom: 14px;
+    }
+    .budget-list-toolbar {
+        display: none;
+    }
+    .column-labels,
+    .budget-row-grid {
+        grid-template-columns: minmax(110px, 1fr) repeat(3, 104px);
+    }
+    .column-labels > .amount-column {
+        padding-inline: 7px;
+    }
+    .budget-row-grid > .amount-column,
+    .budget-row-grid .inline-money-input {
+        width: 100%;
+        min-width: 0;
+    }
+    .budget-row-grid .inline-money-input {
+        border-radius: calc(8px * var(--corner-radius-scale));
+        cursor: text;
+    }
+    .budget-row-grid .inline-money-input:hover {
+        background: var(--soft);
+    }
+    .budget-row-grid .inline-money-input:focus {
+        background: #fff;
+        box-shadow: inset 0 0 0 1.5px var(--blue);
+    }
+    .amount-column--spent {
+        color: var(--muted);
     }
 }
 
@@ -516,6 +633,12 @@
     }
     .right-rail {
         display: none;
+    }
+    .budget-primary-action {
+        display: inline-flex;
+    }
+    .budget-list-toolbar {
+        margin-block: 2px 14px;
     }
     .budget-summary {
         display: block;

@@ -108,10 +108,19 @@ export function BudgetCategorySection({
             </div>
             {collapsed ? null : (
                 <>
-                    <div className='column-labels'>
+                    <div
+                        className='column-labels'
+                        data-amount-view={amountView}
+                    >
                         <span>Budget item</span>
-                        <span>
-                            {amountView === 'planned' ? 'Planned' : 'Available'}
+                        <span className='amount-column amount-column--planned'>
+                            Planned
+                        </span>
+                        <span className='amount-column amount-column--spent'>
+                            Spent
+                        </span>
+                        <span className='amount-column amount-column--available'>
+                            Available
                         </span>
                     </div>
                     <div
@@ -164,7 +173,10 @@ export function BudgetCategorySection({
                                                 pendingItem
                                             )}
                                         >
-                                            <div className='budget-row-grid'>
+                                            <div
+                                                className='budget-row-grid'
+                                                data-amount-view={amountView}
+                                            >
                                                 <button
                                                     className='budget-item-button'
                                                     type='button'
@@ -177,7 +189,7 @@ export function BudgetCategorySection({
                                                 >
                                                     {item.name}
                                                 </button>
-                                                {amountView === 'planned' ? (
+                                                <div className='amount-column amount-column--planned'>
                                                     <PlanInput
                                                         key={item.id}
                                                         item={item}
@@ -186,23 +198,23 @@ export function BudgetCategorySection({
                                                         }
                                                         mutate={mutate}
                                                     />
-                                                ) : (
-                                                    <button
-                                                        className={`money-cell money-cell-button ${BigInt(item.availableCents) < 0n ? 'available-negative' : BigInt(item.availableCents) > 0n ? 'available-positive' : ''}`}
-                                                        type='button'
-                                                        aria-label={`Open ${item.name}, ${money(item.availableCents)} remaining`}
-                                                        onClick={(event) =>
-                                                            onSelectItem(
-                                                                item,
-                                                                event.currentTarget
-                                                            )
-                                                        }
-                                                    >
-                                                        {money(
-                                                            item.availableCents
-                                                        )}
-                                                    </button>
-                                                )}
+                                                </div>
+                                                <span className='money-cell amount-column amount-column--spent'>
+                                                    {money(item.spentCents)}
+                                                </span>
+                                                <button
+                                                    className={`money-cell money-cell-button amount-column amount-column--available ${available < 0n ? 'available-negative' : available > 0n ? 'available-positive' : ''}`}
+                                                    type='button'
+                                                    aria-label={`Open ${item.name}, ${money(item.availableCents)} remaining`}
+                                                    onClick={(event) =>
+                                                        onSelectItem(
+                                                            item,
+                                                            event.currentTarget
+                                                        )
+                                                    }
+                                                >
+                                                    {money(item.availableCents)}
+                                                </button>
                                             </div>
                                             <div className='budget-row-progress'>
                                                 <div

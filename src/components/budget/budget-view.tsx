@@ -21,15 +21,14 @@ import type {
 import { createUuid } from '@/domain/uuid';
 import { createDetailHistory } from '@/components/shared/detail-history';
 import { TransactionSheet } from '@/components/transactions/transaction-sheet';
-import {
-    money,
-    signedMoney,
-    type Mutate,
-    type MutateConfirmed
+import type {
+    Mutate,
+    MutateConfirmed
 } from '@/components/shared/budget-view-helpers';
 import { EditItemDetails } from './budget-item-editors';
 import { BudgetCategorySection } from './budget-category-section';
-import { BudgetSummaryCard, budgetBalanceView } from './budget-summary-card';
+import { BudgetRail } from './budget-rail';
+import { BudgetSummaryCard } from './budget-summary-card';
 import { useBudgetStructureEditor } from './budget-structure-editor';
 import { BudgetStructureSheets } from './budget-structure-sheets';
 
@@ -70,7 +69,6 @@ export function BudgetView({
     const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
     const [transactionOpen, setTransactionOpen] = useState(false);
     const editor = useBudgetStructureEditor(snapshot, mutate, mutateConfirmed);
-    const balance = budgetBalanceView(snapshot);
     const selectedItem = requestedItemDefinitionId
         ? (snapshot.categories
               .flatMap((category) => category.items)
@@ -336,48 +334,16 @@ export function BudgetView({
                     </>
                 )}
             </div>
-            <aside className='right-rail'>
-                <div className='rail-section'>
-                    <h2 className='rail-title'>{snapshot.label} Summary</h2>
-                    <div className='rail-stat'>
-                        <span>{balance.label}</span>
-                        <strong
-                            className={`budget-balance${balance.isOverBudget ? ' budget-balance-over' : ''}`}
-                        >
-                            {balance.amount}
-                        </strong>
-                    </div>
-                    <div className='rail-stat'>
-                        <span>Income</span>
-                        <strong>
-                            {money(snapshot.summary.expectedIncomeCents)}
-                        </strong>
-                    </div>
-                    <div className='rail-stat'>
-                        <span>Planned</span>
-                        <strong>{money(snapshot.summary.plannedCents)}</strong>
-                    </div>
-                    <div className='rail-stat'>
-                        <span>Spent</span>
-                        <strong>{money(snapshot.summary.spentCents)}</strong>
-                    </div>
-                </div>
-                <div className='rail-section'>
-                    <h2 className='rail-title'>Recent transactions</h2>
-                    {snapshot.activity
-                        .filter((entry) => entry.type !== 'income')
-                        .slice(0, 5)
-                        .map((entry) => (
-                            <div className='rail-activity' key={entry.id}>
-                                <span>{entry.occurredOn.slice(5)}</span>
-                                <strong>{entry.title}</strong>
-                                <span>
-                                    {signedMoney(entry.type, entry.amountCents)}
-                                </span>
-                            </div>
-                        ))}
-                </div>
-            </aside>
+            <BudgetRail
+                snapshot={snapshot}
+                mutate={mutate}
+                onAddTransaction={
+                    snapshot.categories.length === 0
+                        ? null
+                        : () => setTransactionOpen(true)
+                }
+                onDeleteTransaction={onDeleteTransaction}
+            />
             <TransactionSheet
                 open={transactionOpen}
                 onOpenChange={setTransactionOpen}

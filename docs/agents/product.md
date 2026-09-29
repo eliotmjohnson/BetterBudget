@@ -47,7 +47,9 @@ The implemented product supports:
   category appearance editor, and shared sheet behavior while limiting its
   scope to renaming, reordering, and deletion.
   Switching the amount view directly on the Budget page remains active for the
-  current app session and resets from this default only on a fresh load.
+  current app session and resets from this default only on a fresh load. At
+  1100 px and wider the Budget page shows Planned, Spent, and Available
+  together, so the switch and this preference apply only to narrower layouts.
 - The Settings Data section exports the whole household budget as one
   `better-budget-backup` JSON file (every month, category and item definition
   including archived ones, plan, carryover setting, income plan and receipt,

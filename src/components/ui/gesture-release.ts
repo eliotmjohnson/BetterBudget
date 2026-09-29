@@ -118,9 +118,7 @@ export function exitMotion(remaining: number, velocity: number) {
         1,
         Math.max(exitCurveMinimumY1, normalizedVelocity * exitCurveX1)
     );
+    const curve = `cubic-bezier(${exitCurveX1}, ${y1.toFixed(3)}, 0.21, 1)`;
 
-    return {
-        duration,
-        transition: `transform ${duration}ms cubic-bezier(${exitCurveX1}, ${y1.toFixed(3)}, 0.21, 1)`
-    };
+    return { curve, duration, transition: `transform ${duration}ms ${curve}` };
 }
