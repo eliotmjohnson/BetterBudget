@@ -845,11 +845,8 @@ body > .sortable-drag-overlay * {
     animation: bottom-nav-enter 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.08s
         backwards;
 }
-.bottom-nav {
-    transition: translate 0.34s cubic-bezier(0.32, 0.72, 0, 1);
-}
-:root:has(.calculator-bar[data-state='open']) .bottom-nav {
-    translate: 0 var(--bottom-nav-hidden-offset);
+:root:has(.budget-row-grid .inline-money-input:focus) .bottom-nav {
+    visibility: hidden;
 }
 :root:has(.budget-row-grid .inline-money-input:focus) .budget-balance-strip {
     translate: 0 calc(-100% - var(--budget-balance-shadow-reach));

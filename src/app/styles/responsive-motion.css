@@ -896,7 +896,7 @@
 }
 @keyframes calculator-bar-in {
     from {
-        translate: 0 calc(var(--calculator-keyboard-height, 0px) + 100%);
+        translate: 100% 0;
     }
 }
 @keyframes calculator-bar-out {

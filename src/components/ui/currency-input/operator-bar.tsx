@@ -19,6 +19,7 @@ import {
 export type OperatorBarKey = MoneyOperator | '.' | '=';
 
 const KEYBOARD_MIN_PX = 100;
+const KEYBOARD_JITTER_PX = 8;
 const KEYS: { key: OperatorBarKey; label: string; glyph: ReactNode }[] = [
     { key: '÷', label: 'Divide', glyph: <Divide aria-hidden /> },
     { key: '×', label: 'Multiply', glyph: <X aria-hidden /> },
@@ -86,7 +87,9 @@ type KeyboardFrame = { top: number; height: number };
 /**
  * Tracks the on-screen keyboard's top edge in layout-viewport pixels and its
  * height, or null while no coarse-pointer keyboard is up or the page is
- * pinch-zoomed.
+ * pinch-zoomed. Once docked it keeps its frame through moves smaller than
+ * `KEYBOARD_JITTER_PX`, so the few-pixel nudges iOS makes as focus moves
+ * between inputs do not shift the bar.
  */
 function useKeyboardFrame(active: boolean) {
     const [frame, setFrame] = useState<KeyboardFrame | null>(null);
@@ -102,11 +105,16 @@ function useKeyboardFrame(active: boolean) {
             return;
         const update = () => {
             const height = fullViewportHeight(viewport) - viewport.height;
+            const top = viewport.offsetTop + viewport.height;
 
-            setFrame(
-                height >= KEYBOARD_MIN_PX && viewport.scale <= 1.01
-                    ? { top: viewport.offsetTop + viewport.height, height }
-                    : null
+            setFrame((docked) =>
+                height < KEYBOARD_MIN_PX || viewport.scale > 1.01
+                    ? null
+                    : docked &&
+                        Math.abs(docked.top - top) < KEYBOARD_JITTER_PX &&
+                        Math.abs(docked.height - height) < KEYBOARD_JITTER_PX
+                      ? docked
+                      : { top, height }
             );
         };
 
@@ -128,9 +136,9 @@ type ShownBar = { state: CalculatorState; frame: KeyboardFrame };
 
 /**
  * The one calculator bar, mounted once in the providers and docked above the
- * on-screen number pad for whichever money input currently owns it. It slides
- * up from below the keyboard when it opens and back down when the input lets
- * go or the keyboard closes; switching between inputs only swaps its contents,
+ * on-screen number pad for whichever money input currently owns it. Once the
+ * keyboard is up it slides in from the right, and it slides down with the
+ * keyboard when the input lets go or the keyboard closes; switching between inputs only swaps its contents,
  * so it never remounts or flashes. Every control presses without moving focus
  * off the input, which would commit a half-typed expression.
  */
