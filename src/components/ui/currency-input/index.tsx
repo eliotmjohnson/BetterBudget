@@ -22,7 +22,11 @@ import {
     operatorForKey,
     startExpression
 } from './expression-edit';
-import { OperatorBar, type OperatorBarKey } from './operator-bar';
+import {
+    OperatorBar,
+    type OperatorBarFill,
+    type OperatorBarKey
+} from './operator-bar';
 
 type CurrencyInputProps = Omit<
     ComponentPropsWithoutRef<'input'>,
@@ -30,6 +34,7 @@ type CurrencyInputProps = Omit<
 > & {
     value: string;
     onValueChange: (valueCents: string) => void;
+    fill?: (OperatorBarFill & { valueCents: string }) | null;
 };
 
 const moveCaretToEnd = (input: HTMLInputElement) => {
@@ -67,10 +72,12 @@ function fitExpression(input: HTMLInputElement, calculating: boolean) {
  * turns the field into a calculator expression that starts from the current
  * amount and takes dollar operands; every valid intermediate result is
  * reported through `onValueChange`, and blur or `=` collapses the field back
- * to the last valid result.
+ * to the last valid result. An optional `fill` offers one amount on the bar
+ * that replaces the field's value in a single tap.
  */
 export function CurrencyInput({
     className,
+    fill,
     onBlur,
     onClick,
     onFocus,
@@ -190,6 +197,13 @@ export function CurrencyInput({
             <OperatorBar
                 active={focused}
                 calculating={expression !== null}
+                fill={fill}
+                onFill={() => {
+                    if (!fill) return;
+                    setExpression(null);
+                    if (fill.valueCents !== value)
+                        onValueChange(fill.valueCents);
+                }}
                 preview={
                     expression === null
                         ? ''

@@ -193,6 +193,10 @@ export function BudgetCategorySection({
                                                     <PlanInput
                                                         key={item.id}
                                                         item={item}
+                                                        leftToBudgetCents={
+                                                            snapshot.summary
+                                                                .leftToBudgetCents
+                                                        }
                                                         monthKey={
                                                             snapshot.monthKey
                                                         }

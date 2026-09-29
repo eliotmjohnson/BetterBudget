@@ -60,3 +60,37 @@ export function projectedAvailableAfterTransactionDraft({
 
     return cents(projected);
 }
+
+/**
+ * What is still left to budget while one item's plan is being edited: the
+ * month's left-to-budget, which counts the item's saved plan, adjusted by how
+ * far the draft has moved from that plan.
+ */
+export function leftToBudgetWithPlanDraft({
+    leftToBudgetCents,
+    savedPlanCents,
+    draftPlanCents
+}: {
+    leftToBudgetCents: Cents | string;
+    savedPlanCents: Cents | string;
+    draftPlanCents: Cents | string;
+}): Cents {
+    return cents(
+        BigInt(leftToBudgetCents) -
+            (BigInt(draftPlanCents) - BigInt(savedPlanCents))
+    );
+}
+
+/**
+ * The plan for one item that leaves nothing left to budget: its saved plan
+ * plus the month's left-to-budget, whatever the item's draft currently holds.
+ */
+export function planFillingLeftToBudget({
+    leftToBudgetCents,
+    savedPlanCents
+}: {
+    leftToBudgetCents: Cents | string;
+    savedPlanCents: Cents | string;
+}): Cents {
+    return cents(BigInt(savedPlanCents) + BigInt(leftToBudgetCents));
+}

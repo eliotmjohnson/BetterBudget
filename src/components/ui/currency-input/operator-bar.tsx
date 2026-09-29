@@ -17,6 +17,32 @@ const KEYS: { key: OperatorBarKey; label: string; glyph: ReactNode }[] = [
     { key: '=', label: 'Equals', glyph: <Equal aria-hidden /> }
 ];
 
+/**
+ * An optional one-tap amount offered in the preview slot while no expression
+ * is being typed, such as filling a plan with what is left to budget.
+ */
+export type OperatorBarFill = {
+    amount: string;
+    caption: string;
+    label: string;
+};
+
+/**
+ * Press handlers for a bar control that must act without taking focus from
+ * the input: `pointerdown` is prevented, the touch acts on `touchend` with its
+ * default prevented so iOS synthesizes no focus-moving click, and `onClick`
+ * covers VoiceOver and mouse activation.
+ */
+const pressHandlers = (action: () => void) => ({
+    onPointerDown: (event: { preventDefault: () => void }) =>
+        event.preventDefault(),
+    onTouchEnd: (event: { preventDefault: () => void }) => {
+        event.preventDefault();
+        action();
+    },
+    onClick: action
+});
+
 export const isCalculatorBarTarget = (target: EventTarget | null) =>
     target instanceof Element &&
     target.closest('[data-calculator-bar]') !== null;
@@ -86,20 +112,23 @@ function useKeyboardTop(active: boolean) {
 
 /**
  * The calculator keys docked above the on-screen number pad while a currency
- * input is focused. Keys act on touchend with its default prevented, so iOS
- * never synthesizes the click that would move focus off the input and commit
- * a half-typed expression; `onClick` still covers VoiceOver and mouse
- * activation.
+ * input is focused, plus the optional fill amount. Every control presses
+ * without moving focus off the input, which would commit a half-typed
+ * expression.
  */
 export function OperatorBar({
     active,
     calculating,
+    fill,
     preview,
+    onFill,
     onKey
 }: {
     active: boolean;
     calculating: boolean;
+    fill?: OperatorBarFill | null;
     preview: string;
+    onFill?: () => void;
     onKey: (key: OperatorBarKey) => void;
 }) {
     const keyboardTop = useKeyboardTop(active);
@@ -114,7 +143,22 @@ export function OperatorBar({
             aria-label='Calculator'
             style={{ top: keyboardTop }}
         >
-            <output className='calculator-bar-preview'>{preview}</output>
+            {fill && onFill && !calculating ? (
+                <button
+                    className='calculator-bar-fill'
+                    type='button'
+                    tabIndex={-1}
+                    aria-label={fill.label}
+                    {...pressHandlers(onFill)}
+                >
+                    <span className='calculator-bar-fill-caption'>
+                        {fill.caption}
+                    </span>
+                    <strong>{fill.amount}</strong>
+                </button>
+            ) : (
+                <output className='calculator-bar-preview'>{preview}</output>
+            )}
             <div className='calculator-bar-keys'>
                 {KEYS.map(({ key, label, glyph }) => (
                     <button
@@ -129,12 +173,7 @@ export function OperatorBar({
                                 : undefined
                         }
                         data-key={key}
-                        onPointerDown={(event) => event.preventDefault()}
-                        onTouchEnd={(event) => {
-                            event.preventDefault();
-                            onKey(key);
-                        }}
-                        onClick={() => onKey(key)}
+                        {...pressHandlers(() => onKey(key))}
                     >
                         {glyph}
                     </button>
