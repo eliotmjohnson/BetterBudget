@@ -5,12 +5,11 @@ import { useMemo, useState } from 'react';
 import { Sheet } from '@/components/ui/sheet';
 import { formatCurrency } from '@/domain/money';
 import type { ActivityEntry, MonthSnapshot } from '@/domain/types';
-import type { BudgetMutation } from '@/server/mutation-schema';
+import type { Mutate } from '@/components/shared/budget-view-helpers';
 import { useTransactionHoldMenu } from '@/components/shared/transaction-hold-menu';
 import { TransactionRow } from '@/components/shared/transaction-row';
 import { TransactionSheet } from './transaction-sheet';
 
-type Mutate = (input: BudgetMutation) => boolean | void;
 type Filter = 'all' | 'expense' | 'refund';
 type SplitFilter = 'all' | 'split' | 'single';
 type TransactionActivityEntry = ActivityEntry & {

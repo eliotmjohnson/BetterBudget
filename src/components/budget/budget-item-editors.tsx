@@ -22,6 +22,7 @@ import {
 } from '@/components/budget/item-remaining-summary';
 import {
     money,
+    signedMoney,
     type Mutate,
     type MutateConfirmed
 } from '@/components/shared/budget-view-helpers';
@@ -37,8 +38,6 @@ const dayLabel = (date: string) =>
         year: 'numeric',
         timeZone: 'UTC'
     }).format(new Date(`${date}T00:00:00Z`));
-const transactionMoney = (entry: ActivityEntry, amountCents: string) =>
-    `${entry.type === 'expense' ? '−' : '+'}${money(amountCents)}`;
 const isTransactionActivityEntry = (
     entry: ActivityEntry
 ): entry is TransactionActivityEntry => entry.type !== 'income';
@@ -255,8 +254,8 @@ export function EditItemForm({
                                         <TransactionRow
                                             key={entry.id}
                                             className='navigation-detail-transaction-row'
-                                            amount={transactionMoney(
-                                                entry,
+                                            amount={signedMoney(
+                                                entry.type,
                                                 allocation.amountCents
                                             )}
                                             entry={entry}

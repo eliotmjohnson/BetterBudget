@@ -9,7 +9,7 @@
     z-index: 40;
     top: clamp(
         var(--assistant-launcher-top-reserve),
-        calc(var(--assistant-y, 0.68) * var(--viewport-height)),
+        calc(var(--assistant-y, 1) * var(--viewport-height)),
         calc(
             var(--viewport-height) - var(--assistant-launcher-bottom-reserve) -
                 var(--assistant-launcher-size)

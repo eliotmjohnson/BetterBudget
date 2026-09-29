@@ -931,8 +931,6 @@ body > .sortable-drag-overlay * {
     font-weight: 700;
     text-align: center;
 }
-/* An open Radix modal sets pointer-events: none on body; the toast lives
-   outside every dialog, so it must opt back in for Undo to be tappable. */
 .toast {
     position: fixed;
     z-index: 80;
@@ -952,6 +950,11 @@ body > .sortable-drag-overlay * {
     font-size: 13px;
     font-weight: 650;
     animation: rise-in 200ms ease-out;
+}
+.toast-actions {
+    flex: 0 0 auto;
+    display: flex;
+    gap: 8px;
 }
 .toast button {
     flex: 0 0 auto;

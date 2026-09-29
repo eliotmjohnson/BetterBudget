@@ -4,7 +4,8 @@ import {
     useIsMutating,
     useMutation,
     useQuery,
-    useQueryClient
+    useQueryClient,
+    type QueryClient
 } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { shiftMonth, type MonthKey } from '@/domain/money';
@@ -13,6 +14,9 @@ import type { BudgetMutation } from '@/server/mutation-schema';
 
 const snapshotKey = (monthKey: MonthKey) =>
     ['budget-snapshot', monthKey] as const;
+const budgetMutationKey = ['budget-mutation'] as const;
+
+export type MutationFailure = { message: string; retryable: boolean };
 
 function carryoverInvalidationStart(input: BudgetMutation): MonthKey | null {
     switch (input.type) {
@@ -52,6 +56,34 @@ function carryoverInvalidationStart(input: BudgetMutation): MonthKey | null {
     }
 }
 
+function budgetMutationsSettled(
+    queryClient: QueryClient,
+    signal: AbortSignal
+): Promise<void> {
+    const pending = () =>
+        queryClient.isMutating({ mutationKey: budgetMutationKey }) > 0;
+
+    if (!pending()) return Promise.resolve();
+
+    return new Promise((resolve, reject) => {
+        const stop = () => {
+            unsubscribe();
+            signal.removeEventListener('abort', abort);
+        };
+        const abort = () => {
+            stop();
+            reject(signal.reason);
+        };
+        const unsubscribe = queryClient.getMutationCache().subscribe(() => {
+            if (pending()) return;
+            stop();
+            resolve();
+        });
+
+        signal.addEventListener('abort', abort, { once: true });
+    });
+}
+
 async function fetchSnapshot(
     monthKey: MonthKey,
     signal: AbortSignal
@@ -80,7 +112,9 @@ async function postMutation(
 
     if (scenario === 'offline')
         throw new MutationRequestError(
-            'Reconnect before saving financial changes.'
+            'Reconnect before saving financial changes.',
+            undefined,
+            true
         );
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), 8_000);
@@ -116,7 +150,9 @@ async function postMutation(
         }
 
         throw new MutationRequestError(
-            'The save is taking longer than expected. Retrying safely…',
+            controller.signal.aborted
+                ? 'Couldn’t confirm that change was saved.'
+                : 'Couldn’t reach the server. That change wasn’t saved.',
             undefined,
             true
         );
@@ -125,7 +161,7 @@ async function postMutation(
     }
     if (response.status >= 500)
         throw new MutationRequestError(
-            'The server is taking longer than expected.',
+            'The server couldn’t save that change.',
             undefined,
             true
         );
@@ -137,10 +173,15 @@ async function postMutation(
 }
 
 export function useBudgetSnapshot(initialSnapshot: MonthSnapshot) {
+    const queryClient = useQueryClient();
+
     return useQuery({
         queryKey: snapshotKey(initialSnapshot.monthKey),
-        queryFn: ({ signal }) =>
-            fetchSnapshot(initialSnapshot.monthKey, signal),
+        queryFn: async ({ signal }) => {
+            await budgetMutationsSettled(queryClient, signal);
+
+            return fetchSnapshot(initialSnapshot.monthKey, signal);
+        },
         initialData: initialSnapshot,
         refetchOnWindowFocus: 'always',
         refetchInterval: 10_000,
@@ -154,13 +195,13 @@ export function useBudgetMutation(
         snapshot: MonthSnapshot,
         input: BudgetMutation
     ) => MonthSnapshot,
-    onMessage?: (message: string) => void,
+    onFailure?: (failure: MutationFailure, input: BudgetMutation) => void,
     onMutationSuccess?: (input: BudgetMutation) => void
 ) {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationKey: ['budget-mutation', monthKey],
+        mutationKey: [...budgetMutationKey, monthKey],
         scope: { id: `budget-mutation-${monthKey}` },
         mutationFn: postMutation,
         retry: (failureCount, error) =>
@@ -221,10 +262,16 @@ export function useBudgetMutation(
                     });
             } else if (context?.previous)
                 queryClient.setQueryData(context.queryKey, context.previous);
-            onMessage?.(
-                error instanceof Error
-                    ? error.message
-                    : 'That change could not be saved.'
+            onFailure?.(
+                {
+                    message:
+                        error instanceof Error
+                            ? error.message
+                            : 'That change could not be saved.',
+                    retryable:
+                        error instanceof MutationRequestError && error.transient
+                },
+                input
             );
         }
     });
@@ -250,7 +297,7 @@ export function useConnectivity() {
 }
 
 export function useDelayedSyncIndicator() {
-    const mutating = useIsMutating({ mutationKey: ['budget-mutation'] }) > 0;
+    const mutating = useIsMutating({ mutationKey: budgetMutationKey }) > 0;
     const [visible, setVisible] = useState(false);
 
     useEffect(() => {

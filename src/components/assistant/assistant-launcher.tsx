@@ -29,7 +29,8 @@ type Side = 'left' | 'right';
 
 const STORAGE_KEY = 'betterBudgetAssistantPosition';
 const CHANGE_EVENT = 'better-budget-assistant-position';
-const DEFAULT_POSITION = 'right:0.68';
+const DEFAULT_FRACTION = 1;
+const DEFAULT_POSITION = `left:${DEFAULT_FRACTION}`;
 const DRAG_THRESHOLD_PX = 8;
 const SWALLOW_CLICK_MS = 600;
 const ARRIVAL_DELAY_MS = 600;
@@ -75,11 +76,11 @@ function parsePosition(raw: string): { side: Side; fraction: number } {
     const fraction = Number(value);
 
     return {
-        side: side === 'left' ? 'left' : 'right',
+        side: side === 'right' ? 'right' : 'left',
         fraction:
             Number.isFinite(fraction) && fraction >= 0 && fraction <= 1
                 ? fraction
-                : 0.68
+                : DEFAULT_FRACTION
     };
 }
 

@@ -9,10 +9,9 @@ import { defaultDateForMonth } from '@/domain/calendar';
 import { formatCurrency } from '@/domain/money';
 import type { ActivityEntry, MonthSnapshot } from '@/domain/types';
 import { createUuid } from '@/domain/uuid';
-import type { BudgetMutation } from '@/server/mutation-schema';
+import type { Mutate } from '@/components/shared/budget-view-helpers';
 import { TransactionAllocationPicker } from './transaction-allocation-picker';
 
-type Mutate = (input: BudgetMutation) => void;
 interface SplitDraft {
     key: string;
     monthlyItemId: string;
@@ -190,15 +189,17 @@ export function TransactionSheet({
             note: note || undefined,
             splits: normalized
         };
+        const accepted =
+            transaction && transaction.type !== 'income'
+                ? mutate({
+                      type: 'updateTransaction',
+                      transactionId: transaction.id,
+                      expectedVersion: transaction.version,
+                      ...values
+                  })
+                : mutate({ type: 'addTransaction', ...values });
 
-        if (transaction && transaction.type !== 'income')
-            mutate({
-                type: 'updateTransaction',
-                transactionId: transaction.id,
-                expectedVersion: transaction.version,
-                ...values
-            });
-        else mutate({ type: 'addTransaction', ...values });
+        if (!accepted) return;
         onOpenChange(false);
         setMerchant('');
         setAmount('');

@@ -30,7 +30,7 @@ export function AddIncomeSource({
     const [icon, setIcon] = useState<IncomeIconValue>('wallet');
     const [tone, setTone] = useState<CategoryTone>('mint');
     const submit = () => {
-        mutate({
+        const accepted = mutate({
             type: 'addIncomePlan',
             clientMutationId: createUuid(),
             monthKey: snapshot.monthKey,
@@ -39,6 +39,8 @@ export function AddIncomeSource({
             tone,
             expectedCents: expected || '0'
         });
+
+        if (!accepted) return;
         onOpenChange(false);
         setName('');
         setExpected('');
@@ -126,7 +128,7 @@ export function RecordIncome({
 
     if (!renderedPlan) return null;
     const submit = () => {
-        mutate({
+        const accepted = mutate({
             type: 'addIncomeReceipt',
             clientMutationId: createUuid(),
             monthKey: snapshot.monthKey,
@@ -135,6 +137,8 @@ export function RecordIncome({
             amountCents: amount || '0',
             note: note || undefined
         });
+
+        if (!accepted) return;
         onOpenChange(false);
         setAmount('');
         setNote('');

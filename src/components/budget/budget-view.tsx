@@ -23,6 +23,7 @@ import { createDetailHistory } from '@/components/shared/detail-history';
 import { TransactionSheet } from '@/components/transactions/transaction-sheet';
 import {
     money,
+    signedMoney,
     type Mutate,
     type MutateConfirmed
 } from '@/components/shared/budget-view-helpers';
@@ -370,7 +371,9 @@ export function BudgetView({
                             <div className='rail-activity' key={entry.id}>
                                 <span>{entry.occurredOn.slice(5)}</span>
                                 <strong>{entry.title}</strong>
-                                <span>-{money(entry.amountCents)}</span>
+                                <span>
+                                    {signedMoney(entry.type, entry.amountCents)}
+                                </span>
                             </div>
                         ))}
                 </div>

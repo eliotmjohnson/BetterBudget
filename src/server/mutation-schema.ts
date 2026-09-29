@@ -8,7 +8,7 @@ const base = z.object({
 
 export const centsSchema = z
     .string()
-    .regex(/^\d+$/)
+    .regex(/^\d+$/, { message: 'Amounts must be whole cents.', abort: true })
     .refine((value) => BigInt(value) <= MAX_ENTRY_CENTS, {
         message: 'Amounts can be at most $99,999,999.99.'
     });

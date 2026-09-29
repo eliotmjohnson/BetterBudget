@@ -6,9 +6,8 @@ import { Sheet } from '@/components/ui/sheet';
 import { monthLabel, shiftMonth } from '@/domain/money';
 import type { MonthSnapshot } from '@/domain/types';
 import { createUuid } from '@/domain/uuid';
+import type { Mutate } from '@/components/shared/budget-view-helpers';
 import type { BudgetMutation } from '@/server/mutation-schema';
-
-type Mutate = (input: BudgetMutation) => void;
 
 export function MonthActionsSheet({
     open,
@@ -37,13 +36,14 @@ export function MonthActionsSheet({
             clientMutationId: createUuid(),
             monthKey: snapshot.monthKey
         };
+        const mutations = {
+            copy: { type: 'copyPreviousMonth', ...base },
+            clear: { type: 'clearPlannedAmounts', ...base },
+            reset: { type: 'resetBudget', ...base },
+            note: { type: 'updateMonthNote', note, ...base }
+        } satisfies Record<NonNullable<typeof confirm>, BudgetMutation>;
 
-        if (confirm === 'copy') mutate({ type: 'copyPreviousMonth', ...base });
-        if (confirm === 'clear')
-            mutate({ type: 'clearPlannedAmounts', ...base });
-        if (confirm === 'reset') mutate({ type: 'resetBudget', ...base });
-        if (confirm === 'note')
-            mutate({ type: 'updateMonthNote', note, ...base });
+        if (confirm && !mutate(mutations[confirm])) return;
         close();
     };
 

@@ -83,16 +83,29 @@ export function BudgetApp({
             enabled ? 'on' : 'off'
         );
     };
+    const confirmedMutationIds = useRef(new Set<string>());
     const budgetMutation = useBudgetMutation(
         snapshot.monthKey,
         optimisticSnapshot,
-        (message) => showToast({ message }),
+        ({ message, retryable }, input) =>
+            showToast(
+                retryable &&
+                    !confirmedMutationIds.current.has(input.clientMutationId)
+                    ? {
+                          message,
+                          actionLabel: 'Retry',
+                          action: () => mutate(input),
+                          persistent: true
+                      }
+                    : { message }
+            ),
         (input) => {
             if (input.type === 'copyPreviousMonth')
                 setBudgetAnimationKey((current) => current + 1);
         }
     );
-    const mutate = (input: BudgetMutation) => {
+
+    function mutate(input: BudgetMutation) {
         if (!online) {
             showToast({
                 message: 'Reconnect before saving financial changes.'
@@ -103,7 +116,7 @@ export function BudgetApp({
         budgetMutation.mutate(input);
 
         return true;
-    };
+    }
     const mutateConfirmed = async (input: BudgetMutation) => {
         if (!online) {
             showToast({
@@ -112,12 +125,15 @@ export function BudgetApp({
 
             return false;
         }
+        confirmedMutationIds.current.add(input.clientMutationId);
         try {
             await budgetMutation.mutateAsync(input);
 
             return true;
         } catch {
             return false;
+        } finally {
+            confirmedMutationIds.current.delete(input.clientMutationId);
         }
     };
     const deleteTransaction = (entry: ActivityEntry) => {

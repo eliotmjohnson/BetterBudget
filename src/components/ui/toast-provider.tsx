@@ -15,6 +15,7 @@ interface ToastOptions {
     message: string;
     actionLabel?: string;
     action?: () => void;
+    persistent?: boolean;
 }
 
 interface ToastState extends ToastOptions {
@@ -48,7 +49,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     };
 
     useEffect(() => {
-        if (!toast) return;
+        if (!toast || toast.persistent) return;
         const timer = window.setTimeout(
             () => dismiss(toast.id),
             toastDurationMs
@@ -70,19 +71,22 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                           key={toast.id}
                       >
                           <span>{toast.message}</span>
-                          {toast.action ? (
-                              <button type='button' onClick={runAction}>
-                                  {toast.actionLabel}
-                              </button>
-                          ) : (
-                              <button
-                                  type='button'
-                                  aria-label='Dismiss message'
-                                  onClick={() => dismiss(toast.id)}
-                              >
-                                  ×
-                              </button>
-                          )}
+                          <span className='toast-actions'>
+                              {toast.action ? (
+                                  <button type='button' onClick={runAction}>
+                                      {toast.actionLabel}
+                                  </button>
+                              ) : null}
+                              {!toast.action || toast.persistent ? (
+                                  <button
+                                      type='button'
+                                      aria-label='Dismiss message'
+                                      onClick={() => dismiss(toast.id)}
+                                  >
+                                      ×
+                                  </button>
+                              ) : null}
+                          </span>
                       </div>,
                       document.body
                   )
