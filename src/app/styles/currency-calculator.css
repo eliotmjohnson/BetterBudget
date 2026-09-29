@@ -106,10 +106,6 @@
 .calculator-bar-fill:active {
     background: #d8e7ff;
 }
-.calculator-bar-fill[data-state='spent'] {
-    pointer-events: none;
-    animation: calculator-fill-spent 0.2s ease-out forwards;
-}
 .calculator-bar-fill-caption,
 .calculator-bar-fill strong {
     max-width: 100%;

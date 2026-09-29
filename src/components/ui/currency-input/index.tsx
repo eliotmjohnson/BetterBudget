@@ -71,7 +71,9 @@ function fitExpression(input: HTMLInputElement, calculating: boolean) {
  * amount and takes dollar operands; every valid intermediate result is
  * reported through `onValueChange`, and blur or `=` collapses the field back
  * to the last valid result. An optional `fill` offers one amount on the bar
- * that replaces the field's value in a single tap.
+ * that replaces the field's value in a single tap; it lands as a native text
+ * insertion whose `input` event carries the filled amount, so the browser
+ * handles it like a keystroke rather than a scripted value change.
  */
 export function CurrencyInput({
     className,
@@ -91,6 +93,7 @@ export function CurrencyInput({
     const result =
         expression === null ? null : evaluateMoneyExpression(expression);
     const inputRef = useRef<HTMLInputElement>(null);
+    const pendingFill = useRef<string | null>(null);
     const displayed = expression ?? formatCurrencyInput(value);
 
     useLayoutEffect(() => {
@@ -118,9 +121,19 @@ export function CurrencyInput({
             updateExpression(appendToExpression(expression, key));
     };
     const fillValue = () => {
+        const input = inputRef.current;
+
         if (!fill) return;
         setExpression(null);
-        if (fill.valueCents !== value) onValueChange(fill.valueCents);
+        if (fill.valueCents === value) return;
+        if (input && document.activeElement === input) {
+            pendingFill.current = fill.valueCents;
+            moveCaretToEnd(input);
+            document.execCommand('insertText', false, '0');
+            if (pendingFill.current === null) return;
+            pendingFill.current = null;
+        }
+        onValueChange(fill.valueCents);
     };
 
     useLayoutEffect(() => {
@@ -141,6 +154,12 @@ export function CurrencyInput({
     useEffect(() => () => releaseCalculator(owner), [owner]);
 
     const changeAmount = (text: string) => {
+        if (pendingFill.current !== null) {
+            onValueChange(pendingFill.current);
+            pendingFill.current = null;
+
+            return;
+        }
         if (expression !== null) {
             updateExpression(applyExpressionEdit(expression, text));
 
