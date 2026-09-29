@@ -1,7 +1,7 @@
 'use client';
 
 import { Plus } from 'lucide-react';
-import { useMemo, useState, type RefObject } from 'react';
+import { useEffect, useMemo, useState, type RefObject } from 'react';
 import { AppSwitch } from '@/components/ui/app-switch';
 import { CurrencyInput } from '@/components/ui/currency-input';
 import { NavigationDetail } from '@/components/ui/navigation-detail';
@@ -79,6 +79,33 @@ function leftToBudgetFill(
     };
 }
 
+/**
+ * Marks the document while a Budget-row planned amount is being edited, so the
+ * stylesheet can clear the chrome over the rows without a `:root:has(:focus)`
+ * selector, which WebKit re-checks on every focus change in the document,
+ * including a sheet field's as the keyboard opens.
+ */
+function markEditingPlan(editing: boolean) {
+    document.documentElement.toggleAttribute('data-editing-plan', editing);
+}
+
+/**
+ * Clears the editing mark once focus has settled, unless it settled on another
+ * planned amount: blur and the next field's focus arrive in one task, but the
+ * layout reads in between would otherwise restyle the page without the mark
+ * and restart the bottom navigation's hide delay on every switch.
+ */
+function releaseEditingPlan() {
+    setTimeout(() => {
+        if (
+            !document.activeElement?.matches(
+                '.budget-row-grid .inline-money-input'
+            )
+        )
+            markEditingPlan(false);
+    }, 0);
+}
+
 export function PlanInput({
     item,
     leftToBudgetCents,
@@ -92,6 +119,9 @@ export function PlanInput({
 }) {
     const { value, setValue, baseline, startEditing, stopEditing } =
         useVersionedDraft(item.plannedCents, item.version);
+
+    useEffect(() => () => markEditingPlan(false), []);
+
     const commit = () => {
         const plannedCents = value || '0';
 
@@ -116,8 +146,14 @@ export function PlanInput({
             value={value}
             fill={leftToBudgetFill(item, leftToBudgetCents, value || '0')}
             onValueChange={setValue}
-            onFocus={startEditing}
-            onBlur={commit}
+            onFocus={() => {
+                startEditing();
+                markEditingPlan(true);
+            }}
+            onBlur={() => {
+                releaseEditingPlan();
+                commit();
+            }}
             onKeyDown={(event) => {
                 if (event.key === 'Enter') event.currentTarget.blur();
             }}
