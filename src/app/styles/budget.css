@@ -136,7 +136,6 @@
     );
     opacity: min(1, calc(var(--budget-balance-progress) * 3));
     pointer-events: none;
-    transition: translate 0.35s cubic-bezier(0.45, 0, 0.2, 1);
 }
 .budget-balance-strip {
     height: 100%;
@@ -160,7 +159,6 @@
         0
     );
     pointer-events: auto;
-    transition: translate 0.35s cubic-bezier(0.45, 0, 0.2, 1);
     will-change: transform;
 }
 .budget-balance-arc {
@@ -848,13 +846,31 @@ body > .sortable-drag-overlay * {
 :root:has(.budget-row-grid .inline-money-input:focus) .bottom-nav {
     visibility: hidden;
 }
-:root:has(.budget-row-grid .inline-money-input:focus) .budget-balance-strip {
-    translate: 0 calc(-100% - var(--budget-balance-shadow-reach));
-    pointer-events: none;
-}
-:root:has(.budget-row-grid .inline-money-input:focus)
-    .budget-balance-clip::after {
-    translate: 0 -100%;
+@media (max-width: 759.98px) {
+    .mobile-header,
+    .budget-balance-clip {
+        transition: translate 0.35s cubic-bezier(0.45, 0, 0.2, 1);
+    }
+    .app-main::before {
+        content: '';
+        position: fixed;
+        z-index: 21;
+        top: 0;
+        right: 0;
+        left: 0;
+        height: var(--safe-area-top);
+        background: #fff;
+        visibility: hidden;
+        transition: visibility 0s linear 0.35s;
+    }
+    :root:has(.budget-row-grid .inline-money-input:focus) .mobile-header,
+    :root:has(.budget-row-grid .inline-money-input:focus) .budget-balance-clip {
+        translate: 0 calc(-1 * (var(--safe-area-top) + 150px));
+    }
+    :root:has(.budget-row-grid .inline-money-input:focus) .app-main::before {
+        visibility: visible;
+        transition-delay: 0s;
+    }
 }
 @media (pointer: coarse) {
     :root:has(.budget-row-grid .inline-money-input:focus)
