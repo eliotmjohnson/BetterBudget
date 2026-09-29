@@ -1,6 +1,12 @@
 'use client';
 
 import type { RefObject } from 'react';
+import {
+    createTitleEditState,
+    startTitleEditTween,
+    titleEditTweenProgress,
+    type TitleEditState
+} from './title-edit';
 
 interface TitleMotionMetrics {
     compactHeaderHeight: number;
@@ -13,10 +19,9 @@ interface TitleMotionMetrics {
 }
 
 export const mobileMedia = '(max-width: 759.98px)';
-export const titleEditTransitionCleanupDelay = 400;
 const titleCompactScale = 20 / 46;
 const titleTailFadeProgress = 0.5;
-const titleRevealProgress = 0.65; // Matches the 65% collapse keyframe stop.
+const titleRevealProgress = 0.65;
 const reducedMotionExpandThreshold = 8;
 const headerShadowFadeDistance = 24;
 
@@ -47,6 +52,7 @@ export function clearTitleMotion(content: HTMLElement | null) {
     header?.style.removeProperty('--navigation-detail-expanded-header-height');
     header?.style.removeProperty('--navigation-detail-header-collapse-y');
     header?.style.removeProperty('--navigation-detail-header-shadow');
+    title?.style.removeProperty('--navigation-detail-title-progress');
     title?.style.removeProperty('--navigation-detail-title-scale');
     title?.style.removeProperty('--navigation-detail-title-x');
     title?.style.removeProperty('--navigation-detail-title-y');
@@ -59,6 +65,7 @@ export function clearTitleMotion(content: HTMLElement | null) {
     title?.style.removeProperty('--navigation-detail-title-compact-scale');
     title?.style.removeProperty('--navigation-detail-title-rest-x');
     content.style.removeProperty('--navigation-detail-collapse-range');
+    content.style.removeProperty('--navigation-detail-header-drop');
 }
 
 function measureFirstLineWidth(title: HTMLElement, layoutWidth: number) {
@@ -88,6 +95,7 @@ export interface TitleMotionContext {
     prepareTitleEditingRef: RefObject<() => void>;
     reducedMotionTitleCollapsedRef: RefObject<boolean>;
     scheduleTitleMotionRef: RefObject<() => void>;
+    titleEditStateRef: RefObject<TitleEditState>;
     titleEditingRef: RefObject<boolean>;
     titleMotionOpenRef: RefObject<boolean>;
     titleRef: RefObject<HTMLHeadingElement | null>;
@@ -102,10 +110,9 @@ interface TitleMotionRuntime {
     metrics: TitleMotionMetrics | null;
     mobileQuery: MediaQueryList;
     reducedMotionQuery: MediaQueryList;
-    renderedTitleEditing: boolean;
+    edit: TitleEditState;
     schedule: () => void;
     supportsScrollDrivenMotion: boolean;
-    titleEditHandoffProgress: number | null;
     titleElement: HTMLHeadingElement;
 }
 
@@ -242,23 +249,36 @@ function readTitleMotion(rt: TitleMotionRuntime, ignoreEditing = false) {
 
     return { collapsedDistance, progress };
 }
+
+/**
+ * The shadow under the header, from how far content has scrolled beneath the
+ * header's drawn bottom edge. Outside title editing that edge follows the
+ * scroll, so the shadow stays off until the header has fully collapsed; while
+ * editing re-expands the header, content still scrolled beneath it keeps the
+ * shadow.
+ */
 function headerShadow(
     rt: TitleMotionRuntime,
     progress: number,
     collapseRange: number
 ) {
-    if (progress < 1) return 0;
-    if (rt.reducedMotionQuery.matches) return 1;
+    const coveredDistance = rt.body.scrollTop - collapseRange * progress;
 
-    return Math.min(
-        1,
-        Math.max(
-            0,
-            (rt.body.scrollTop - collapseRange) / headerShadowFadeDistance
-        )
-    );
+    if (rt.reducedMotionQuery.matches)
+        return progress >= 1 ||
+            (rt.ctx.titleEditingRef.current && coveredDistance > 0.5)
+            ? 1
+            : 0;
+
+    return Math.min(1, Math.max(0, coveredDistance / headerShadowFadeDistance));
 }
-function applyTitleMotion(rt: TitleMotionRuntime) {
+
+/**
+ * Renders one frame of the title and header motion. `now` is the animation
+ * frame's timestamp, or null for the synchronous render at setup, which never
+ * starts or advances the edit tween's clock.
+ */
+function applyTitleMotion(rt: TitleMotionRuntime, now: number | null) {
     const {
         content,
         header,
@@ -279,55 +299,55 @@ function applyTitleMotion(rt: TitleMotionRuntime) {
     const motion = readTitleMotion(rt);
 
     if (!rt.metrics || !motion) return;
+    const progress = titleEditTweenProgress(rt, motion.progress, now);
+
+    rt.edit.displayedProgress = progress;
     content.toggleAttribute(
         'data-navigation-detail-title-editing',
         titleEditingRef.current
     );
     content.toggleAttribute(
         'data-navigation-detail-title-motion',
-        motion.progress > 0.001
+        progress > 0.001
     );
     content.toggleAttribute(
         'data-navigation-detail-title-compact',
-        motion.progress >= titleRevealProgress && !titleEditingRef.current
+        progress >= titleRevealProgress && !titleEditingRef.current
     );
 
     const useDirectMotion =
         !supportsScrollDrivenMotion ||
         reducedMotionQuery.matches ||
         titleEditingRef.current ||
-        rt.renderedTitleEditing ||
-        content.hasAttribute('data-navigation-detail-title-edit-transition');
+        rt.edit.rendered ||
+        rt.edit.tween !== null;
 
     if (!useDirectMotion) {
         delete content.dataset.navigationDetailMotionDirect;
+        content.style.removeProperty('--navigation-detail-header-drop');
 
         return;
     }
 
-    const directProgress = rt.titleEditHandoffProgress ?? motion.progress;
+    const directProgress = progress;
     const collapseRange = Math.max(
         0,
         rt.metrics.expandedHeaderHeight - rt.metrics.compactHeaderHeight
     );
-    const directCollapsedDistance =
-        rt.titleEditHandoffProgress === null
-            ? motion.collapsedDistance
-            : collapseRange * rt.titleEditHandoffProgress;
 
     header.style.setProperty(
         '--navigation-detail-header-collapse-y',
-        `${directCollapsedDistance.toFixed(3)}px`
+        `${(collapseRange * directProgress).toFixed(3)}px`
+    );
+    content.style.setProperty(
+        '--navigation-detail-header-drop',
+        `${(collapseRange * (1 - directProgress)).toFixed(3)}px`
     );
     header.style.setProperty(
         '--navigation-detail-header-shadow',
         headerShadow(rt, directProgress, collapseRange).toFixed(4)
     );
 
-    // A wrapped title is centered on its own box and the wider single-line box
-    // only takes over once the compact layout replaces it, so travel runs to
-    // translateX first and blends on to restTranslateX as the remainder
-    // reveals, keeping one center across the swap.
     const scale = 1 + (titleCompactScale - 1) * directProgress;
     const reveal = Math.max(
         0,
@@ -339,6 +359,10 @@ function applyTitleMotion(rt: TitleMotionRuntime) {
             rt.metrics.translateX * titleRevealProgress) *
             reveal;
 
+    titleElement.style.setProperty(
+        '--navigation-detail-title-progress',
+        directProgress.toFixed(5)
+    );
     titleElement.style.setProperty(
         '--navigation-detail-title-scale',
         scale.toFixed(5)
@@ -360,12 +384,38 @@ function applyTitleMotion(rt: TitleMotionRuntime) {
         reveal.toFixed(4)
     );
     content.dataset.navigationDetailMotionDirect = 'true';
-    if (rt.titleEditHandoffProgress !== null) {
-        void window.getComputedStyle(header, '::before').clipPath;
-        void window.getComputedStyle(titleElement).transform;
-        rt.titleEditHandoffProgress = null;
-        rt.schedule();
+}
+
+/**
+ * Reconciles the rendered title (button or rename input) with the edit state:
+ * entering an edit notes whether the header was collapsed, and leaving one
+ * eases the header back to the scroll position when it was collapsed or
+ * scrolled during the edit. Runs from the title's mutation observer and on
+ * every setup, so an edit that ended across a setup re-run still animates.
+ */
+function syncTitleEditing(rt: TitleMotionRuntime) {
+    const { content, edit, titleElement } = rt;
+    const editing =
+        titleElement.querySelector('.navigation-detail-title-input') !== null;
+
+    if (editing !== edit.rendered) {
+        edit.rendered = editing;
+        if (editing)
+            edit.transitionNeeded = content.hasAttribute(
+                'data-navigation-detail-title-motion'
+            );
+        else {
+            if (edit.transitionNeeded)
+                startTitleEditTween(
+                    rt,
+                    edit.tween ? edit.displayedProgress : 0
+                );
+            edit.transitionNeeded = false;
+        }
     }
+    if (!editing) rt.metrics = null;
+    rt.ctx.titleEditingRef.current = editing;
+    rt.schedule();
 }
 
 /**
@@ -382,6 +432,7 @@ export function setupTitleMotion(
         prepareTitleEditingRef,
         reducedMotionTitleCollapsedRef,
         scheduleTitleMotionRef,
+        titleEditStateRef,
         titleEditingRef,
         titleMotionOpenRef,
         titleRef
@@ -399,23 +450,18 @@ export function setupTitleMotion(
         '(prefers-reduced-motion: reduce)'
     );
     const supportsScrollDrivenMotion = scrollDrivenMotionSupported();
-    let titleEditTransitionNeeded = false;
-    let titleEditTransitionTimer: ReturnType<typeof setTimeout> | null = null;
     const rt: TitleMotionRuntime = {
         animationFrame: null,
         body,
         content,
         ctx,
+        edit: titleEditStateRef.current,
         header,
         metrics: null,
         mobileQuery,
         reducedMotionQuery,
-        renderedTitleEditing:
-            titleElement.querySelector('.navigation-detail-title-input') !==
-            null,
         schedule: () => scheduleTitleMotion(),
         supportsScrollDrivenMotion,
-        titleEditHandoffProgress: null,
         titleElement
     };
 
@@ -424,40 +470,19 @@ export function setupTitleMotion(
         body.scrollTop = 0;
         titleEditingRef.current = false;
         reducedMotionTitleCollapsedRef.current = false;
+        Object.assign(rt.edit, createTitleEditState());
         clearTitleMotion(content);
     }
 
     const scheduleTitleMotion = () => {
         if (rt.animationFrame !== null) return;
-        rt.animationFrame = window.requestAnimationFrame(() =>
-            applyTitleMotion(rt)
+        rt.animationFrame = window.requestAnimationFrame((now) =>
+            applyTitleMotion(rt, now)
         );
     };
-    const clearTitleEditTransition = (releaseDirectMotion = true) => {
-        if (titleEditTransitionTimer) {
-            clearTimeout(titleEditTransitionTimer);
-            titleEditTransitionTimer = null;
-        }
-        delete content.dataset.navigationDetailTitleEditTransition;
-        if (releaseDirectMotion && !titleEditingRef.current)
-            delete content.dataset.navigationDetailMotionDirect;
-    };
-    const startTitleEditTransition = () => {
-        clearTitleEditTransition(false);
-        if (reducedMotionQuery.matches) return;
-
-        content.dataset.navigationDetailTitleEditTransition = 'true';
-        titleEditTransitionTimer = setTimeout(() => {
-            delete content.dataset.navigationDetailTitleEditTransition;
-            if (!titleEditingRef.current)
-                delete content.dataset.navigationDetailMotionDirect;
-            titleEditTransitionTimer = null;
-        }, titleEditTransitionCleanupDelay);
-    };
     const handleTitleScroll = () => {
-        if (titleEditingRef.current) {
-            if (body.scrollTop > 0.5) titleEditTransitionNeeded = true;
-        } else clearTitleEditTransition();
+        if (titleEditingRef.current && body.scrollTop > 0.5)
+            rt.edit.transitionNeeded = true;
         scheduleTitleMotion();
     };
     const remeasureTitleMotion = () => {
@@ -465,10 +490,13 @@ export function setupTitleMotion(
         scheduleTitleMotion();
     };
 
-    prepareTitleEditingRef.current = () => {
-        rt.titleEditHandoffProgress =
-            readTitleMotion(rt, true)?.progress ?? null;
-    };
+    prepareTitleEditingRef.current = () =>
+        startTitleEditTween(
+            rt,
+            rt.edit.tween
+                ? rt.edit.displayedProgress
+                : (readTitleMotion(rt, true)?.progress ?? 0)
+        );
     scheduleTitleMotionRef.current = scheduleTitleMotion;
     body.addEventListener('scroll', handleTitleScroll, {
         passive: true
@@ -476,25 +504,7 @@ export function setupTitleMotion(
     mobileQuery.addEventListener('change', remeasureTitleMotion);
     reducedMotionQuery.addEventListener('change', scheduleTitleMotion);
     const resizeObserver = new ResizeObserver(remeasureTitleMotion);
-    const titleObserver = new MutationObserver(() => {
-        const editing =
-            titleElement.querySelector('.navigation-detail-title-input') !==
-            null;
-
-        if (editing !== rt.renderedTitleEditing) {
-            rt.renderedTitleEditing = editing;
-            if (editing)
-                titleEditTransitionNeeded = content.hasAttribute(
-                    'data-navigation-detail-title-motion'
-                );
-            if (titleEditTransitionNeeded) startTitleEditTransition();
-            else clearTitleEditTransition();
-            if (!editing) titleEditTransitionNeeded = false;
-        }
-        if (!editing) rt.metrics = null;
-        titleEditingRef.current = editing;
-        scheduleTitleMotion();
-    });
+    const titleObserver = new MutationObserver(() => syncTitleEditing(rt));
 
     resizeObserver.observe(content);
     titleObserver.observe(titleElement, {
@@ -502,8 +512,9 @@ export function setupTitleMotion(
         characterData: true,
         subtree: true
     });
+    syncTitleEditing(rt);
     measureTitleMotion(rt);
-    applyTitleMotion(rt);
+    applyTitleMotion(rt, null);
 
     return () => {
         body.removeEventListener('scroll', handleTitleScroll);
@@ -513,7 +524,6 @@ export function setupTitleMotion(
         titleObserver.disconnect();
         if (rt.animationFrame !== null)
             window.cancelAnimationFrame(rt.animationFrame);
-        clearTitleEditTransition();
         prepareTitleEditingRef.current = () => undefined;
         scheduleTitleMotionRef.current = () => undefined;
     };

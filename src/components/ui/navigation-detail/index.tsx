@@ -2,6 +2,7 @@
 
 import * as Dialog from '@radix-ui/react-dialog';
 import { ChevronLeft, X } from 'lucide-react';
+import { isCalculatorBarTarget } from '@/components/ui/currency-input/operator-bar';
 import { isToastTarget } from '@/components/ui/toast-provider';
 import {
     useCallback,
@@ -26,9 +27,9 @@ import { clearSummaryMotion, setupSummaryMotion } from './summary-motion';
 import {
     clearTitleMotion,
     mobileMedia,
-    setupTitleMotion,
-    titleEditTransitionCleanupDelay
+    setupTitleMotion
 } from './title-motion';
+import { createTitleEditState } from './title-edit';
 
 const motionCleanupDelay = 600;
 const gestureReadyDelay = 500;
@@ -95,11 +96,9 @@ export function NavigationDetail({
     const prepareTitleEditingRef = useRef<() => void>(() => undefined);
     const scheduleTitleMotionRef = useRef<() => void>(() => undefined);
     const titleEditingRef = useRef(false);
+    const titleEditStateRef = useRef(createTitleEditState());
     const titleMotionOpenRef = useRef(false);
     const titleRef = useRef<HTMLHeadingElement>(null);
-    const titleSelectionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
-        null
-    );
     const summaryRef = useRef<HTMLDivElement>(null);
     const settleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -138,11 +137,6 @@ export function NavigationDetail({
         if (!settleTimerRef.current) return;
         clearTimeout(settleTimerRef.current);
         settleTimerRef.current = null;
-    };
-    const clearTitleSelectionTimer = () => {
-        if (!titleSelectionTimerRef.current) return;
-        clearTimeout(titleSelectionTimerRef.current);
-        titleSelectionTimerRef.current = null;
     };
 
     useLayoutEffect(() => {
@@ -200,6 +194,7 @@ export function NavigationDetail({
             prepareTitleEditingRef,
             reducedMotionTitleCollapsedRef,
             scheduleTitleMotionRef,
+            titleEditStateRef,
             titleEditingRef,
             titleMotionOpenRef,
             titleRef
@@ -230,7 +225,6 @@ export function NavigationDetail({
                 clearTimeout(gestureReadyTimerRef.current);
             if (enterFrameRef.current !== null)
                 cancelAnimationFrame(enterFrameRef.current);
-            clearTitleSelectionTimer();
             clearTitleMotion(contentRef.current);
             clearSummaryMotion(contentRef.current);
             clearBaseMotion();
@@ -322,7 +316,8 @@ export function NavigationDetail({
                     onPointerDownOutside={(event) => {
                         if (
                             window.matchMedia(mobileMedia).matches ||
-                            isToastTarget(event.target)
+                            isToastTarget(event.target) ||
+                            isCalculatorBarTarget(event.target)
                         )
                             event.preventDefault();
                     }}
@@ -360,7 +355,6 @@ export function NavigationDetail({
                                     )
                                 )
                                     return;
-                                clearTitleSelectionTimer();
                                 titleEditingRef.current = false;
                                 scheduleTitleMotionRef.current();
                             }}
@@ -371,37 +365,17 @@ export function NavigationDetail({
                                     )
                                 )
                                     return;
-                                const input = event.target as HTMLInputElement;
-                                const delaySelection =
+                                if (
                                     contentRef.current?.hasAttribute(
                                         'data-navigation-detail-title-motion'
                                     ) === true &&
                                     !window.matchMedia(
                                         '(prefers-reduced-motion: reduce)'
-                                    ).matches;
-
-                                clearTitleSelectionTimer();
-                                if (delaySelection)
+                                    ).matches
+                                )
                                     prepareTitleEditingRef.current();
                                 titleEditingRef.current = true;
                                 scheduleTitleMotionRef.current();
-                                if (!delaySelection) {
-                                    input.select();
-
-                                    return;
-                                }
-
-                                titleSelectionTimerRef.current = setTimeout(
-                                    () => {
-                                        titleSelectionTimerRef.current = null;
-                                        if (
-                                            input.isConnected &&
-                                            document.activeElement === input
-                                        )
-                                            input.select();
-                                    },
-                                    titleEditTransitionCleanupDelay
-                                );
                             }}
                             onKeyDown={(event) => {
                                 if (

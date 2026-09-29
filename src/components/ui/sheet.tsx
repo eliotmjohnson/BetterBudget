@@ -3,6 +3,7 @@
 import * as Dialog from '@radix-ui/react-dialog';
 import { X } from 'lucide-react';
 import { useContinuousCorners } from './continuous-corners';
+import { isCalculatorBarTarget } from './currency-input/operator-bar';
 import { isToastTarget } from './toast-provider';
 import {
     useCallback,
@@ -332,7 +333,11 @@ export function Sheet({
                         contentRef.current?.focus();
                     }}
                     onPointerDownOutside={(event) => {
-                        if (interactionDisabled || isToastTarget(event.target))
+                        if (
+                            interactionDisabled ||
+                            isToastTarget(event.target) ||
+                            isCalculatorBarTarget(event.target)
+                        )
                             event.preventDefault();
                     }}
                     onAnimationEnd={(event) => {

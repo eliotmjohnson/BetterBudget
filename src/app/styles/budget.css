@@ -755,6 +755,9 @@ body > .sortable-drag-overlay * {
     animation: bottom-nav-enter 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.08s
         backwards;
 }
+:root:has(.budget-row-grid .inline-money-input:focus) .bottom-nav {
+    visibility: hidden;
+}
 .bottom-nav-surface {
     position: absolute;
     z-index: -1;
