@@ -1,5 +1,4 @@
 .assistant-launcher {
-    --assistant-viewport-height: var(--viewport-height);
     --assistant-launcher-size: 64px;
     --assistant-launcher-inset: 10px;
     --assistant-launcher-bottom-reserve: calc(var(--bottom-nav-height) + 12px);
@@ -10,10 +9,9 @@
     z-index: 40;
     top: clamp(
         var(--assistant-launcher-top-reserve),
-        calc(var(--assistant-y, 1) * var(--assistant-viewport-height)),
+        calc(var(--assistant-y, 1) * var(--viewport-height)),
         calc(
-            var(--assistant-viewport-height) -
-                var(--assistant-launcher-bottom-reserve) -
+            var(--viewport-height) - var(--assistant-launcher-bottom-reserve) -
                 var(--assistant-launcher-size)
         )
     );

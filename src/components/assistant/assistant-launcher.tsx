@@ -204,27 +204,6 @@ export function AssistantLauncher({
             window.clearTimeout(arrivalTimer);
         };
     }, []);
-    useEffect(() => {
-        const launcher = buttonRef.current;
-        let measuredWidth = -1;
-
-        if (!launcher) return;
-        const measureScreen = () => {
-            const root = document.documentElement;
-
-            if (root.clientWidth === measuredWidth) return;
-            measuredWidth = root.clientWidth;
-            launcher.style.setProperty(
-                '--assistant-viewport-height',
-                `${root.clientHeight}px`
-            );
-        };
-
-        measureScreen();
-        window.addEventListener('resize', measureScreen);
-
-        return () => window.removeEventListener('resize', measureScreen);
-    }, []);
     const onPointerDown = (event: ReactPointerEvent<HTMLButtonElement>) => {
         if (event.button !== 0) return;
         const base = catchSettle(event.currentTarget, settleRef.current);
