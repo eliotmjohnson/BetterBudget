@@ -1,6 +1,6 @@
 .sheet-overlay {
     position: fixed;
-    inset: 0;
+    inset: calc(-1 * var(--viewport-height)) 0;
     z-index: 70;
     background: var(--overlay-dim);
     backface-visibility: hidden;
