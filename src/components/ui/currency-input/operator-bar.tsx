@@ -89,8 +89,10 @@ const keyboardUp = (frame: ViewportFrame | null): frame is ViewportFrame =>
 
 /**
  * Tracks the visual viewport (its offset into the layout viewport, its
- * height, and the keyboard height it leaves) while `active`. A pinch-zoomed
- * page counts as having no keyboard. While the keyboard stays up, moves of
+ * height, and the keyboard height it leaves) while `active`, read in the
+ * animation frame after each `resize` or `scroll` so a scroll another handler
+ * undoes in the same frame is never seen. A pinch-zoomed page counts as having
+ * no keyboard. While the keyboard stays up, moves of
  * its top edge or height smaller than `KEYBOARD_JITTER_PX` keep the previous
  * frame, so the few-pixel nudges iOS makes as focus moves between inputs do
  * not shift the bar.
@@ -131,14 +133,20 @@ function useViewportFrame(active: boolean) {
                     : next
             );
         };
+        let frameRequest = 0;
+        const scheduleUpdate = () => {
+            cancelAnimationFrame(frameRequest);
+            frameRequest = requestAnimationFrame(update);
+        };
 
         update();
-        viewport.addEventListener('resize', update);
-        viewport.addEventListener('scroll', update);
+        viewport.addEventListener('resize', scheduleUpdate);
+        viewport.addEventListener('scroll', scheduleUpdate);
 
         return () => {
-            viewport.removeEventListener('resize', update);
-            viewport.removeEventListener('scroll', update);
+            cancelAnimationFrame(frameRequest);
+            viewport.removeEventListener('resize', scheduleUpdate);
+            viewport.removeEventListener('scroll', scheduleUpdate);
             setFrame(null);
         };
     }, [active]);

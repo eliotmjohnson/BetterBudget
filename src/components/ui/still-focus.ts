@@ -10,6 +10,7 @@ const PARK_OFFSET_PX = 10000;
 const KEYBOARD_SETTLE_MS = 150;
 const PARK_LIMIT_MS = 1200;
 const VEIL_MS = 300;
+const RECLAIM_MS = 450;
 let press: { x: number; y: number; field: HTMLInputElement } | null = null;
 let quietFocus: HTMLInputElement | null = null;
 let held: { field: HTMLElement; standIn: HTMLElement } | null = null;
@@ -186,7 +187,9 @@ export const stillFocusHandlers = {
 /**
  * Pads the end of `scroller` so it can scroll `distance` further, for rows
  * near the end of the list that could otherwise never clear the keyboard, and
- * takes the padding back once the keyboard has closed.
+ * takes the padding back once the keyboard has closed: when the list is
+ * scrolled into the padding, it first glides back to its real end, so
+ * dropping the padding does not jump it.
  */
 function lendScrollRoom(scroller: HTMLElement, distance: number) {
     const viewport = window.visualViewport;
@@ -200,7 +203,19 @@ function lendScrollRoom(scroller: HTMLElement, distance: number) {
     const reclaim = () => {
         if (keyboardHeight(viewport) >= KEYBOARD_MIN_PX) return;
         viewport.removeEventListener('resize', reclaim);
-        scroller.style.removeProperty('padding-bottom');
+        const lentNow = Number.parseInt(scroller.style.paddingBottom, 10) || 0;
+        const end = scroller.scrollHeight - scroller.clientHeight - lentNow;
+
+        if (scroller.scrollTop <= end) {
+            scroller.style.removeProperty('padding-bottom');
+
+            return;
+        }
+        scroller.scrollTo({ top: end, behavior: 'smooth' });
+        window.setTimeout(
+            () => scroller.style.removeProperty('padding-bottom'),
+            RECLAIM_MS
+        );
     };
 
     viewport.addEventListener('resize', reclaim);
