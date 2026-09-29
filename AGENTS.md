@@ -18,15 +18,15 @@ This file is loaded into every session. It holds the durable guardrails,
 invariants, conventions, and verification contract. Longer reference material
 lives alongside it and should be read when the work touches it:
 
-| Read before                                                     | File                                   |
-| --------------------------------------------------------------- | -------------------------------------- |
-| Adding or reshaping a user-facing capability                    | `docs/agents/product.md`               |
-| Changing layout, motion, gestures, sheets, or navigation detail | `docs/agents/design.md`                |
-| Writing or changing any mutation                                | `docs/agents/persistence.md`           |
-| Changing deployment, infrastructure, or the production runtime  | `docs/agents/deployment.md`            |
-| Formatter/linter config, size budgets, comments, or releasing   | `docs/agents/conventions.md`           |
-| Operating, rolling back, or replacing the production host       | `docs/aws/ec2-cloudfront-migration.md` |
-| Setup, environment variables, and troubleshooting               | `README.md`                            |
+| Read before                                                     | File                                         |
+| --------------------------------------------------------------- | -------------------------------------------- |
+| Adding or reshaping a user-facing capability                    | `docs/agents/product.md`                     |
+| Changing layout, motion, gestures, sheets, or navigation detail | `docs/agents/design.md`, then its topic file |
+| Writing or changing any mutation                                | `docs/agents/persistence.md`                 |
+| Changing deployment, infrastructure, or the production runtime  | `docs/agents/deployment.md`                  |
+| Formatter/linter config, size budgets, comments, or releasing   | `docs/agents/conventions.md`                 |
+| Operating, rolling back, or replacing the production host       | `docs/aws/ec2-cloudfront-migration.md`       |
+| Setup, environment variables, and troubleshooting               | `README.md`                                  |
 
 `README.md` is the human-facing setup and operations manual. This file is the
 engineering contract. When behavior changes, update whichever of the two
@@ -115,7 +115,7 @@ Approved visual references live in `docs/design/`: `budget-responsive.png`, `bra
 
 The visual system is deliberately iOS-like and restrained, built on cornflower blue `#1769E0` with pastel semantic accents, rounded cards, tactile sheets, a mobile bottom navigation, and a desktop left-nav/budget/rail layout. Interactive targets are at least 44 px, with safe-area padding, keyboard focus management, accessible status announcements, and reduced-motion support. Do not replace the established brand or visual language with a generic dashboard theme. Extend existing primitives and tokens first.
 
-Read `docs/agents/design.md` for the palette, reference viewports, and the full layout, motion, gesture, sheet, swipe, reordering, and navigation-detail interaction contracts before changing any of them.
+Read `docs/agents/design.md` for the palette and reference viewports before changing layout. Each interaction contract (layout, motion, gesture, sheet, swipe, reordering, and navigation detail) lives in one topic file under `docs/agents/design/`, and the table in `design.md` says which; read only the topic you are changing.
 
 ## Technology and runtime
 
@@ -176,12 +176,12 @@ High-impact files:
 - `src/components/assistant/` — `assistant-launcher.tsx` is the draggable floating button, rendered through `AppShell`'s `floating` slot so it sits outside the animated page content, `launcher-throw.ts` its release-velocity projection and settle spring, `buddy-protest.tsx` the fall and speech bubble after a hard throw, `buddy-ship.tsx` the spaceship that beams him away (art in `better-buddy-ship.png` and `better-buddy-ship-beam.png`, styles in `src/app/styles/assistant-ship.css`), `better-buddy.png` the transparent 256 px robot icon cut from the approved artwork, `better-buddy-figure.tsx` the floating robot with its gradient halo and floor shadow, `assistant-sheet.tsx` the chat sheet, `keyboard-layout.ts` the chat's on-screen-keyboard fit and motion, and `use-assistant.ts` the in-memory conversation and snapshot invalidation. Styles live in `src/app/styles/assistant.css`. `src/components/settings/settings-assistant-section.tsx` is the Settings switch.
 - `src/components/ui/navigation-detail/` — mobile push navigation, fixed detail chrome, modal fallback. `index.tsx` is the component, `edge-drag.ts` the edge-swipe dismissal gesture, `title-motion.ts` the collapsing-title machinery, `title-edit.ts` the rename tween that eases the header open and shut around a title edit, `summary-motion.ts` the scroll-scrubbed summary strip docked under the collapsed header, `header-cover.ts` the scrolled flag that lets the drawn header bar take pointers. `src/components/ui/docked-summary.ts` is the scroll tracking both docked strips share.
 - `src/components/ui/left-edge-gesture-guard.tsx` — global Safari left-edge history-gesture suppression.
-- `src/components/ui/currency-input/` — the shared money field: `index.tsx` holds ATM-style cents entry and the calculator expression state, `expression-edit.ts` the end-of-text expression edits, and `operator-bar.tsx` the operator keys docked above the on-screen number pad. `docs/agents/design.md` holds its contract.
+- `src/components/ui/currency-input/` — the shared money field: `index.tsx` holds ATM-style cents entry and the calculator expression state, `expression-edit.ts` the end-of-text expression edits, and `operator-bar.tsx` the operator keys docked above the on-screen number pad. `docs/agents/design/budget-and-inputs.md` holds its contract.
 - `src/components/ui/sheet.tsx` — animated, scroll-contained, drag-dismissible sheets.
 - `src/components/ui/hold-menu/` — the iOS-style touch-and-hold context menu. `index.tsx` is the `useHoldMenu` hook (open state, trigger props, held-finger selection, focus restore), `surface.tsx` the Radix Dialog layer with the lifted row clone and action panel, `press.ts` the hold timer and held-pointer tracking, and `layout.ts` the placement math. `src/components/shared/transaction-hold-menu.tsx` builds the Edit, Duplicate, and Delete actions shared by the Transactions page and the line-item detail, whose rows both render `transaction-row.tsx`.
 - `src/components/ui/continuous-corners/` — iOS-style continuous corners: `attach.ts` is the shared per-element core, `index.tsx` exports the `useContinuousCorners` hook and `ContinuousControls` (mounted once in `providers.tsx`, owns the button selector list), and `geometry.ts` holds the superellipse corner, capsule-end, and sliver-clip math. The global `corner-shape` rule and its circle/pill opt-out list live in `src/app/styles/tokens.css`.
 - `src/components/ui/sortable-list/` — `index.tsx` holds long-press activation, keyboard reordering, and the hook surface; `drag.ts` the pointer drag, list reflow, and edge auto-scroll.
-- `src/app/safe-area-launch.ts` — the inline head scripts in `layout.tsx`: the launch backup for a late `env(safe-area-inset-top)` (saved height, or a first-launch hold) and the landscape Dynamic Island side (`data-island`). `docs/agents/design.md` holds the contract.
+- `src/app/safe-area-launch.ts` — the inline head scripts in `layout.tsx`: the launch backup for a late `env(safe-area-inset-top)` (saved height, or a first-launch hold) and the landscape Dynamic Island side (`data-island`). `docs/agents/design/shell-and-platform.md` holds the contract.
 - `src/app/globals.css` — the Tailwind import and the ordered `@import` list only.
 - `src/app/styles/` — the rules, split by area (`tokens`, `app-shell`, `budget`, `navigation-detail`, `sheets-and-forms`, `transactions`, `income`, `organize`, `settings`, `sign-in`, `assistant`, `assistant-ship`, `hold-menu`, `currency-calculator`, `responsive-motion`). **The import order in `globals.css` is the cascade order.** Later files intentionally override earlier ones, so never reorder the imports, and add a new area file at the position its specificity requires — `responsive-motion.css` must stay last.
 

@@ -1,0 +1,51 @@
+# Sheets, menus, and toasts
+
+Read this before changing any sheet, the transaction hold menu, or toasts.
+
+## Sheets
+
+### Dim and entrance
+
+All sheets share the same interaction contract: a slight iOS-style dim (`--overlay-dim` in `tokens.css`, `rgb(19 28 45 / 16%)`) that fades in and out with the sheet and, during a mobile drag, lightens in proportion to how far the sheet has been pulled down, easing back on settle and out on dismissal with the sheet's own exit curve (`exitMotion` returns it). Mounting a sheet can cost several frames, which would consume most of a 0.6 s expo-out fade before its first paint and make the dim pop in, so the overlay's fade-in stays paused until `data-entered` is set two animation frames after opening, the same deferral the navigation-detail entrance uses. Line-item, income-source, and organizer details dim the page behind them with the same overlay at every width: on phones it darkens the parallaxed Budget layer during the push, holds its fade until `data-navigation-detail-state='open'`, and follows the left-edge swipe in `edge-drag.ts`, 0.6 s `cubic-bezier(0.29, 1, 0.29, 1)` entrance, 0.45 s `cubic-bezier(0.4, 1, 0.4, 1)` exit, and mobile downward drag-to-dismiss with distance, velocity, and projected-distance thresholds.
+
+### Drag and dismissal
+
+The sheet drag follows the same rules as the navigation-detail edge swipe (`navigation-detail.md`): each pointer event writes an inline `transform` directly, with no smoothing driver and no per-frame custom properties. Release velocity and the speed-matched exit come from the same helpers in `src/components/ui/gesture-release.ts`, and the exit `transition` is written inline on the sheet. A drag that starts during the entrance or a settle picks up from the sheet's rendered offset. A released drag that does not dismiss settles back over 0.38 s. The close control and Escape keep the 0.45 s exit.
+
+### Layout
+
+Keep the grabber, title, and close control fixed while only `.sheet-body` scrolls; prevent horizontal sheet overflow. Desktop sheets use the same timing as centered modals without drag dismissal. Below 760 px a sheet sizes to its content up to `min(92dvh, 850px)`; the `capped-mobile` variant, which the add and edit transaction sheet uses everywhere except the budget-item detail (there it is `full-screen-mobile`), instead stops 28 px below the mobile header bar so the header stays visible above it.
+
+### Focus
+
+Sheets focus their content container on open instead of drawing a focus ring around the close control. When a pointer-opened sheet closes, restore focus without a visible ring; keyboard-opened sheets must preserve visible keyboard focus on restoration.
+
+## Hold menu
+
+### Opening
+
+Transaction rows open an iOS-style hold menu from `src/components/ui/hold-menu/`. A touch or pen press held 450 ms without moving more than 8 px opens it; the row eases to 0.97 scale with the long-press tint after a 120 ms delay so taps and scrolls never visibly shrink it. A mouse never starts the timer: right-click, a two-finger trackpad tap, Android's own long press, and the keyboard context-menu key or Shift+F10 all arrive as `contextmenu` and open the same menu, which a second `contextmenu` while open ignores. The menu is a modal Radix Dialog so it layers correctly over the line-item detail (itself a Radix Dialog): its Escape, focus trap, and pointer-outside handling stack with the detail's instead of closing it.
+
+### Layers and the lifted row
+
+The overlay is a light translucent fill with a `backdrop-filter` blur (opaque fallback where unsupported), fading in over 0.3 s. The layer above it holds a static clone of the row, rendered as a white card with rounded corners and a shadow, and the action panel, which springs in from the corner nearest the row and aligns with the card's left edge. The card is the row's measured box widened by `previewInset` (12 px, applied inline as padding so the row's content stays in place). A held clone also starts with the pressed row's `#f5f8fd` tint and fades it to white over 0.45 s, so the swap from the tinted row does not flash. Its lift animates from exactly the row's box (`--hold-menu-row-left` and `--hold-menu-row-width`, no padding, square corners, no shadow, the pressed 0.97 scale) to the padded card on a slight spring, and its exit animates back to exactly that box. An earlier version stayed widened while it faded out and read as a mismatched component, so the clone must always start and end at the row's exact box; animation values override the inline padded geometry. The box is measured without the row's own transform (`untransformedRect` in `index.tsx`): a held row is still easing back from its 0.97 pressed scale when the menu opens, and its bounding rect then made the clone about 3% narrower than the row. The original row is transparent (`opacity: 0`, not `visibility: hidden`, so focus can still return to it; set from the clone's ref callback in the same commit that paints the clone, since hiding it when the hold fired left a frame with neither and the row flashed) while the menu is open and until the layer's exit animation ends, so the clone stands in for it and swaps back pixel for pixel.
+
+### Placement
+
+Placement (`layout.ts`) puts the panel below the row, above it when below does not fit, and otherwise slides the clone up so both fit, all within the layer's padding, which is the safe-area insets or 12 px. The panel carries no `backdrop-filter`, because its continuous-corner clip-path would make it a backdrop root and blank the blur; it is a near-opaque surface over the already-blurred page instead.
+
+### Held-finger selection
+
+While the finger that opened the menu stays down, sliding it highlights the item under it and lifting it on an item selects that item, as on iOS; lifting elsewhere leaves the menu open. Highlighting and release selection arm only once the finger has moved more than 10 px (`selectionSlop` in `press.ts`) from where it was when the menu opened, because the menu can open under a finger that never moved, and lifting it then silently ran Delete. During that phase a non-passive `touchmove` listener prevents scrolling, and a click the browser synthesizes on release is swallowed in the capture phase for 350 ms unless it lands on a menu item, or it would land on the overlay and close the menu. Clicks on items are never swallowed: a 600 ms blanket window made an immediate tap on Delete do nothing, and `select` ignores a second selection once the menu is closing, so an item can never act twice.
+
+### Closing and keyboard
+
+Closing restores focus to the row (without a visible ring unless the menu was opened from the keyboard) and only then runs the chosen action, so a sheet opened by Edit records the row as its focus-return target. Arrow keys, Home, and End move between items, Tab closes the menu, and a keyboard-opened menu focuses its first item. Delete is red and set apart by an inset separator. The panel clips its contents to its rounded corners, and the pressed, highlighted, or focused item shows a pill (`border-radius: 999px`, inset 6 px from the panel's sides, listed with the other pills in the `corner-shape: round` opt-out in `tokens.css`).
+
+### Exit and stacking
+
+The exit is 0.22–0.28 s: the panel shrinks and fades, the clone slides back to the row's position while its shadow and corner rounding settle to none without fading, the overlay fades out over 0.22 s on a fast-clearing curve, and the layer's own no-op `hold-menu-layer-out` animation marks the end, at which point the row is revealed. The clone's settle and that marker share `--hold-menu-settle-duration`, which `placeMenu` sets to 0.26 s, or 0.42 s when the clone was slid up to make room and has to travel back, on the ease-in-out `cubic-bezier(0.45, 0, 0.2, 1)`; the shorter fast-start settle made that return look abrupt. When the menu closes because an item was chosen, the overlay and layer drop from `z-index` 75/76 to 71 (`data-exit='action'`) for the exit, because the chosen action (Edit) opens a sheet at once and the settling clone and fading blur otherwise drew over it. At 71 they tie with sheet and navigation-detail content, so DOM order decides: a sheet opened by the action mounts its portal later and draws above the exiting menu, while a navigation detail the menu was opened from mounted earlier and stays below it. Dismissing without an action keeps 75/76. When a menu opened from a page (not inside a dialog such as the line-item detail) closes without an action, the layer drops from 76 to 29, below the bottom navigation (30) and Better Buddy (40), as soon as the 0.22 s overlay fade has finished, so the returning clone slides under those floating controls for the rest of its trip; the step sits at 85% of the 0.26 s settle (`hold-menu-layer-drop`) or 53% of the 0.42 s travelling settle (`hold-menu-layer-drop-travel`), so keep those percentages in step with the durations. It cannot drop earlier: while the blur is still fading, anything above the clone would render sharp over a blurred page. The line-item detail's floating add button cannot sit above the clone at all, because it is positioned inside the detail's own `z-index: 71` stacking context, which the clone must be above to show over the detail. The overlay must finish before that swap: when it outlasted the clone, the row was revealed under a faint residual blur while the clone above the overlay was sharp, which read as a slight shift.
+
+## Toasts
+
+One toast shows at a time, above the bottom navigation on mobile and in the bottom-right corner on desktop. It sets `pointer-events: auto` because an open Radix modal sets `pointer-events: none` on `body` and the toast lives outside every dialog, so without it Undo or Retry would be untappable while a sheet is open. Toasts dismiss themselves after 5 s unless they are `persistent`; a persistent toast (a failed save's Retry) stays until the person acts on it and always carries a dismiss button beside its action.

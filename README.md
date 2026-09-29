@@ -379,8 +379,8 @@ Income page.
 Search matches the merchant, budget-item subtitle, and note. The All, Expenses,
 and Income pills apply immediately, while the sliders button opens a filter
 sheet whose changes stay drafts until **Apply filters** is pressed.
-`docs/agents/design.md` holds the precise filter, badge, and clear-control
-contract.
+`docs/agents/design/budget-and-inputs.md` holds the precise filter, badge, and
+clear-control contract.
 
 ## Seeded development data
 
@@ -907,6 +907,7 @@ The database CLI scripts intentionally set the `react-server` Node condition bec
 ├── drizzle/                       Ordered SQL migrations
 ├── docs/
 │   ├── agents/                    On-demand engineering references
+│   │   └── design/                Interaction contracts, one file per area
 │   ├── aws/                       AWS runbook and least-privilege policies
 │   └── design/                    Approved visual concepts
 ├── public/                        PWA icons and static files
@@ -967,7 +968,8 @@ plain rounded corners until WebKit ships `corner-shape`. Setting
 `--corner-superellipse: 1`, `--corner-extent: 1`, and `--capsule-smoothing: 0`
 turns the effect off everywhere without a code change.
 
-`docs/agents/design.md` holds the exact gesture, motion, swipe, reordering, and
+`docs/agents/design.md` and the topic files it indexes under
+`docs/agents/design/` hold the exact gesture, motion, swipe, reordering, and
 navigation-detail contracts these behaviors must satisfy.
 
 The iOS launch images under `public/ios-startup/` are generated assets, not
