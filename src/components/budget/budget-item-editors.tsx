@@ -7,7 +7,8 @@ import { CurrencyInput } from '@/components/ui/currency-input';
 import { NavigationDetail } from '@/components/ui/navigation-detail';
 import {
     revealAboveKeyboard,
-    stillFocusHandlers
+    stillFocusHandlers,
+    veilNativeFocus
 } from '@/components/ui/still-focus';
 import {
     leftToBudgetWithPlanDraft,
@@ -152,6 +153,7 @@ export function PlanInput({
             onValueChange={setValue}
             {...stillFocusHandlers}
             onFocus={(event) => {
+                veilNativeFocus(event.currentTarget);
                 startEditing();
                 markEditingPlan(true);
                 revealAboveKeyboard(

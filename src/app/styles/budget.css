@@ -859,6 +859,12 @@ body > .sortable-drag-overlay * {
 :root[data-editing-plan] .budget-balance-clip::after {
     translate: 0 -100%;
 }
+:root[data-editing-plan] .app-content {
+    overscroll-behavior-y: contain;
+}
+:root[data-editing-plan] .mobile-header {
+    touch-action: none;
+}
 @media (pointer: coarse) {
     :root[data-editing-plan] .assistant-launcher[data-arrived] {
         pointer-events: none;

@@ -7,6 +7,7 @@ import {
     type PointerEvent as ReactPointerEvent,
     type ReactNode
 } from 'react';
+import { focusStill } from '@/components/ui/still-focus';
 
 const actionWidth = 68;
 const intentDistance = 6;
@@ -14,6 +15,12 @@ const verticalIntentDistance = 24;
 const diagonalVerticalTolerance = 2.25;
 const openDistance = actionWidth * 0.3;
 const flickVelocity = 0.22;
+
+function focusEditable(target: HTMLElement | null, pointerType: string) {
+    if (target instanceof HTMLInputElement)
+        focusStill(target, pointerType === 'touch');
+    else target?.focus({ preventScroll: true });
+}
 
 type Gesture = {
     pointerId: number;
@@ -117,7 +124,7 @@ export function SwipeReveal({
             event.currentTarget.releasePointerCapture(event.pointerId);
         if (gesture.axis !== 'horizontal') {
             if (!cancelled && gesture.axis === 'pending' && !openRef.current)
-                gesture.editableTarget?.focus();
+                focusEditable(gesture.editableTarget, event.pointerType);
 
             return;
         }
