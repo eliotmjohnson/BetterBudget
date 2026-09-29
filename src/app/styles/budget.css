@@ -849,8 +849,8 @@ body > .sortable-drag-overlay * {
     visibility: hidden;
     translate: 0 var(--bottom-nav-hidden-offset);
     transition:
-        translate 0.34s cubic-bezier(0.32, 0.72, 0, 1),
-        visibility 0s linear 0.34s;
+        translate 0.34s cubic-bezier(0.32, 0.72, 0, 1) 0.15s,
+        visibility 0s linear 0.49s;
 }
 :root[data-editing-plan] .budget-balance-strip {
     translate: 0 calc(-100% - var(--budget-balance-shadow-reach));
