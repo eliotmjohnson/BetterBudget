@@ -106,6 +106,12 @@
             var(--viewport-height) - max(6px, var(--safe-area-top)) - 77px
         );
     }
+    .sheet-content:not([data-variant='full-screen-mobile']):not(
+            :has([data-buddy-seat])
+        ) {
+        inset: var(--viewport-height) 0 auto;
+        translate: 0 -100%;
+    }
     body[data-navigation-detail-state] .app-frame {
         backface-visibility: hidden;
         will-change: transform;
