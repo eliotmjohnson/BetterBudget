@@ -2,36 +2,56 @@ import { cents } from '@/domain/money';
 import type { MonthSnapshot } from '@/domain/types';
 import type { PatchOf } from './context';
 
-type Input = PatchOf<'updatePlan' | 'toggleCarryover'>;
+type Input = PatchOf<'updatePlan' | 'movePlannedAmount' | 'toggleCarryover'>;
+
+function shiftPlan(
+    next: MonthSnapshot,
+    monthlyItemId: string,
+    deltaCents: bigint
+): void {
+    for (const category of next.categories) {
+        const item = category.items.find(
+            (candidate) => candidate.id === monthlyItemId
+        );
+
+        if (!item) continue;
+        item.plannedCents = cents(BigInt(item.plannedCents) + deltaCents);
+        item.availableCents = cents(BigInt(item.availableCents) + deltaCents);
+        item.version += 1;
+        category.availableCents = cents(
+            BigInt(category.availableCents) + deltaCents
+        );
+        next.summary.plannedCents = cents(
+            BigInt(next.summary.plannedCents) + deltaCents
+        );
+        next.summary.leftToBudgetCents = cents(
+            BigInt(next.summary.leftToBudgetCents) - deltaCents
+        );
+
+        return;
+    }
+}
 
 export function applyPlanPatch(next: MonthSnapshot, input: Input): void {
     switch (input.type) {
         case 'updatePlan': {
-            for (const category of next.categories) {
-                const item = category.items.find(
-                    (candidate) => candidate.id === input.monthlyItemId
-                );
+            const item = next.categories
+                .flatMap((category) => category.items)
+                .find((candidate) => candidate.id === input.monthlyItemId);
 
-                if (!item) continue;
-                const delta =
-                    BigInt(input.plannedCents) - BigInt(item.plannedCents);
+            if (item)
+                shiftPlan(
+                    next,
+                    item.id,
+                    BigInt(input.plannedCents) - BigInt(item.plannedCents)
+                );
+            break;
+        }
+        case 'movePlannedAmount': {
+            const amount = BigInt(input.amountCents);
 
-                item.plannedCents = cents(input.plannedCents);
-                item.availableCents = cents(
-                    BigInt(item.availableCents) + delta
-                );
-                item.version += 1;
-                category.availableCents = cents(
-                    BigInt(category.availableCents) + delta
-                );
-                next.summary.plannedCents = cents(
-                    BigInt(next.summary.plannedCents) + delta
-                );
-                next.summary.leftToBudgetCents = cents(
-                    BigInt(next.summary.leftToBudgetCents) - delta
-                );
-                break;
-            }
+            shiftPlan(next, input.fromItemId, -amount);
+            shiftPlan(next, input.toItemId, amount);
             break;
         }
         case 'toggleCarryover': {

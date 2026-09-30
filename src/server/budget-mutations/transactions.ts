@@ -1,17 +1,8 @@
 import 'server-only';
-import {
-    and,
-    eq,
-    inArray,
-    isNotNull,
-    isNull,
-    not,
-    type SQL
-} from 'drizzle-orm';
+import { and, eq, inArray, isNotNull, isNull, not } from 'drizzle-orm';
 import type { MonthKey } from '@/domain/money';
 import { splitsMatchTotal } from '@/domain/budget-calculations';
 import { monthDate } from '@/domain/calendar';
-import type { AppDb } from '@/db';
 import {
     budgetItems,
     budgetMonths,
@@ -24,22 +15,12 @@ import {
     MutationFailure,
     throwTransactionMutationFailure
 } from '@/server/mutation-failures';
-import { definitionActiveIn } from './active-items';
+import {
+    activeMonthlyItems,
+    activeMovePair,
+    definitionActiveIn
+} from './active-items';
 import { ensureMonth, type MutationContext } from './context';
-
-const activeMonthlyItems = (tx: AppDb, month: string, condition: SQL) =>
-    tx
-        .select({
-            id: monthlyBudgetItems.id,
-            budgetItemId: monthlyBudgetItems.budgetItemId
-        })
-        .from(monthlyBudgetItems)
-        .innerJoin(
-            budgetItems,
-            eq(monthlyBudgetItems.budgetItemId, budgetItems.id)
-        )
-        .innerJoin(categories, eq(budgetItems.categoryId, categories.id))
-        .where(and(definitionActiveIn(month), condition));
 
 export async function addTransaction({
     tx,
@@ -81,6 +62,46 @@ export async function addTransaction({
             transactionId: id,
             monthlyItemId: split.monthlyItemId,
             amountCents: BigInt(split.amountCents)
+        }))
+    );
+}
+
+export async function transferBetweenItems(
+    context: MutationContext<'transferBetweenItems'>
+): Promise<void> {
+    const { tx, monthId, input } = context;
+    const amount = BigInt(input.amountCents);
+    const { from, to } = await activeMovePair(context);
+    const legs = [
+        {
+            id: crypto.randomUUID(),
+            kind: 'expense' as const,
+            merchant: `Transfer to ${to.name}`,
+            monthlyItemId: from.id
+        },
+        {
+            id: crypto.randomUUID(),
+            kind: 'refund' as const,
+            merchant: `Transfer from ${from.name}`,
+            monthlyItemId: to.id
+        }
+    ];
+
+    await tx.insert(transactions).values(
+        legs.map((leg) => ({
+            id: leg.id,
+            monthId,
+            kind: leg.kind,
+            merchant: leg.merchant,
+            occurredOn: input.occurredOn,
+            totalCents: amount
+        }))
+    );
+    await tx.insert(transactionSplits).values(
+        legs.map((leg) => ({
+            transactionId: leg.id,
+            monthlyItemId: leg.monthlyItemId,
+            amountCents: amount
         }))
     );
 }

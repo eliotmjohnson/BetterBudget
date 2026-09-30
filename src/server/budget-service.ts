@@ -12,10 +12,15 @@ import {
     ensureMonth,
     type MutationContext
 } from '@/server/budget-mutations/context';
-import { toggleCarryover, updatePlan } from '@/server/budget-mutations/plans';
+import {
+    movePlannedAmount,
+    toggleCarryover,
+    updatePlan
+} from '@/server/budget-mutations/plans';
 import {
     addTransaction,
     deleteTransaction,
+    transferBetweenItems,
     undoDeleteTransaction,
     updateTransaction
 } from '@/server/budget-mutations/transactions';
@@ -74,6 +79,10 @@ async function dispatch(
             return updatePlan(context(input));
         case 'toggleCarryover':
             return toggleCarryover(context(input));
+        case 'movePlannedAmount':
+            return movePlannedAmount(context(input));
+        case 'transferBetweenItems':
+            return transferBetweenItems(context(input));
         case 'addTransaction':
             return addTransaction(context(input));
         case 'updateTransaction':
@@ -190,7 +199,8 @@ export async function applyBudgetMutation(
             );
 
             if (
-                input.type === 'addTransaction' &&
+                (input.type === 'addTransaction' ||
+                    input.type === 'transferBetweenItems') &&
                 !input.occurredOn.startsWith(`${input.monthKey}-`)
             )
                 throw new MutationFailure(

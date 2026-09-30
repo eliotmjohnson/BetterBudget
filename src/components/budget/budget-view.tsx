@@ -32,6 +32,7 @@ import { BudgetRail } from './budget-rail';
 import { BudgetSummaryCard } from './budget-summary-card';
 import { useBudgetStructureEditor } from './budget-structure-editor';
 import { BudgetStructureSheets } from './budget-structure-sheets';
+import { MoveMoneySheet } from './move-money-sheet';
 
 const itemHistory = createDetailHistory(
     'item',
@@ -69,6 +70,11 @@ export function BudgetView({
     const itemTriggerRef = useRef<HTMLElement | null>(null);
     const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
     const [transactionOpen, setTransactionOpen] = useState(false);
+    const [moveMoney, setMoveMoney] = useState<{
+        itemId: string;
+        open: boolean;
+        key: number;
+    } | null>(null);
     const editor = useBudgetStructureEditor(snapshot, mutate, mutateConfirmed);
     const selectedItem = requestedItemDefinitionId
         ? (snapshot.categories
@@ -302,6 +308,13 @@ export function BudgetView({
                                                     item
                                                 })
                                             }
+                                            onMoveItem={(item) =>
+                                                setMoveMoney((current) => ({
+                                                    itemId: item.id,
+                                                    open: true,
+                                                    key: (current?.key ?? 0) + 1
+                                                }))
+                                            }
                                             onEditCategory={
                                                 editor.openCategoryEditor
                                             }
@@ -364,6 +377,21 @@ export function BudgetView({
                 restoreFocusRef={itemTriggerRef}
             />
             <BudgetStructureSheets editor={editor} snapshot={snapshot} />
+            {moveMoney ? (
+                <MoveMoneySheet
+                    key={moveMoney.key}
+                    itemId={moveMoney.itemId}
+                    open={moveMoney.open}
+                    onOpenChange={(open) =>
+                        setMoveMoney((current) =>
+                            current ? { ...current, open } : current
+                        )
+                    }
+                    onExitComplete={() => setMoveMoney(null)}
+                    snapshot={snapshot}
+                    mutate={mutate}
+                />
+            ) : null}
         </section>
     );
 }

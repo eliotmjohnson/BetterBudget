@@ -101,7 +101,8 @@ html[data-safe-area-pending] ::after {
 .assistant-send,
 .assistant-suggestion,
 .assistant-typing span,
-.hold-menu-item {
+.hold-menu-item,
+.move-money-swap {
     corner-shape: round;
 }
 [data-continuous-border] {

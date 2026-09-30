@@ -21,8 +21,10 @@ export type MutationFailure = { message: string; retryable: boolean };
 function carryoverInvalidationStart(input: BudgetMutation): MonthKey | null {
     switch (input.type) {
         case 'updatePlan':
+        case 'movePlannedAmount':
         case 'toggleCarryover':
         case 'addTransaction':
+        case 'transferBetweenItems':
         case 'deleteTransaction':
         case 'undoDeleteTransaction':
         case 'archiveCategory':

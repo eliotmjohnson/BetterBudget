@@ -72,6 +72,21 @@ export const mutationSchema = z.discriminatedUnion('type', [
         expectedVersion: z.number().int().positive()
     }),
     base.extend({
+        type: z.literal('movePlannedAmount'),
+        fromItemId: z.string().uuid(),
+        toItemId: z.string().uuid(),
+        amountCents: positiveCentsSchema,
+        fromExpectedVersion: z.number().int().positive(),
+        toExpectedVersion: z.number().int().positive()
+    }),
+    base.extend({
+        type: z.literal('transferBetweenItems'),
+        fromItemId: z.string().uuid(),
+        toItemId: z.string().uuid(),
+        amountCents: positiveCentsSchema,
+        occurredOn: z.string().date()
+    }),
+    base.extend({
         type: z.literal('addTransaction'),
         kind: z.enum(['expense', 'refund']),
         merchant: z.string().trim().min(1).max(120),

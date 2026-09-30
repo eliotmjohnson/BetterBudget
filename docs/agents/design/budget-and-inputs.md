@@ -6,7 +6,9 @@ Read this before changing Budget rows, the summary arc, the Transactions filters
 
 ### Row actions
 
-Category headers expose an edit menu; budget-item rows alone use a deliberately leftward swipe to reveal Delete. Keep the inactive swipe action fully transparent so fast vertical scrolling cannot flash its red layer.
+Category headers expose an edit menu; budget-item rows alone use a deliberately leftward swipe to reveal two 68 px actions: a blue **Move** and, at the far edge, a red **Delete**. `SwipeReveal` takes an `actions` list and opens by 68 px per action, published to CSS as `--swipe-reveal-width` so keyboard focus reveals the same width. Keep the inactive swipe actions fully transparent so fast vertical scrolling cannot flash their colored layers.
+
+**Move** opens the standard Move money sheet (`move-money-sheet.tsx`). A segmented control picks **Plan** (lower one item's planned amount and raise the other's, capped at the source's plan, so Left to budget does not change) or **Transfer** (an expense `Transfer to …` on the source and an income transaction `Transfer from …` on the destination, dated `defaultDateForMonth`, with no date field). The swiped item is fixed on one side, a category-grouped select showing each item's remaining amount picks the other, and the swap button between them flips direction, so an overspent item can pull money in. The hint under the amount states the source's planned (Plan) or remaining (Transfer) amount, and in Plan mode it turns into the error and disables **Move** once the amount exceeds the plan. The sheet pins every item's version when it opens and closes only when `mutate` accepts the write; offline, it stays open with its draft.
 
 ### Amount display
 

@@ -1,6 +1,12 @@
 'use client';
 
-import { ChevronDown, MoreHorizontal, Plus } from 'lucide-react';
+import {
+    ArrowLeftRight,
+    ChevronDown,
+    MoreHorizontal,
+    Plus,
+    Trash2
+} from 'lucide-react';
 import { useSortableList } from '@/components/ui/sortable-list';
 import type { SortLongPressProps } from '@/components/ui/sortable-list';
 import { SwipeReveal } from '@/components/ui/swipe-reveal';
@@ -38,6 +44,7 @@ export function BudgetCategorySection({
     mutate,
     onAddItem,
     onDeleteItem,
+    onMoveItem,
     onEditCategory,
     onSelectItem,
     onToggle,
@@ -50,6 +57,7 @@ export function BudgetCategorySection({
     mutate: Mutate;
     onAddItem: (category: BudgetCategoryView) => void;
     onDeleteItem: (category: BudgetCategoryView, item: BudgetItemView) => void;
+    onMoveItem: (item: BudgetItemView) => void;
     onEditCategory: (category: BudgetCategoryView) => void;
     onSelectItem: (item: BudgetItemView, trigger: HTMLButtonElement) => void;
     onToggle: (categoryId: string) => void;
@@ -160,11 +168,34 @@ export function BudgetCategorySection({
                                         Reorder {item.name}
                                     </button>
                                     <SwipeReveal
-                                        actionLabel={`Delete ${item.name} budget item`}
+                                        actions={[
+                                            {
+                                                key: 'move',
+                                                label: `Move money for ${item.name}`,
+                                                icon: (
+                                                    <ArrowLeftRight
+                                                        size={21}
+                                                        aria-hidden='true'
+                                                    />
+                                                ),
+                                                tone: 'accent',
+                                                onAction: () => onMoveItem(item)
+                                            },
+                                            {
+                                                key: 'delete',
+                                                label: `Delete ${item.name} budget item`,
+                                                icon: (
+                                                    <Trash2
+                                                        size={21}
+                                                        aria-hidden='true'
+                                                    />
+                                                ),
+                                                tone: 'danger',
+                                                onAction: () =>
+                                                    onDeleteItem(category, item)
+                                            }
+                                        ]}
                                         disabled={pendingItem}
-                                        onAction={() =>
-                                            onDeleteItem(category, item)
-                                        }
                                     >
                                         <div
                                             className='budget-row'

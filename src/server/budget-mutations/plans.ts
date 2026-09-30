@@ -1,7 +1,12 @@
 import 'server-only';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
+import type { AppDb } from '@/db';
 import { monthlyBudgetItems } from '@/db/schema';
-import { throwMonthlyItemMutationFailure } from '@/server/mutation-failures';
+import {
+    MutationFailure,
+    throwMonthlyItemMutationFailure
+} from '@/server/mutation-failures';
+import { activeMovePair } from './active-items';
 import type { MutationContext } from './context';
 
 export async function updatePlan({
@@ -52,4 +57,61 @@ export async function toggleCarryover({
 
     if (!updated[0])
         await throwMonthlyItemMutationFailure(tx, monthId, input.monthlyItemId);
+}
+
+async function shiftPlan(
+    tx: AppDb,
+    monthId: string,
+    change: {
+        monthlyItemId: string;
+        expectedVersion: number;
+        deltaCents: bigint;
+    }
+): Promise<void> {
+    const updated = await tx
+        .update(monthlyBudgetItems)
+        .set({
+            plannedCents: sql`${monthlyBudgetItems.plannedCents} + ${change.deltaCents}`,
+            version: change.expectedVersion + 1,
+            updatedAt: new Date()
+        })
+        .where(
+            and(
+                eq(monthlyBudgetItems.id, change.monthlyItemId),
+                eq(monthlyBudgetItems.monthId, monthId),
+                eq(monthlyBudgetItems.version, change.expectedVersion)
+            )
+        )
+        .returning({ id: monthlyBudgetItems.id });
+
+    if (!updated[0])
+        await throwMonthlyItemMutationFailure(
+            tx,
+            monthId,
+            change.monthlyItemId
+        );
+}
+
+export async function movePlannedAmount(
+    context: MutationContext<'movePlannedAmount'>
+): Promise<void> {
+    const { tx, monthId, input } = context;
+    const amount = BigInt(input.amountCents);
+    const { from } = await activeMovePair(context);
+
+    await shiftPlan(tx, monthId, {
+        monthlyItemId: input.fromItemId,
+        expectedVersion: input.fromExpectedVersion,
+        deltaCents: -amount
+    });
+    await shiftPlan(tx, monthId, {
+        monthlyItemId: input.toItemId,
+        expectedVersion: input.toExpectedVersion,
+        deltaCents: amount
+    });
+    if (from.plannedCents < amount)
+        throw new MutationFailure(
+            'validation',
+            `You can move at most what ${from.name} has planned.`
+        );
 }

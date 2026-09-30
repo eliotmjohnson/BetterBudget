@@ -286,7 +286,8 @@
     transform: translateX(0);
     transition: transform 0.45s cubic-bezier(0.4, 1, 0.4, 1);
 }
-.segmented[data-kind='refund'] .segmented-thumb {
+.segmented[data-kind='refund'] .segmented-thumb,
+.segmented[data-segment='second'] .segmented-thumb {
     transform: translateX(100%);
 }
 .segment {
@@ -303,6 +304,38 @@
 }
 .segment.active {
     color: white;
+}
+.move-money-route {
+    display: grid;
+    gap: 4px;
+}
+.move-money-fixed {
+    display: flex;
+    align-items: center;
+    min-height: 48px;
+    padding: 11px 13px;
+    border: 1px solid var(--line);
+    border-radius: calc(12px * var(--corner-radius-scale));
+    background: #f5f7fa;
+    font-weight: 650;
+}
+.move-money-swap {
+    justify-self: center;
+    width: 44px;
+    height: 44px;
+    display: grid;
+    place-items: center;
+    margin-bottom: -8px;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--blue);
+    cursor: pointer;
+}
+.move-money-hint {
+    margin: 0;
+    color: #6b7280;
+    font-size: 13px;
 }
 .split-row {
     display: grid;

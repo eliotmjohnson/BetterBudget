@@ -3,8 +3,51 @@ import type { MonthSnapshot } from '@/domain/types';
 import type { AdjustAllocation, PatchOf } from './context';
 
 type Input = PatchOf<
-    'addTransaction' | 'updateTransaction' | 'deleteTransaction'
+    | 'addTransaction'
+    | 'transferBetweenItems'
+    | 'updateTransaction'
+    | 'deleteTransaction'
 >;
+
+function transferLegs(
+    next: MonthSnapshot,
+    input: PatchOf<'transferBetweenItems'>
+): PatchOf<'addTransaction'>[] {
+    const nameOf = (monthlyItemId: string) =>
+        next.categories
+            .flatMap((category) => category.items)
+            .find((item) => item.id === monthlyItemId)?.name ?? 'budget item';
+    const leg = (
+        suffix: string,
+        kind: 'expense' | 'refund',
+        merchant: string,
+        monthlyItemId: string
+    ): PatchOf<'addTransaction'> => ({
+        type: 'addTransaction',
+        clientMutationId: `${input.clientMutationId}-${suffix}`,
+        monthKey: input.monthKey,
+        kind,
+        merchant,
+        occurredOn: input.occurredOn,
+        totalCents: input.amountCents,
+        splits: [{ monthlyItemId, amountCents: input.amountCents }]
+    });
+
+    return [
+        leg(
+            'out',
+            'expense',
+            `Transfer to ${nameOf(input.toItemId)}`,
+            input.fromItemId
+        ),
+        leg(
+            'in',
+            'refund',
+            `Transfer from ${nameOf(input.fromItemId)}`,
+            input.toItemId
+        )
+    ];
+}
 
 export function applyTransactionPatch(
     next: MonthSnapshot,
@@ -12,6 +55,11 @@ export function applyTransactionPatch(
     adjustAllocation: AdjustAllocation
 ): void {
     switch (input.type) {
+        case 'transferBetweenItems': {
+            for (const leg of transferLegs(next, input))
+                applyTransactionPatch(next, leg, adjustAllocation);
+            break;
+        }
         case 'addTransaction': {
             const direction = input.kind === 'refund' ? -1n : 1n;
 

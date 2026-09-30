@@ -645,11 +645,16 @@
     background: white;
     overscroll-behavior-inline: none;
 }
-.swipe-reveal-action {
+.swipe-reveal-actions {
     position: absolute;
     z-index: 0;
     inset: 0 0 0 auto;
-    width: 68px;
+    width: var(--swipe-reveal-width, 68px);
+    display: flex;
+    pointer-events: none;
+}
+.swipe-reveal-action {
+    flex: 0 0 68px;
     display: grid;
     place-items: center;
     border: 0;
@@ -660,10 +665,15 @@
     cursor: pointer;
 }
 .swipe-reveal[data-active='true'] .swipe-reveal-action {
-    background: #e5484d;
     color: white;
     opacity: 1;
     pointer-events: auto;
+}
+.swipe-reveal[data-active='true'] .swipe-reveal-action[data-tone='accent'] {
+    background: var(--blue);
+}
+.swipe-reveal[data-active='true'] .swipe-reveal-action[data-tone='danger'] {
+    background: #e5484d;
 }
 .swipe-reveal-action:disabled {
     opacity: 0.55;
@@ -685,7 +695,7 @@
     will-change: transform;
 }
 .swipe-reveal:has(.swipe-reveal-action:focus-visible) .swipe-reveal-content {
-    transform: translate3d(-68px, 0, 0);
+    transform: translate3d(calc(-1 * var(--swipe-reveal-width, 68px)), 0, 0);
 }
 body > .sortable-drag-overlay {
     position: fixed;

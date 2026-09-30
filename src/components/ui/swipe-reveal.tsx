@@ -1,9 +1,9 @@
 'use client';
 
-import { Trash2 } from 'lucide-react';
 import {
     useEffect,
     useRef,
+    type CSSProperties,
     type PointerEvent as ReactPointerEvent,
     type ReactNode
 } from 'react';
@@ -13,7 +13,6 @@ const actionWidth = 68;
 const intentDistance = 6;
 const verticalIntentDistance = 24;
 const diagonalVerticalTolerance = 2.25;
-const openDistance = actionWidth * 0.3;
 const flickVelocity = 0.22;
 
 function focusEditable(target: HTMLElement | null, pointerType: string) {
@@ -34,20 +33,27 @@ type Gesture = {
     editableTarget: HTMLElement | null;
 };
 
-const clampedOffset = (value: number) =>
-    Math.max(-actionWidth, Math.min(0, value));
+export type SwipeRevealAction = {
+    key: string;
+    label: string;
+    icon: ReactNode;
+    tone: 'accent' | 'danger';
+    onAction: () => void;
+};
 
 export function SwipeReveal({
-    actionLabel,
+    actions,
     children,
-    disabled = false,
-    onAction
+    disabled = false
 }: {
-    actionLabel: string;
+    actions: SwipeRevealAction[];
     children: ReactNode;
     disabled?: boolean;
-    onAction: () => void;
 }) {
+    const revealWidth = actionWidth * actions.length;
+    const openDistance = revealWidth * 0.3;
+    const clampedOffset = (value: number) =>
+        Math.max(-revealWidth, Math.min(0, value));
     const rootRef = useRef<HTMLDivElement>(null);
     const contentRef = useRef<HTMLDivElement>(null);
     const gestureRef = useRef<Gesture | null>(null);
@@ -107,7 +113,7 @@ export function SwipeReveal({
         openRef.current = open;
         rootRef.current?.setAttribute('data-open', String(open));
         if (open) rootRef.current?.setAttribute('data-active', 'true');
-        setOffset(open ? -actionWidth : 0, true);
+        setOffset(open ? -revealWidth : 0, true);
         if (!open && wasAtRest)
             rootRef.current?.setAttribute('data-active', 'false');
     };
@@ -136,7 +142,7 @@ export function SwipeReveal({
 
         const startedOpen = gesture.startOffset < 0;
         const movedOpen = startedOpen
-            ? offsetRef.current <= -actionWidth * 0.6
+            ? offsetRef.current <= -revealWidth * 0.6
             : offsetRef.current <= -openDistance;
         const flickedOpen = gesture.velocityX <= -flickVelocity;
         const flickedClosed = gesture.velocityX >= flickVelocity;
@@ -154,20 +160,29 @@ export function SwipeReveal({
             data-disabled={disabled || undefined}
             data-open='false'
             data-active='false'
+            style={
+                { '--swipe-reveal-width': `${revealWidth}px` } as CSSProperties
+            }
         >
-            <button
-                className='swipe-reveal-action'
-                type='button'
-                disabled={disabled}
-                aria-label={actionLabel}
-                onFocus={() => settle(true)}
-                onClick={() => {
-                    settle(false);
-                    onAction();
-                }}
-            >
-                <Trash2 size={21} aria-hidden='true' />
-            </button>
+            <div className='swipe-reveal-actions'>
+                {actions.map((action) => (
+                    <button
+                        key={action.key}
+                        className='swipe-reveal-action'
+                        data-tone={action.tone}
+                        type='button'
+                        disabled={disabled}
+                        aria-label={action.label}
+                        onFocus={() => settle(true)}
+                        onClick={() => {
+                            settle(false);
+                            action.onAction();
+                        }}
+                    >
+                        {action.icon}
+                    </button>
+                ))}
+            </div>
             <div
                 ref={contentRef}
                 className='swipe-reveal-content'

@@ -33,10 +33,12 @@ export function optimisticSnapshot(
 
     switch (input.type) {
         case 'updatePlan':
+        case 'movePlannedAmount':
         case 'toggleCarryover':
             applyPlanPatch(next, input);
             break;
         case 'addTransaction':
+        case 'transferBetweenItems':
         case 'updateTransaction':
         case 'deleteTransaction':
             applyTransactionPatch(next, input, adjustAllocation);

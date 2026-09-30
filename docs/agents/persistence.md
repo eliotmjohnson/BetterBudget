@@ -17,6 +17,7 @@ Safe optimistic operations currently include:
 
 - Planned-amount edits committed on blur, Enter, or the established short debounce. A failed save on the line-item detail keeps the typed amount and shows an inline Not saved message with the saved amount until the next edit or retry.
 - Carryover toggles.
+- Moving money between two items of the same month: `movePlannedAmount` (both item versions are checked, and the source's plan must cover the amount) and `transferBetweenItems` (one expense and one refund, each with a single split, committed together). The server resolves both items against the month's active definitions and takes the transfer titles from their names; the optimistic patch reuses the plan and `addTransaction` patches.
 - Category and item renaming/reordering.
 - Simple category, item, expected-income, receipt, and transaction additions after full client validation.
 - Received-income receipt deletion and unused income-source deletion.
