@@ -122,7 +122,7 @@ export function MoveMoneySheet({
                 <optgroup key={category.id} label={category.name}>
                     {category.items.map((choice) => (
                         <option key={choice.id} value={choice.id}>
-                            {choice.name} ({money(choice.availableCents)} left)
+                            {choice.name}
                         </option>
                     ))}
                 </optgroup>
@@ -220,20 +220,22 @@ export function MoveMoneySheet({
                     <CurrencyInput
                         id='move-money-amount'
                         aria-invalid={overPlan || undefined}
-                        aria-describedby='move-money-hint'
+                        aria-describedby={
+                            overPlan ? 'move-money-error' : undefined
+                        }
                         value={amount}
                         onValueChange={setAmount}
                     />
-                    <p
-                        className={overPlan ? 'form-error' : 'move-money-hint'}
-                        id='move-money-hint'
-                    >
-                        {source
-                            ? mode === 'plan'
-                                ? `${source.name} has ${money(source.plannedCents)} planned.`
-                                : `${source.name} has ${money(source.availableCents)} left.`
-                            : 'Choose where the money comes from.'}
-                    </p>
+                    {overPlan ? (
+                        <p
+                            className='form-error'
+                            id='move-money-error'
+                            role='alert'
+                        >
+                            {source.name} has only {money(source.plannedCents)}{' '}
+                            planned.
+                        </p>
+                    ) : null}
                 </div>
                 {preview ? (
                     <ul
