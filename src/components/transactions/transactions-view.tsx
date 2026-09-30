@@ -3,6 +3,7 @@
 import { Plus, Search, SlidersHorizontal, X } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
 import { Sheet } from '@/components/ui/sheet';
+import { useStillField } from '@/components/ui/still-focus';
 import { useScrolledPast } from '@/components/ui/use-scrolled-past';
 import { formatCurrency } from '@/domain/money';
 import type { ActivityEntry, MonthSnapshot } from '@/domain/types';
@@ -102,6 +103,7 @@ export function TransactionsView({
     onDelete: (entry: ActivityEntry) => void;
 }) {
     const [search, setSearch] = useState('');
+    const searchStill = useStillField<HTMLInputElement>();
     const [filter, setFilter] = useState<Filter>('all');
     const [itemFilter, setItemFilter] = useState('all');
     const [splitFilter, setSplitFilter] = useState<SplitFilter>('all');
@@ -219,6 +221,7 @@ export function TransactionsView({
                         aria-hidden='true'
                     />
                     <input
+                        {...searchStill}
                         aria-label='Search transactions'
                         placeholder='Search transactions'
                         value={search}

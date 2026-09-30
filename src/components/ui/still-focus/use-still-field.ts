@@ -36,7 +36,7 @@ export function useStillField<T extends StillField>({
     onFocus,
     onTouchStart,
     onTouchEnd
-}: StillFieldOptions<T>): StillFieldHandlers<T> {
+}: StillFieldOptions<T> = {}): StillFieldHandlers<T> {
     if (!enabled) return { onFocus, onTouchStart, onTouchEnd };
 
     return {
