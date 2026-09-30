@@ -103,6 +103,29 @@ export function CurrencyInput({
         if (inputRef.current)
             fitExpression(inputRef.current, expression !== null);
     }, [displayed, expression]);
+    useEffect(() => {
+        const input = inputRef.current;
+        const viewport = window.visualViewport;
+
+        if (!focused || !input || !viewport || !input.closest('.sheet-content'))
+            return;
+        let frame = 0;
+        const replaceCaret = () => {
+            cancelAnimationFrame(frame);
+            frame = requestAnimationFrame(() => {
+                if (document.activeElement === input) moveCaretToEnd(input);
+            });
+        };
+
+        viewport.addEventListener('scroll', replaceCaret);
+        viewport.addEventListener('resize', replaceCaret);
+
+        return () => {
+            cancelAnimationFrame(frame);
+            viewport.removeEventListener('scroll', replaceCaret);
+            viewport.removeEventListener('resize', replaceCaret);
+        };
+    }, [focused]);
 
     const updateExpression = (next: string) => {
         const nextResult = evaluateMoneyExpression(next);
