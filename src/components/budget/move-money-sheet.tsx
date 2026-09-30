@@ -18,23 +18,43 @@ const modeCopy: Record<MoveMode, string> = {
         'Moves money that’s left, as a transaction on both items. Planned amounts stay the same.'
 };
 
+type PreviewShape =
+    | { kind: 'change'; afterCents: string }
+    | { kind: 'limit' }
+    | { kind: 'unchanged' };
+
 function PreviewRow({
     item,
-    afterCents
+    shape
 }: {
     item: BudgetItemView;
-    afterCents: string;
+    shape: PreviewShape;
 }) {
     return (
-        <li className='move-money-preview-row'>
+        <li
+            className='move-money-preview-row'
+            data-tone={shape.kind === 'unchanged' ? 'muted' : undefined}
+        >
             <span>{item.name}</span>
-            <span>
-                {money(item.availableCents)} →{' '}
-                <strong data-negative={BigInt(afterCents) < 0n || undefined}>
-                    {money(afterCents)}
-                </strong>{' '}
-                left
-            </span>
+            {shape.kind === 'change' ? (
+                <span>
+                    {money(item.availableCents)} →{' '}
+                    <strong
+                        data-negative={
+                            BigInt(shape.afterCents) < 0n || undefined
+                        }
+                    >
+                        {money(shape.afterCents)}
+                    </strong>{' '}
+                    left
+                </span>
+            ) : shape.kind === 'limit' ? (
+                <span data-tone='limit'>
+                    only {money(item.plannedCents)} planned
+                </span>
+            ) : (
+                <span>{money(item.availableCents)} left</span>
+            )}
         </li>
     );
 }
@@ -85,21 +105,15 @@ export function MoveMoneySheet({
         mode === 'plan' &&
         source !== undefined &&
         amountCents > BigInt(source.plannedCents);
-    const canMove =
-        source !== undefined &&
-        destination !== undefined &&
-        amountCents > 0n &&
-        !overPlan;
-    const preview = canMove
-        ? {
-              from: source,
-              to: destination,
-              after: availableAfterMove({
-                  sourceAvailableCents: source.availableCents,
-                  destinationAvailableCents: destination.availableCents,
-                  amountCents: amount
-              })
-          }
+    const ready =
+        source !== undefined && destination !== undefined && amountCents > 0n;
+    const canMove = ready && !overPlan;
+    const after = ready
+        ? availableAfterMove({
+              sourceAvailableCents: source.availableCents,
+              destinationAvailableCents: destination.availableCents,
+              amountCents: amount
+          })
         : null;
     const choices = snapshot.categories
         .map((category) => ({
@@ -221,34 +235,41 @@ export function MoveMoneySheet({
                         id='move-money-amount'
                         aria-invalid={overPlan || undefined}
                         aria-describedby={
-                            overPlan ? 'move-money-error' : undefined
+                            overPlan ? 'move-money-preview' : undefined
                         }
                         value={amount}
                         onValueChange={setAmount}
                     />
-                    {overPlan ? (
-                        <p
-                            className='form-error'
-                            id='move-money-error'
-                            role='alert'
-                        >
-                            {source.name} has only {money(source.plannedCents)}{' '}
-                            planned.
-                        </p>
-                    ) : null}
                 </div>
-                {preview ? (
+                {ready && after ? (
                     <ul
                         className='move-money-preview'
+                        id='move-money-preview'
                         aria-label='After the move'
+                        aria-live='polite'
+                        data-invalid={overPlan || undefined}
                     >
                         <PreviewRow
-                            item={preview.from}
-                            afterCents={preview.after.source}
+                            item={source}
+                            shape={
+                                overPlan
+                                    ? { kind: 'limit' }
+                                    : {
+                                          kind: 'change',
+                                          afterCents: after.source
+                                      }
+                            }
                         />
                         <PreviewRow
-                            item={preview.to}
-                            afterCents={preview.after.destination}
+                            item={destination}
+                            shape={
+                                overPlan
+                                    ? { kind: 'unchanged' }
+                                    : {
+                                          kind: 'change',
+                                          afterCents: after.destination
+                                      }
+                            }
                         />
                     </ul>
                 ) : null}

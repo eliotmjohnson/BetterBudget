@@ -372,6 +372,17 @@
 .move-money-preview-row strong[data-negative] {
     color: #d33f46;
 }
+.move-money-preview[data-invalid] {
+    background: #fdf0f0;
+    box-shadow: inset 0 0 0 1px rgb(211 63 70 / 18%);
+}
+.move-money-preview-row span[data-tone='limit'] {
+    color: #d33f46;
+    font-weight: 650;
+}
+.move-money-preview-row[data-tone='muted'] {
+    opacity: 0.55;
+}
 .split-row {
     display: grid;
     min-width: 0;
