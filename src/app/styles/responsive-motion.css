@@ -225,9 +225,6 @@
         grid-row: 1;
         justify-self: start;
     }
-    .mobile-header > .icon-button[data-action='settings'] {
-        display: none;
-    }
     .month-switcher {
         grid-column: 2;
         grid-row: 1;

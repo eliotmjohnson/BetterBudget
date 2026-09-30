@@ -167,22 +167,15 @@ export function AppShell({
                     </div>
                     <button
                         className='icon-button'
-                        data-action={view === 'budget' ? 'month' : 'settings'}
                         onClick={onMonthActions}
                         disabled={mutationPending}
                         aria-label={
                             mutationPending
                                 ? 'Month actions unavailable while saving'
-                                : view === 'budget'
-                                  ? 'Month actions'
-                                  : 'Settings'
+                                : 'Month actions'
                         }
                     >
-                        {view === 'budget' ? (
-                            <CalendarCog size={21} strokeWidth={1.8} />
-                        ) : (
-                            <Settings size={21} strokeWidth={1.8} />
-                        )}
+                        <CalendarCog size={21} strokeWidth={1.8} />
                     </button>
                 </header>
                 {online ? null : (

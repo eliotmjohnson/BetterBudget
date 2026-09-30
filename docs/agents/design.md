@@ -53,11 +53,11 @@ so the narrower phone column cut off the right of the hover circle. Between 760 
 budget column under 500 px, too narrow for the desktop bars, so the summary card
 keeps the phone arc there and switches to the bars from 1020 px. The rail sticks 24 px
 below the header, which is exactly where the summary card starts, so it never
-jumps when scrolling begins. The header button opens month actions on Budget,
+jumps when scrolling begins. The header button opens month actions on every page, phone and desktop,
 drawn as a calendar with a gear (`CalendarCog`) because it holds this month's
-settings and a plain gear already means the Settings tab, and it links to
-Settings, drawn as the plain gear, elsewhere; on desktop it is hidden outside Budget because the sidebar
-already has Settings. The rail leads with Add transaction on desktop, so the
+settings and a plain gear already means the Settings tab. Before 5.13.2 it was
+drawn as the plain gear and labelled Settings outside Budget, and hidden there on
+desktop, although it opened month actions on every page. The rail leads with Add transaction on desktop, so the
 in-page Add transaction button is hidden from 760 px and shown again by the
 landscape-phone block, where the rail is hidden. Recent transactions rows in the
 rail open the edit transaction sheet, and an empty month says so instead of
