@@ -135,6 +135,17 @@ body {
     overscroll-behavior: none;
     -webkit-font-smoothing: antialiased;
 }
+@media (display-mode: standalone) {
+    html,
+    body {
+        height: 100%;
+    }
+    .app-frame,
+    .sign-in-screen {
+        position: fixed;
+        inset: 0 0 auto;
+    }
+}
 button,
 input,
 textarea,
