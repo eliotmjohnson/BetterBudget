@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { CurrencyInput } from '@/components/ui/currency-input';
 import { Sheet } from '@/components/ui/sheet';
 import { money, type Mutate } from '@/components/shared/budget-view-helpers';
+import { availableAfterMove } from '@/domain/budget-calculations';
 import { defaultDateForMonth } from '@/domain/calendar';
 import type { BudgetItemView, MonthSnapshot } from '@/domain/types';
 import { createUuid } from '@/domain/uuid';
@@ -14,8 +15,29 @@ type MoveMode = 'plan' | 'transfer';
 const modeCopy: Record<MoveMode, string> = {
     plan: 'Moves part of the planned amount. Left to budget stays the same.',
     transfer:
-        'Records the move as a transaction on both items. Planned amounts stay the same.'
+        'Moves money that’s left, as a transaction on both items. Planned amounts stay the same.'
 };
+
+function PreviewRow({
+    item,
+    afterCents
+}: {
+    item: BudgetItemView;
+    afterCents: string;
+}) {
+    return (
+        <li className='move-money-preview-row'>
+            <span>{item.name}</span>
+            <span>
+                {money(item.availableCents)} →{' '}
+                <strong data-negative={BigInt(afterCents) < 0n || undefined}>
+                    {money(afterCents)}
+                </strong>{' '}
+                left
+            </span>
+        </li>
+    );
+}
 
 function FixedItem({ id, item }: { id: string; item: BudgetItemView }) {
     return (
@@ -68,6 +90,17 @@ export function MoveMoneySheet({
         destination !== undefined &&
         amountCents > 0n &&
         !overPlan;
+    const preview = canMove
+        ? {
+              from: source,
+              to: destination,
+              after: availableAfterMove({
+                  sourceAvailableCents: source.availableCents,
+                  destinationAvailableCents: destination.availableCents,
+                  amountCents: amount
+              })
+          }
+        : null;
     const choices = snapshot.categories
         .map((category) => ({
             ...category,
@@ -144,7 +177,7 @@ export function MoveMoneySheet({
                         className={`segment ${mode === 'plan' ? 'active' : ''}`}
                         onClick={() => setMode('plan')}
                     >
-                        Plan
+                        Planned
                     </button>
                     <button
                         type='button'
@@ -152,7 +185,7 @@ export function MoveMoneySheet({
                         className={`segment ${mode === 'transfer' ? 'active' : ''}`}
                         onClick={() => setMode('transfer')}
                     >
-                        Transfer
+                        Remaining
                     </button>
                 </div>
                 <p className='confirmation-copy'>{modeCopy[mode]}</p>
@@ -202,6 +235,21 @@ export function MoveMoneySheet({
                             : 'Choose where the money comes from.'}
                     </p>
                 </div>
+                {preview ? (
+                    <ul
+                        className='move-money-preview'
+                        aria-label='After the move'
+                    >
+                        <PreviewRow
+                            item={preview.from}
+                            afterCents={preview.after.source}
+                        />
+                        <PreviewRow
+                            item={preview.to}
+                            afterCents={preview.after.destination}
+                        />
+                    </ul>
+                ) : null}
                 <button
                     className='primary-button primary-button--wide'
                     type='button'

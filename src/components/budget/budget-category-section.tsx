@@ -170,18 +170,6 @@ export function BudgetCategorySection({
                                     <SwipeReveal
                                         actions={[
                                             {
-                                                key: 'move',
-                                                label: `Move money for ${item.name}`,
-                                                icon: (
-                                                    <ArrowLeftRight
-                                                        size={21}
-                                                        aria-hidden='true'
-                                                    />
-                                                ),
-                                                tone: 'accent',
-                                                onAction: () => onMoveItem(item)
-                                            },
-                                            {
                                                 key: 'delete',
                                                 label: `Delete ${item.name} budget item`,
                                                 icon: (
@@ -193,6 +181,18 @@ export function BudgetCategorySection({
                                                 tone: 'danger',
                                                 onAction: () =>
                                                     onDeleteItem(category, item)
+                                            },
+                                            {
+                                                key: 'move',
+                                                label: `Move money for ${item.name}`,
+                                                icon: (
+                                                    <ArrowLeftRight
+                                                        size={21}
+                                                        aria-hidden='true'
+                                                    />
+                                                ),
+                                                tone: 'accent',
+                                                onAction: () => onMoveItem(item)
                                             }
                                         ]}
                                         disabled={pendingItem}

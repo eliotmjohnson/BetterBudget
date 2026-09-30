@@ -94,3 +94,24 @@ export function planFillingLeftToBudget({
 }): Cents {
     return cents(BigInt(savedPlanCents) + BigInt(leftToBudgetCents));
 }
+
+/**
+ * Remaining balances of both items after moving `amountCents` between them.
+ * A planned-amount move and a transfer shift remaining money identically.
+ */
+export function availableAfterMove({
+    sourceAvailableCents,
+    destinationAvailableCents,
+    amountCents
+}: {
+    sourceAvailableCents: Cents | string;
+    destinationAvailableCents: Cents | string;
+    amountCents: Cents | string;
+}): { source: Cents; destination: Cents } {
+    const amount = BigInt(amountCents);
+
+    return {
+        source: cents(BigInt(sourceAvailableCents) - amount),
+        destination: cents(BigInt(destinationAvailableCents) + amount)
+    };
+}

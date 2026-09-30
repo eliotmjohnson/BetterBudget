@@ -199,6 +199,13 @@
     background: white;
     color: var(--ink);
 }
+.field select {
+    appearance: none;
+    padding-right: 44px;
+    background: white
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")
+        no-repeat right 16px center / 18px;
+}
 .currency-input {
     font-variant-numeric: tabular-nums;
 }
@@ -331,6 +338,39 @@
     background: transparent;
     color: var(--blue);
     cursor: pointer;
+}
+.move-money-preview {
+    display: grid;
+    gap: 8px;
+    margin: 0;
+    padding: 12px 14px;
+    border-radius: calc(12px * var(--corner-radius-scale));
+    background: #f5f7fa;
+    list-style: none;
+}
+.move-money-preview-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 14px;
+    font-variant-numeric: tabular-nums;
+}
+.move-money-preview-row span:first-child {
+    min-width: 0;
+    overflow: hidden;
+    font-weight: 650;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.move-money-preview-row span:last-child {
+    flex: 0 0 auto;
+    color: #6b7280;
+}
+.move-money-preview-row strong {
+    color: #199d67;
+}
+.move-money-preview-row strong[data-negative] {
+    color: #d33f46;
 }
 .move-money-hint {
     margin: 0;
