@@ -74,6 +74,31 @@
     .inline-money-input:focus {
         max-width: calc(100vw - 122px);
     }
+    .budget-row-grid > .amount-column--planned {
+        position: relative;
+        overflow: clip;
+    }
+    .amount-column--planned > .currency-input-fit {
+        display: block;
+        visibility: hidden;
+        height: 34px;
+        min-width: 92px;
+        max-width: 180px;
+        padding: 0 7px;
+        font-size: 17px;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+        letter-spacing: normal;
+        white-space: pre;
+    }
+    .amount-column--planned > .inline-money-input {
+        position: absolute;
+        inset-block: 0;
+        right: 0;
+        width: 180px;
+        min-width: 0;
+        max-width: none;
+    }
     .money-cell-button {
         height: 44px;
         margin-block: -1px;

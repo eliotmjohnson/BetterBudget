@@ -202,6 +202,9 @@
 .currency-input {
     font-variant-numeric: tabular-nums;
 }
+.currency-input-fit {
+    display: none;
+}
 .date-input-shell {
     position: relative;
     width: 100%;

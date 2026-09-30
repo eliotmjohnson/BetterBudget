@@ -7,6 +7,7 @@ import { TransactionSheet } from '@/components/transactions/transaction-sheet';
 import {
     money,
     signedMoney,
+    spentView,
     type Mutate
 } from '@/components/shared/budget-view-helpers';
 import { budgetBalanceView } from './budget-summary-card';
@@ -33,6 +34,7 @@ export function BudgetRail({
         useState<ActivityEntry | null>(null);
     const [editingOpen, setEditingOpen] = useState(false);
     const balance = budgetBalanceView(snapshot);
+    const spent = spentView(snapshot.summary.spentCents);
     const recent = snapshot.activity
         .filter((entry) => entry.type !== 'income')
         .slice(0, 5);
@@ -72,8 +74,10 @@ export function BudgetRail({
                     <strong>{money(snapshot.summary.plannedCents)}</strong>
                 </div>
                 <div className='rail-stat'>
-                    <span>Spent</span>
-                    <strong>{money(snapshot.summary.spentCents)}</strong>
+                    <span>{spent.label}</span>
+                    <strong className={spent.added ? 'positive' : undefined}>
+                        {spent.amount}
+                    </strong>
                 </div>
             </div>
             <div className='rail-section'>

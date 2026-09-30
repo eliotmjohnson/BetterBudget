@@ -33,6 +33,7 @@ type CurrencyInputProps = Omit<
     value: string;
     onValueChange: (valueCents: string) => void;
     fill?: (OperatorBarFill & { valueCents: string }) | null;
+    fitText?: boolean;
 };
 
 const moveCaretToEnd = (input: HTMLInputElement) => {
@@ -71,13 +72,16 @@ function fitExpression(input: HTMLInputElement, calculating: boolean) {
  * amount and takes dollar operands; every valid intermediate result is
  * reported through `onValueChange`, and blur or `=` collapses the field back
  * to the last valid result. An optional `fill` offers one amount on the bar
- * that replaces the field's value in a single tap; it lands as a native text
- * insertion whose `input` event carries the filled amount, so the browser
- * handles it like a keystroke rather than a scripted value change.
+ * that replaces the field's value in a single tap. With `fitText`, an
+ * invisible copy of the displayed text follows the input, so a stylesheet can
+ * size the surrounding box to the text while the input keeps one width:
+ * WebKit scrolls the page to the caret whenever a focused field's text box
+ * changes size.
  */
 export function CurrencyInput({
     className,
     fill,
+    fitText,
     onBlur,
     onClick,
     onFocus,
@@ -93,7 +97,6 @@ export function CurrencyInput({
     const result =
         expression === null ? null : evaluateMoneyExpression(expression);
     const inputRef = useRef<HTMLInputElement>(null);
-    const pendingFill = useRef<string | null>(null);
     const displayed = expression ?? formatCurrencyInput(value);
 
     useLayoutEffect(() => {
@@ -121,19 +124,9 @@ export function CurrencyInput({
             updateExpression(appendToExpression(expression, key));
     };
     const fillValue = () => {
-        const input = inputRef.current;
-
         if (!fill) return;
         setExpression(null);
-        if (fill.valueCents === value) return;
-        if (input && document.activeElement === input) {
-            pendingFill.current = fill.valueCents;
-            moveCaretToEnd(input);
-            document.execCommand('insertText', false, '0');
-            if (pendingFill.current === null) return;
-            pendingFill.current = null;
-        }
-        onValueChange(fill.valueCents);
+        if (fill.valueCents !== value) onValueChange(fill.valueCents);
     };
 
     useLayoutEffect(() => {
@@ -154,12 +147,6 @@ export function CurrencyInput({
     useEffect(() => () => releaseCalculator(owner), [owner]);
 
     const changeAmount = (text: string) => {
-        if (pendingFill.current !== null) {
-            onValueChange(pendingFill.current);
-            pendingFill.current = null;
-
-            return;
-        }
         if (expression !== null) {
             updateExpression(applyExpressionEdit(expression, text));
 
@@ -236,6 +223,11 @@ export function CurrencyInput({
                     }
                 }}
             />
+            {fitText ? (
+                <span className='currency-input-fit' aria-hidden>
+                    {displayed}
+                </span>
+            ) : null}
         </>
     );
 }

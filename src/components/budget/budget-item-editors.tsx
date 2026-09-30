@@ -149,6 +149,7 @@ export function PlanInput({
             aria-label={`Planned amount for ${item.name}`}
             data-swipe-reveal-allow
             size={Math.max(8, formatCurrencyInput(value).length)}
+            fitText
             value={value}
             fill={leftToBudgetFill(item, leftToBudgetCents, value || '0')}
             onValueChange={setValue}

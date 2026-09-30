@@ -2,7 +2,11 @@
 
 import { useLayoutEffect, useRef, type CSSProperties } from 'react';
 import type { MonthSnapshot } from '@/domain/types';
-import { fitAmountStyle, money } from '@/components/shared/budget-view-helpers';
+import {
+    fitAmountStyle,
+    money,
+    spentView
+} from '@/components/shared/budget-view-helpers';
 import { useContinuousCorners } from '@/components/ui/continuous-corners';
 import { remainingAvailableProgress } from './budget-category-section';
 
@@ -46,6 +50,7 @@ export function BudgetSummaryCard({ snapshot }: { snapshot: MonthSnapshot }) {
         label: budgetBalanceLabel,
         amount: budgetBalance
     } = budgetBalanceView(snapshot);
+    const spent = spentView(snapshot.summary.spentCents);
     const summaryArcOverflow = Math.max(0, budgetBalance.length - 6);
     const summaryArcStyle = {
         '--summary-arc-width': `${Math.min(
@@ -192,13 +197,12 @@ export function BudgetSummaryCard({ snapshot }: { snapshot: MonthSnapshot }) {
                             background: 'var(--coral)'
                         }}
                     />
-                    <span>Spent</span>
+                    <span>{spent.label}</span>
                     <strong
-                        style={fitAmountStyle(
-                            money(snapshot.summary.spentCents)
-                        )}
+                        className={spent.added ? 'positive' : undefined}
+                        style={fitAmountStyle(spent.amount)}
                     >
-                        {money(snapshot.summary.spentCents)}
+                        {spent.amount}
                     </strong>
                 </div>
                 <div className='desktop-bar'>
@@ -241,13 +245,12 @@ export function BudgetSummaryCard({ snapshot }: { snapshot: MonthSnapshot }) {
                     </strong>
                 </div>
                 <div className='summary-stat'>
-                    <span>Spent</span>
+                    <span>{spent.label}</span>
                     <strong
-                        style={fitAmountStyle(
-                            money(snapshot.summary.spentCents)
-                        )}
+                        className={spent.added ? 'positive' : undefined}
+                        style={fitAmountStyle(spent.amount)}
                     >
-                        {money(snapshot.summary.spentCents)}
+                        {spent.amount}
                     </strong>
                 </div>
             </div>
