@@ -655,11 +655,13 @@
     z-index: 0;
     inset: 0 0 0 auto;
     width: var(--swipe-reveal-width, 68px);
-    display: flex;
     pointer-events: none;
 }
 .swipe-reveal-action {
-    flex: 0 0 68px;
+    position: absolute;
+    inset-block: 0;
+    right: 0;
+    width: 68px;
     display: grid;
     place-items: center;
     border: 0;
@@ -668,6 +670,11 @@
     opacity: 0;
     pointer-events: none;
     cursor: pointer;
+    transform: translate3d(
+        calc(68px + var(--swipe-reveal-x, 0px) * var(--swipe-reveal-share, 1)),
+        0,
+        0
+    );
 }
 .swipe-reveal[data-active='true'] .swipe-reveal-action {
     color: white;
@@ -691,16 +698,28 @@
     transform: translate3d(var(--swipe-reveal-x, 0px), 0, 0);
     touch-action: pan-y;
 }
-.swipe-reveal-content[data-dragging='true'] {
+.swipe-reveal[data-dragging='true']
+    :is(.swipe-reveal-content, .swipe-reveal-action) {
     transition: none;
     will-change: transform;
 }
-.swipe-reveal-content[data-settling='true'] {
+.swipe-reveal[data-settling='true']
+    :is(.swipe-reveal-content, .swipe-reveal-action) {
     transition: transform 0.32s cubic-bezier(0.4, 1, 0.4, 1);
     will-change: transform;
 }
 .swipe-reveal:has(.swipe-reveal-action:focus-visible) .swipe-reveal-content {
     transform: translate3d(calc(-1 * var(--swipe-reveal-width, 68px)), 0, 0);
+}
+.swipe-reveal:has(.swipe-reveal-action:focus-visible) .swipe-reveal-action {
+    transform: translate3d(
+        calc(
+            68px - var(--swipe-reveal-width, 68px) *
+                var(--swipe-reveal-share, 1)
+        ),
+        0,
+        0
+    );
 }
 body > .sortable-drag-overlay {
     position: fixed;

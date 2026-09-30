@@ -17,7 +17,7 @@ The implemented product supports:
 - Household-level category and budget-item definitions with per-month category participation and item plans.
 - Adding, editing, reordering, archiving, and conditionally deleting categories and items. Deleting a category or item that has transactions in the selected month or later opens a delete sheet that requires a destination budget item for that activity and offers to move the planned amount too; a definition with only a plan offers the move as optional. Permanent deletion appears only for definitions that were never used. The Budget page retains creation, direct category name/icon/color editing, and item swipe deletion. The Settings organizer is a focused, collapsible Budget-style list with compact 56 px category headers and 44 px item rows for category appearance and item-name editing, history-preserving deletion, permanent deletion of unused definitions, and reordering; it intentionally does not create structure. A 350 ms long-press on a category header or item row starts reordering on both surfaces, with a lifted pointer-following preview, an in-list placeholder, and animated neighboring rows. There are no visible drag grips.
 - Moving money between two budget items in the same month from the Move
-  action a Budget row's leftward swipe reveals to the right of Delete. **Planned** moves
+  action a Budget row's leftward swipe reveals to the left of Delete. **Planned** moves
   part of one item's planned amount to the other (at most what the source has
   planned, leaving Left to budget unchanged); **Remaining** records an expense
   `Transfer to …` on the source and an income transaction `Transfer from …` on

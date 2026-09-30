@@ -100,12 +100,12 @@ export function SwipeReveal({
 
     const setOffset = (offset: number, settling: boolean) => {
         offsetRef.current = offset;
-        const content = contentRef.current;
+        const root = rootRef.current;
 
-        if (!content) return;
-        content.style.setProperty('--swipe-reveal-x', `${offset}px`);
-        content.dataset.dragging = settling ? 'false' : 'true';
-        content.dataset.settling = settling ? 'true' : 'false';
+        if (!root) return;
+        root.style.setProperty('--swipe-reveal-x', `${offset}px`);
+        root.dataset.dragging = settling ? 'false' : 'true';
+        root.dataset.settling = settling ? 'true' : 'false';
     };
     const settle = (open: boolean) => {
         const wasAtRest = offsetRef.current === 0;
@@ -160,16 +160,24 @@ export function SwipeReveal({
             data-disabled={disabled || undefined}
             data-open='false'
             data-active='false'
+            data-dragging='false'
+            data-settling='false'
             style={
                 { '--swipe-reveal-width': `${revealWidth}px` } as CSSProperties
             }
         >
             <div className='swipe-reveal-actions'>
-                {actions.map((action) => (
+                {actions.map((action, index) => (
                     <button
                         key={action.key}
                         className='swipe-reveal-action'
                         data-tone={action.tone}
+                        style={
+                            {
+                                '--swipe-reveal-share':
+                                    (actions.length - index) / actions.length
+                            } as CSSProperties
+                        }
                         type='button'
                         disabled={disabled}
                         aria-label={action.label}
@@ -186,8 +194,6 @@ export function SwipeReveal({
             <div
                 ref={contentRef}
                 className='swipe-reveal-content'
-                data-dragging='false'
-                data-settling='false'
                 onPointerDown={(event) => {
                     if (
                         disabled ||
@@ -288,8 +294,12 @@ export function SwipeReveal({
                 onPointerUp={(event) => finishGesture(event)}
                 onPointerCancel={(event) => finishGesture(event, true)}
                 onTransitionEnd={(event) => {
-                    if (event.propertyName !== 'transform') return;
-                    event.currentTarget.dataset.settling = 'false';
+                    if (
+                        event.propertyName !== 'transform' ||
+                        event.target !== event.currentTarget
+                    )
+                        return;
+                    rootRef.current?.setAttribute('data-settling', 'false');
                     if (!openRef.current)
                         rootRef.current?.setAttribute('data-active', 'false');
                 }}
