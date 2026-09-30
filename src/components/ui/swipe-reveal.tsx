@@ -235,6 +235,15 @@ export function SwipeReveal({
 
                     if (!gesture || gesture.pointerId !== event.pointerId)
                         return;
+                    if (
+                        event.target instanceof Element &&
+                        event.target.closest('[data-long-press-active]')
+                    ) {
+                        gestureRef.current = null;
+                        if (gesture.axis === 'horizontal') settle(false);
+
+                        return;
+                    }
                     const deltaX = event.clientX - gesture.startX;
                     const deltaY = event.clientY - gesture.startY;
 
