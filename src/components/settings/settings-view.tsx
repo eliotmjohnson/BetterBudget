@@ -19,6 +19,7 @@ import { useRouter } from 'next/navigation';
 import { Sheet } from '@/components/ui/sheet';
 import { SettingsAssistantSection } from './settings-assistant-section';
 import { SettingsDataSection } from './settings-data-section';
+import { SettingsKeyboardProbe } from './settings-keyboard-probe';
 import {
     APP_BUILD_LABEL,
     APP_DESCRIPTION,
@@ -282,6 +283,7 @@ export function SettingsView({
                             <option value='offline'>Offline write</option>
                         </select>
                     </div>
+                    <SettingsKeyboardProbe />
                 </>
             ) : null}
             <footer
