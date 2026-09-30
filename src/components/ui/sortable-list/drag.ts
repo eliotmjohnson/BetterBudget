@@ -322,6 +322,11 @@ export function finish<T>(
 
         return;
     }
+    const drop = {
+        duration: 320,
+        easing: 'cubic-bezier(.4, 1, .4, 1)',
+        fill: 'forwards'
+    } as const;
     const animation = drag.overlay.animate(
         [
             {
@@ -329,17 +334,14 @@ export function finish<T>(
                 transform: `translate3d(0, ${currentDelta}px, 0) scale(1.012)`
             },
             {
-                boxShadow: '0 0 0 rgb(32 48 70 / 0%)',
                 opacity: 0.88,
                 transform: `translate3d(0, ${targetDelta}px, 0) scale(1)`
             }
         ],
-        {
-            duration: 320,
-            easing: 'cubic-bezier(.4, 1, .4, 1)',
-            fill: 'forwards'
-        }
+        drop
     );
+
+    drag.overlay.animate([{ boxShadow: '0 0 0 rgb(32 48 70 / 0%)' }], drop);
 
     cleanupTimer = window.setTimeout(cleanup, 420);
     void animation.finished.then(cleanup, cleanup);
