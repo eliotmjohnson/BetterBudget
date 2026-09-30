@@ -18,7 +18,11 @@ import type {
 } from '@/domain/types';
 import { createUuid } from '@/domain/uuid';
 import { CategoryIcon } from '@/components/shared/category-icon';
-import { money, type Mutate } from '@/components/shared/budget-view-helpers';
+import {
+    money,
+    spentView,
+    type Mutate
+} from '@/components/shared/budget-view-helpers';
 import { PlanInput } from './budget-item-editors';
 import { CarryoverCoin } from './carryover-coin';
 
@@ -138,6 +142,7 @@ export function BudgetCategorySection({
                     >
                         {orderedItems.map((item) => {
                             const available = BigInt(item.availableCents);
+                            const spent = spentView(item.spentCents);
                             const fill = remainingAvailableProgress(
                                 available,
                                 BigInt(item.spentCents)
@@ -234,8 +239,10 @@ export function BudgetCategorySection({
                                                         mutate={mutate}
                                                     />
                                                 </div>
-                                                <span className='money-cell amount-column amount-column--spent'>
-                                                    {money(item.spentCents)}
+                                                <span
+                                                    className={`money-cell amount-column amount-column--spent${spent.added ? ' spent-added' : ''}`}
+                                                >
+                                                    {spent.amount}
                                                 </span>
                                                 <button
                                                     className={`money-cell money-cell-button amount-column amount-column--available ${available < 0n ? 'available-negative' : available > 0n ? 'available-positive' : ''}`}

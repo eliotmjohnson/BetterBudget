@@ -60,6 +60,10 @@ The implemented product supports:
   current app session and resets from this default only on a fresh load. At
   1100 px and wider the Budget page shows Planned, Spent, and Available
   together, so the switch and this preference apply only to narrower layouts.
+  Spent is net of refunds and income entries, so a month or item they outweigh
+  never shows a negative Spent: the amount reads as money added, `+$X` in
+  green, and the summary card, rail, and desktop bar label it Added instead of
+  Spent (`spentView` in `src/components/shared/budget-view-helpers.ts`).
 - The Settings Data section exports the whole household budget as one
   `better-budget-backup` JSON file (every month, category and item definition
   including archived ones, plan, carryover setting, income plan and receipt,

@@ -96,7 +96,9 @@
     letter-spacing: -0.025em;
     white-space: nowrap;
 }
-.summary-stat strong.positive {
+.summary-stat strong.positive,
+.desktop-bar strong.positive,
+.rail-stat strong.positive {
     color: #1fa86e;
 }
 .desktop-bars,
@@ -595,6 +597,9 @@
 .money-cell.available-positive {
     color: #199d67;
     font-weight: 700;
+}
+.money-cell.spent-added {
+    color: #199d67;
 }
 .money-cell.available-negative {
     color: #e3474d;
