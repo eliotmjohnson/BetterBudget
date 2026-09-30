@@ -6,12 +6,6 @@ import { AppSwitch } from '@/components/ui/app-switch';
 import { CurrencyInput } from '@/components/ui/currency-input';
 import { NavigationDetail } from '@/components/ui/navigation-detail';
 import {
-    pinPageWhileFocused,
-    revealAboveKeyboard,
-    stillFocusHandlers,
-    veilNativeFocus
-} from '@/components/ui/still-focus';
-import {
     leftToBudgetWithPlanDraft,
     planFillingLeftToBudget
 } from '@/domain/budget-calculations';
@@ -153,16 +147,10 @@ export function PlanInput({
             value={value}
             fill={leftToBudgetFill(item, leftToBudgetCents, value || '0')}
             onValueChange={setValue}
-            {...stillFocusHandlers}
-            onFocus={(event) => {
-                veilNativeFocus(event.currentTarget);
-                pinPageWhileFocused(event.currentTarget);
+            stillFocus
+            onFocus={() => {
                 startEditing();
                 markEditingPlan(true);
-                revealAboveKeyboard(
-                    event.currentTarget,
-                    event.currentTarget.closest<HTMLElement>('.app-content')
-                );
             }}
             onBlur={() => {
                 releaseEditingPlan();

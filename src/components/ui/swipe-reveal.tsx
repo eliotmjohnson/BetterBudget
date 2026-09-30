@@ -7,7 +7,7 @@ import {
     type PointerEvent as ReactPointerEvent,
     type ReactNode
 } from 'react';
-import { focusStill } from '@/components/ui/still-focus';
+import { focusStill, isStillField } from '@/components/ui/still-focus';
 
 const actionWidth = 68;
 const intentDistance = 6;
@@ -16,8 +16,7 @@ const diagonalVerticalTolerance = 2.25;
 const flickVelocity = 0.22;
 
 function focusEditable(target: HTMLElement | null, pointerType: string) {
-    if (target instanceof HTMLInputElement)
-        focusStill(target, pointerType === 'touch');
+    if (isStillField(target)) focusStill(target, pointerType === 'touch');
     else target?.focus({ preventScroll: true });
 }
 

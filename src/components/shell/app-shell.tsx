@@ -210,6 +210,7 @@ export function AppShell({
                         key={`${contentView}-${monthKey}`}
                         ref={contentRef}
                         className='app-content app-content--enter'
+                        data-still-scroller
                     >
                         {onRefresh ? <PullRefreshDial /> : null}
                         {children}

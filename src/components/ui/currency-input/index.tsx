@@ -7,6 +7,7 @@ import {
     useState,
     type ComponentPropsWithoutRef
 } from 'react';
+import { useStillField } from '@/components/ui/still-focus';
 import {
     formatCurrency,
     formatCurrencyInput,
@@ -34,6 +35,7 @@ type CurrencyInputProps = Omit<
     onValueChange: (valueCents: string) => void;
     fill?: (OperatorBarFill & { valueCents: string }) | null;
     fitText?: boolean;
+    stillFocus?: boolean;
 };
 
 const moveCaretToEnd = (input: HTMLInputElement) => {
@@ -76,7 +78,8 @@ function fitExpression(input: HTMLInputElement, calculating: boolean) {
  * invisible copy of the displayed text follows the input, so a stylesheet can
  * size the surrounding box to the text while the input keeps one width:
  * WebKit scrolls the page to the caret whenever a focused field's text box
- * changes size.
+ * changes size. With `stillFocus`, focusing the field never slides the page
+ * on iOS (`useStillField`).
  */
 export function CurrencyInput({
     className,
@@ -86,8 +89,11 @@ export function CurrencyInput({
     onClick,
     onFocus,
     onKeyDown,
+    onTouchEnd,
+    onTouchStart,
     onValueChange,
     size,
+    stillFocus = false,
     value,
     ...props
 }: CurrencyInputProps) {
@@ -98,6 +104,13 @@ export function CurrencyInput({
         expression === null ? null : evaluateMoneyExpression(expression);
     const inputRef = useRef<HTMLInputElement>(null);
     const displayed = expression ?? formatCurrencyInput(value);
+    const still = useStillField({
+        enabled: stillFocus,
+        calculator: true,
+        onFocus,
+        onTouchStart,
+        onTouchEnd
+    });
 
     useLayoutEffect(() => {
         if (inputRef.current)
@@ -212,6 +225,8 @@ export function CurrencyInput({
                 }
                 value={displayed}
                 onChange={(event) => changeAmount(event.currentTarget.value)}
+                onTouchStart={still.onTouchStart}
+                onTouchEnd={still.onTouchEnd}
                 onBlur={(event) => {
                     setFocused(false);
                     releaseCalculator(owner);
@@ -225,7 +240,7 @@ export function CurrencyInput({
                 }}
                 onFocus={(event) => {
                     setFocused(true);
-                    onFocus?.(event);
+                    still.onFocus?.(event);
                     if (!event.defaultPrevented)
                         moveCaretToEnd(event.currentTarget);
                 }}
