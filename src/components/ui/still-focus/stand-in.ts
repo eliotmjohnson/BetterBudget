@@ -1,5 +1,6 @@
 import type { StillField } from './field';
 
+const HEIGHT_TOLERANCE_PX = 0.5;
 const FOCUSED_LOOK = [
     'background-color',
     'border-top-color',
@@ -24,14 +25,46 @@ export function shownField(field: StillField): HTMLElement {
 }
 
 /**
+ * Where `field`'s border box sits inside its offset parent, which is also the
+ * stand-in's containing block, to the fraction of a pixel. The `offset*`
+ * properties round to whole pixels, so a field at a fractional position, such
+ * as the centered Income expected amount under its label, got a stand-in up
+ * to half a pixel off, which showed as the value nudging down and back up as
+ * the stand-in came and went.
+ */
+function exactBox(field: StillField) {
+    const box = field.getBoundingClientRect();
+    const parent = field.offsetParent;
+
+    if (!(parent instanceof HTMLElement))
+        return {
+            left: field.offsetLeft,
+            top: field.offsetTop,
+            width: field.offsetWidth,
+            height: field.offsetHeight
+        };
+    const origin = parent.getBoundingClientRect();
+
+    return {
+        left: box.left - origin.left - parent.clientLeft + parent.scrollLeft,
+        top: box.top - origin.top - parent.clientTop + parent.scrollTop,
+        width: box.width,
+        height: box.height
+    };
+}
+
+/**
  * An inert copy of `field`, laid over its spot, that shows its value while the
  * field itself is hidden. It is the first child of the field's parent, so
  * positioned siblings drawn over the field, such as a search icon, are drawn
- * over it too, and it does not transition, so it takes the focused look at
- * once.
+ * over it too. It takes its height from its stylesheet, as the field does,
+ * and only gets the field's height inline when that differs: a fixed-height
+ * stand-in drew the Income expected amount, which is sized by `min-height`,
+ * two device pixels lower than the field.
  */
 function createStandIn(field: StillField) {
     const standIn = field.cloneNode() as StillField;
+    const { left, top, width, height } = exactBox(field);
 
     standIn.value = field.value;
     standIn.removeAttribute('id');
@@ -42,33 +75,43 @@ function createStandIn(field: StillField) {
     standIn.setAttribute('aria-hidden', 'true');
     Object.assign(standIn.style, {
         position: 'absolute',
-        left: `${field.offsetLeft}px`,
-        top: `${field.offsetTop}px`,
-        width: `${field.offsetWidth}px`,
-        height: `${field.offsetHeight}px`,
+        left: `${left}px`,
+        top: `${top}px`,
+        width: `${width}px`,
         margin: '0',
-        pointerEvents: 'none',
-        transition: 'none'
+        pointerEvents: 'none'
     });
     field.parentElement?.prepend(standIn);
+    if (
+        Math.abs(standIn.getBoundingClientRect().height - height) >
+        HEIGHT_TOLERANCE_PX
+    )
+        standIn.style.height = `${height}px`;
 
     return standIn;
 }
 
 /**
- * Gives `standIn` the focused field's border, background, shadow, and outline,
- * read with the field's own transitions switched off so the result is the
- * finished focus style rather than the start of its fade. Without it the
- * stand-in shows the unfocused look until release, and the field then fades
- * into focus late.
+ * Moves `standIn` to the focused field's border, background, shadow, and
+ * outline through the stand-in's own stylesheet transitions, so it fades into
+ * focus exactly as the field would. The target is read with the field's
+ * transitions switched off, so it is the finished focus style rather than the
+ * start of the field's fade, and the stand-in's current look is resolved
+ * first, so a stand-in inserted in this same task has a starting style to
+ * fade from. Without it the stand-in shows the unfocused look until release,
+ * and the field then fades into focus late.
  */
 function wearFocusedLook(field: StillField, standIn: StillField) {
     field.style.transition = 'none';
     const look = getComputedStyle(field);
+    const targets = FOCUSED_LOOK.map(
+        (property) => [property, look.getPropertyValue(property)] as const
+    );
 
-    for (const property of FOCUSED_LOOK)
-        standIn.style.setProperty(property, look.getPropertyValue(property));
     field.style.removeProperty('transition');
+    void getComputedStyle(standIn).borderTopColor;
+    for (const [property, value] of targets)
+        standIn.style.setProperty(property, value);
 }
 
 /**

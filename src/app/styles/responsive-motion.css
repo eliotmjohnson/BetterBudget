@@ -735,14 +735,16 @@
     .field textarea,
     .field select,
     .search-box input,
-    .date-input-shell {
+    .date-input-shell,
+    .income-source-expected-input {
         transition: border-color 0.2s ease;
     }
     .field input:focus,
     .field textarea:focus,
     .field select:focus,
     .search-box input:focus,
-    .date-input-shell:focus-within {
+    .date-input-shell:focus-within,
+    .income-source-expected-input:focus {
         border-color: var(--blue);
     }
     .income-source-expected-input:focus-visible {

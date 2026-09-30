@@ -46,11 +46,11 @@ function parkWhileKeyboardOpens(field: StillField) {
 
 /**
  * Focuses `field` so iOS does not scroll the page to it: with `preventScroll`,
- * marked so `veilNativeFocus` leaves it alone, and, for a touch while the
+ * marked so `veilNativeFocus` leaves it alone, and, with `park` while the
  * keyboard is still down, parked off-screen while the keyboard opens.
  */
-export function focusStill(field: StillField, touch: boolean) {
-    if (touch) parkWhileKeyboardOpens(field);
+export function focusStill(field: StillField, park: boolean) {
+    if (park) parkWhileKeyboardOpens(field);
     quietFocus = field;
     field.focus({ preventScroll: true });
     quietFocus = null;

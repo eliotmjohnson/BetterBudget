@@ -419,7 +419,11 @@ export function NavigationDetail({
                             </div>
                         </div>
                     ) : null}
-                    <div ref={bodyRef} className='navigation-detail-body'>
+                    <div
+                        ref={bodyRef}
+                        className='navigation-detail-body'
+                        data-still-scroller
+                    >
                         {children}
                     </div>
                     {floatingAction ? (

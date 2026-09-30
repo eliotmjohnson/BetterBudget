@@ -1,39 +1,54 @@
 import { isKeyboardUp } from './keyboard';
 
 const RECLAIM_MS = 450;
+const lent = new WeakMap<HTMLElement, { base: number; extra: number }>();
+
+function padBy(scroller: HTMLElement, room: { base: number; extra: number }) {
+    lent.set(scroller, room);
+    scroller.style.paddingBottom = `${room.base + room.extra}px`;
+}
+
+function returnRoom(scroller: HTMLElement) {
+    lent.delete(scroller);
+    scroller.style.removeProperty('padding-bottom');
+}
 
 /**
  * Pads the end of `scroller` so it can scroll `distance` further, for rows
  * near the end of the list that could otherwise never clear the keyboard, and
  * takes the padding back once the keyboard has closed: when the list is
  * scrolled into the padding, it first glides back to its real end, so
- * dropping the padding does not jump it.
+ * dropping the padding does not jump it. The loan is added to the
+ * stylesheet's own bottom padding, read when the first loan is made, rather
+ * than replacing it.
  */
 export function lendScrollRoom(scroller: HTMLElement, distance: number) {
     const viewport = window.visualViewport;
-    const lent = Number.parseInt(scroller.style.paddingBottom, 10) || 0;
+    const current = lent.get(scroller);
     const room =
         scroller.scrollHeight - scroller.clientHeight - scroller.scrollTop;
 
     if (!viewport || distance <= room) return;
-    scroller.style.paddingBottom = `${lent + distance - room}px`;
-    if (lent > 0) return;
+    padBy(scroller, {
+        base:
+            current?.base ??
+            Number.parseFloat(getComputedStyle(scroller).paddingBottom),
+        extra: (current?.extra ?? 0) + distance - room
+    });
+    if (current) return;
     const reclaim = () => {
         if (isKeyboardUp(viewport)) return;
         viewport.removeEventListener('resize', reclaim);
-        const lentNow = Number.parseInt(scroller.style.paddingBottom, 10) || 0;
-        const end = scroller.scrollHeight - scroller.clientHeight - lentNow;
+        const extra = lent.get(scroller)?.extra ?? 0;
+        const end = scroller.scrollHeight - scroller.clientHeight - extra;
 
         if (scroller.scrollTop <= end) {
-            scroller.style.removeProperty('padding-bottom');
+            returnRoom(scroller);
 
             return;
         }
         scroller.scrollTo({ top: end, behavior: 'smooth' });
-        window.setTimeout(
-            () => scroller.style.removeProperty('padding-bottom'),
-            RECLAIM_MS
-        );
+        window.setTimeout(() => returnRoom(scroller), RECLAIM_MS);
     };
 
     viewport.addEventListener('resize', reclaim);

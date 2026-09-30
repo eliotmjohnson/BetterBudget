@@ -21,12 +21,12 @@ export function startStillTap(event: ReactTouchEvent<StillField>) {
 
 /**
  * Turns a tap on an unfocused field into a focus iOS does not scroll the page
- * for: the field asks for no scroll and, when the keyboard is still down, is
- * parked off-screen while it opens. iOS otherwise slides the whole page
+ * for: the field asks for no scroll and, with `park` while the keyboard is
+ * still down, is parked off-screen while it opens. iOS otherwise slides the whole page
  * toward the field, dragging the header and Better Buddy with it. A touch that
  * moved past `TAP_SLOP_PX` is a scroll or a swipe and is left alone.
  */
-export function endStillTap(event: ReactTouchEvent<StillField>) {
+export function endStillTap(event: ReactTouchEvent<StillField>, park: boolean) {
     const tap = press;
     const touch = event.changedTouches[0];
 
@@ -39,5 +39,5 @@ export function endStillTap(event: ReactTouchEvent<StillField>) {
     )
         return;
     event.preventDefault();
-    if (document.activeElement !== tap.field) focusStill(tap.field, true);
+    if (document.activeElement !== tap.field) focusStill(tap.field, park);
 }

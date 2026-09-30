@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState, type RefObject } from 'react';
 import { AppSwitch } from '@/components/ui/app-switch';
 import { CurrencyInput } from '@/components/ui/currency-input';
 import { NavigationDetail } from '@/components/ui/navigation-detail';
+import { useStillField } from '@/components/ui/still-focus';
 import {
     leftToBudgetWithPlanDraft,
     planFillingLeftToBudget
@@ -247,6 +248,7 @@ export function EditItemForm({
                         plannedUnsaved ? 'item-planned-unsaved' : undefined
                     }
                     value={planned}
+                    stillFocus
                     onValueChange={(value) => {
                         setPlanned(value);
                         setPlannedUnsaved(false);
@@ -379,6 +381,10 @@ export function EditableItemTitle({
     mutate: Mutate;
 }) {
     const [editing, setEditing] = useState(false);
+    const titleStill = useStillField<HTMLInputElement>({
+        autoFocus: true,
+        conceal: false
+    });
     const [draft, setDraft] = useState(item.name);
     const [baseline, setBaseline] = useState({
         name: item.name,
@@ -408,9 +414,9 @@ export function EditableItemTitle({
 
     return editing ? (
         <input
+            {...titleStill}
             className='navigation-detail-title-input'
             aria-label='Line item name'
-            autoFocus
             maxLength={80}
             value={draft}
             onBlur={commit}
