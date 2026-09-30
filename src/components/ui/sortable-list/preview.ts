@@ -23,6 +23,15 @@ function keepHandlePadding(
     Object.assign(copy.style, { paddingBottom, paddingTop });
 }
 
+/** The top padding of the first reorder handle in `root`, whose text sits that far below the row's edge. */
+export function handlePaddingTop(root: HTMLElement) {
+    const handle = root.matches(handleSelector)
+        ? root
+        : root.querySelector(handleSelector);
+
+    return handle ? parseFloat(getComputedStyle(handle).paddingTop) || 0 : 0;
+}
+
 /** Builds the lifted drag copy of `source`, laid out exactly as the row it leaves. */
 export function createPreviewOverlay(
     source: HTMLElement,

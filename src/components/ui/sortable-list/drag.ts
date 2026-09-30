@@ -2,7 +2,7 @@
 
 import type { Dispatch, RefObject, SetStateAction } from 'react';
 import { flushSync } from 'react-dom';
-import { createPreviewOverlay } from './preview';
+import { createPreviewOverlay, handlePaddingTop } from './preview';
 
 export type DragState = {
     activeHeight: number;
@@ -64,10 +64,12 @@ export function animateOrder<T>(
     beforeCommit?: () => void
 ) {
     const { setOrder, sortAnimationsRef, sortableElements } = ctx;
+    const textTop = (element: HTMLElement) =>
+        element.getBoundingClientRect().top + handlePaddingTop(element);
     const before = new Map(
         sortableElements().map((element) => [
             element.dataset.sortableId,
-            element.getBoundingClientRect().top
+            textTop(element)
         ])
     );
 
@@ -84,7 +86,7 @@ export function animateOrder<T>(
         const previousTop = before.get(id);
 
         if (previousTop === undefined) continue;
-        const delta = previousTop - element.getBoundingClientRect().top;
+        const delta = previousTop - textTop(element);
 
         if (Math.abs(delta) < 1) continue;
         const animation = element.animate(
@@ -293,8 +295,11 @@ export function finish<T>(
     const targetItem = sortableElements().find(
         (element) => element.dataset.sortableId === drag.draggedId
     );
-    const targetTop = targetItem
-        ? previewElement(targetItem).getBoundingClientRect().top
+    const targetPreview = targetItem ? previewElement(targetItem) : null;
+    const targetTop = targetPreview
+        ? targetPreview.getBoundingClientRect().top +
+          handlePaddingTop(targetPreview) -
+          handlePaddingTop(drag.overlay.firstElementChild as HTMLElement)
         : drag.overlayOriginTop;
     const currentDelta = drag.currentY - drag.pointerStartY;
     const targetDelta = targetTop - drag.overlayOriginTop;
@@ -324,6 +329,7 @@ export function finish<T>(
                 transform: `translate3d(0, ${currentDelta}px, 0) scale(1.012)`
             },
             {
+                boxShadow: '0 0 0 rgb(32 48 70 / 0%)',
                 opacity: 0.88,
                 transform: `translate3d(0, ${targetDelta}px, 0) scale(1)`
             }
