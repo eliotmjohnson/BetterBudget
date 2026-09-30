@@ -228,7 +228,6 @@
     white-space: nowrap;
 }
 .month-picker-shell {
-    position: relative;
     min-width: 0;
 }
 .month-picker-control {
@@ -255,7 +254,7 @@
 .month-picker-popover {
     position: absolute;
     z-index: 50;
-    top: calc(100% + 7px);
+    top: 100%;
     left: 50%;
     width: min(320px, calc(100vw - 24px));
     padding: 14px;

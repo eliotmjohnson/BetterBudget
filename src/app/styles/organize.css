@@ -62,9 +62,6 @@
 .organizer-category-chevron[data-collapsed='true'] {
     transform: rotate(-90deg);
 }
-.organizer-item-sortable-list {
-    border-top: 1px solid var(--line);
-}
 .organizer-item-row {
     min-height: 44px;
     display: grid;
@@ -77,7 +74,8 @@
         background-color 0.18s ease,
         box-shadow 0.18s ease;
 }
-.organizer-item-sortable-item + .organizer-item-sortable-item {
+.organizer-item-sortable-item,
+.organizer-empty-category {
     border-top: 1px solid var(--line);
 }
 .organizer-item-edit {

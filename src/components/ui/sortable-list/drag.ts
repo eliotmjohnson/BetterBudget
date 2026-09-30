@@ -31,7 +31,13 @@ export type DragState = {
 const sameOrder = (left: string[], right: string[]) =>
     left.length === right.length &&
     left.every((id, index) => id === right[index]);
-const maximumAutoScrollVelocity = 0.22;
+const maximumAutoScrollVelocity = 0.6;
+const switchSlack = 8;
+const translatedY = (element: HTMLElement) => {
+    const transform = getComputedStyle(element).transform;
+
+    return transform === 'none' ? 0 : new DOMMatrixReadOnly(transform).m42;
+};
 
 export interface DragStart {
     clientY: number;
@@ -123,62 +129,45 @@ export function updateTarget<T>(
         slotShifts[index] = slotShifts[index - 1]! + heights[index]!;
     for (let index = initialIndex - 1; index >= 0; index -= 1)
         slotShifts[index] = slotShifts[index + 1]! - heights[index]!;
-    const sourceMatchesPreviewHeight =
-        Math.abs(drag.activeHeight - drag.overlay.offsetHeight) <= 2;
-    const targetPositions = sourceMatchesPreviewHeight
-        ? slotShifts
-        : sortableItems.map((element) => {
-              const rect = element.getBoundingClientRect();
-              const transform = getComputedStyle(element).transform;
-              const translatedY =
-                  transform === 'none'
-                      ? 0
-                      : new DOMMatrixReadOnly(transform).m42;
-              const activatorRect = element
-                  .querySelector<HTMLElement>('[data-sort-long-press]')
-                  ?.getBoundingClientRect();
+    const titleCenters = sortableItems.map((element) => {
+        const rect = previewElement(element).getBoundingClientRect();
 
-              return (
-                  (activatorRect
-                      ? activatorRect.top + activatorRect.height / 2
-                      : rect.top + rect.height / 2) - translatedY
-              );
-          });
-    let pointerPosition = clientY;
-
-    if (sourceMatchesPreviewHeight) {
-        const sourceTransform = getComputedStyle(drag.sortableItem).transform;
-        const sourceTranslatedY =
-            sourceTransform === 'none'
-                ? 0
-                : new DOMMatrixReadOnly(sourceTransform).m42;
-        const sourceTop =
-            previewElement(drag.sortableItem).getBoundingClientRect().top -
-            sourceTranslatedY;
-        const overlayTop = drag.overlayOriginTop + clientY - drag.pointerStartY;
-
-        pointerPosition = overlayTop - sourceTop;
-    }
+        return rect.top + rect.height / 2 - translatedY(element);
+    });
+    const titleCenter = (index: number, target: number) =>
+        titleCenters[index]! +
+        (index > initialIndex && index <= target
+            ? -drag.activeHeight
+            : index >= target && index < initialIndex
+              ? drag.activeHeight
+              : 0);
+    const titleHalf = drag.overlay.offsetHeight / 2;
+    const overlayCenter =
+        drag.overlayOriginTop + clientY - drag.pointerStartY + titleHalf;
     let targetIndex = drag.targetIndex;
 
-    while (
-        targetIndex < targetPositions.length - 1 &&
-        pointerPosition >
-            (targetPositions[targetIndex]! +
-                targetPositions[targetIndex + 1]!) /
-                2 +
-                8
-    )
+    while (targetIndex < sortableItems.length - 1) {
+        const below =
+            targetIndex >= initialIndex ? targetIndex + 1 : targetIndex;
+
+        if (
+            overlayCenter + titleHalf <=
+            titleCenter(below, targetIndex) + switchSlack
+        )
+            break;
         targetIndex += 1;
-    while (
-        targetIndex > 0 &&
-        pointerPosition <
-            (targetPositions[targetIndex - 1]! +
-                targetPositions[targetIndex]!) /
-                2 -
-                8
-    )
+    }
+    while (targetIndex > 0) {
+        const above =
+            targetIndex > initialIndex ? targetIndex : targetIndex - 1;
+
+        if (
+            overlayCenter - titleHalf >=
+            titleCenter(above, targetIndex) - switchSlack
+        )
+            break;
         targetIndex -= 1;
+    }
     if (targetIndex === drag.targetIndex) return;
     drag.targetIndex = targetIndex;
     const next = [...drag.initialOrder];
