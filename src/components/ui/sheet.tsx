@@ -62,6 +62,25 @@ export function restoreSheetFocus(target: HTMLElement, focusVisible: boolean) {
     });
 }
 
+/**
+ * What had focus as a sheet opened, to return focus to when it closes if the
+ * caller names no `restoreFocusRef`. The sheets open from controlled state
+ * rather than Radix's own trigger, so Radix returned focus to nothing and it
+ * fell to the page: after Escape closed Add transaction, Tab started over from
+ * the top instead of the button that opened it. A text field is left out,
+ * because focusing one again after a tap outside can raise the on-screen
+ * keyboard.
+ */
+function focusOpener() {
+    const active = document.activeElement;
+
+    return active instanceof HTMLElement &&
+        active !== document.body &&
+        !active.matches('input, textarea, select')
+        ? active
+        : null;
+}
+
 export function Sheet({
     open,
     onOpenChange,
@@ -116,6 +135,7 @@ export function Sheet({
     const overlayRef = useRef<HTMLDivElement>(null);
     const dragRef = useRef<DragState | null>(null);
     const restoreFocusVisibleRef = useRef(true);
+    const openerRef = useRef<HTMLElement | null>(null);
     const settleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -319,8 +339,12 @@ export function Sheet({
                         if (interactionDisabled) event.preventDefault();
                     }}
                     onCloseAutoFocus={(event) => {
-                        const target = restoreFocusRef?.current;
+                        const opener = openerRef.current;
+                        const target =
+                            restoreFocusRef?.current ??
+                            (opener?.isConnected ? opener : null);
 
+                        openerRef.current = null;
                         if (!target) return;
                         event.preventDefault();
                         restoreSheetFocus(
@@ -329,11 +353,12 @@ export function Sheet({
                         );
                     }}
                     onOpenAutoFocus={(event) => {
+                        openerRef.current = focusOpener();
                         restoreFocusVisibleRef.current =
                             restoreFocusVisible ??
-                            restoreFocusRef?.current?.matches(
-                                ':focus-visible'
-                            ) ??
+                            (
+                                restoreFocusRef?.current ?? openerRef.current
+                            )?.matches(':focus-visible') ??
                             true;
                         event.preventDefault();
                         contentRef.current?.focus();
