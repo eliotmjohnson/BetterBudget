@@ -58,6 +58,10 @@ On an occasional cold launch iOS reports `env(safe-area-inset-top)` as 0 for the
 
 The mobile PWA intentionally disables page zoom, text selection, touch callouts, document-level pull-to-refresh, and cancelable Safari history gestures beginning within the leftmost 20 px on any route. The global touch guard must remain capture-phase and non-passive for touchstart and touchmove, claim non-control edge touches immediately, preserve normal control taps, and prevent every move that begins inside the edge strip regardless of direction. Mount it once above all routes.
 
+### Field focus on touch
+
+On touch screens (`pointer: coarse`), a focused field shows focus with its own border instead of a ring. The light blue `:focus-visible` outline from `app-shell.css` is removed for text fields, selects, textareas, and the allocation picker's checkboxes. The Income expected-amount field loses its halo too. Bordered fields (`.field` inputs, selects, and textareas, the Transactions search, and the date field's `.date-input-shell` through `:focus-within`) turn their border to the theme `--blue` over 0.2 s instead. These rules live in the `pointer: coarse` block near the end of `responsive-motion.css`, because that file comes after every area file and so wins over their more specific rules. The rules use `:focus` rather than `:focus-visible`, because iOS does not always match `:focus-visible` on a tapped select. Buttons keep their rings, and fine-pointer devices keep every ring for keyboard users.
+
 ### Scroll surface and month slide
 
 The month picker popover hangs from the header's bottom edge. `.month-picker-shell` is deliberately unpositioned, so the popover's containing block is the sticky `.mobile-header` and `top: 100%` lands on that header's bottom border on every viewport, whatever the safe-area inset makes the header's height. An offset from the picker button instead left it floating a few pixels below the header. Do not make the shell, the month switcher, or anything between them and the header positioned.

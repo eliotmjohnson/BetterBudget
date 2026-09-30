@@ -24,7 +24,8 @@
     -webkit-user-select: none;
 }
 .calculator-bar[data-state='open'] {
-    animation: calculator-bar-in 0.34s cubic-bezier(0.32, 0.72, 0, 1) 0.25s both;
+    animation: calculator-bar-in 0.42s cubic-bezier(0.25, 0.8, 0.3, 1) 0.25s
+        both;
 }
 .calculator-bar[data-state='closing'] {
     pointer-events: none;

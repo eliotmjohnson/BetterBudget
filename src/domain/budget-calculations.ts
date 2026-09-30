@@ -96,6 +96,25 @@ export function planFillingLeftToBudget({
 }
 
 /**
+ * The amount for one split that leaves nothing of the transaction total
+ * unassigned: its draft amount plus whatever is still unassigned, which
+ * shrinks the split when the splits together exceed the total.
+ */
+export function splitFillingRemainder({
+    totalCents,
+    assignedCents,
+    splitCents
+}: {
+    totalCents: Cents | string;
+    assignedCents: Cents | string;
+    splitCents: Cents | string;
+}): Cents {
+    return cents(
+        BigInt(splitCents) + BigInt(totalCents) - BigInt(assignedCents)
+    );
+}
+
+/**
  * Remaining balances of both items after moving `amountCents` between them.
  * A planned-amount move and a transfer shift remaining money identically.
  */

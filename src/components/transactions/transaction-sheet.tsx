@@ -11,6 +11,7 @@ import type { ActivityEntry, MonthSnapshot } from '@/domain/types';
 import { createUuid } from '@/domain/uuid';
 import type { Mutate } from '@/components/shared/budget-view-helpers';
 import { TransactionAllocationPicker } from './transaction-allocation-picker';
+import { SplitSummary, splitRemainderFill } from './transaction-split-fill';
 
 interface SplitDraft {
     key: string;
@@ -346,6 +347,13 @@ export function TransactionSheet({
                                 <CurrencyInput
                                     aria-label={`${item?.name ?? `Split ${index + 1}`} amount`}
                                     value={split.amount}
+                                    fill={splitRemainderFill({
+                                        splits,
+                                        split,
+                                        itemName: item?.name ?? 'Budget item',
+                                        totalCents,
+                                        assignedCents
+                                    })}
                                     onValueChange={(valueCents) =>
                                         updateSplit(split.key, {
                                             amount: valueCents
@@ -367,32 +375,18 @@ export function TransactionSheet({
                     <Plus size={18} />
                     Add split
                 </button>
-                <div className='split-summary'>
-                    <div>
-                        <span>Assigned</span>
-                        <strong>
-                            {formatCurrency(assignedCents.toString()).replace(
-                                '.00',
-                                ''
-                            )}
-                        </strong>
-                    </div>
-                    <div>
-                        <span>Remaining</span>
-                        <strong
-                            style={
-                                remaining === 0n
-                                    ? undefined
-                                    : { color: '#e3474d' }
-                            }
-                        >
-                            {formatCurrency(remaining.toString()).replace(
-                                '.00',
-                                ''
-                            )}
-                        </strong>
-                    </div>
-                </div>
+                <SplitSummary
+                    splits={splits}
+                    totalCents={totalCents}
+                    assignedCents={assignedCents}
+                    itemName={(split) =>
+                        itemsById.get(split.monthlyItemId)?.name ??
+                        'Budget item'
+                    }
+                    onFill={(key, valueCents) =>
+                        updateSplit(key, { amount: valueCents })
+                    }
+                />
                 <div className='field'>
                     <label htmlFor='transaction-note'>Note (optional)</label>
                     <textarea

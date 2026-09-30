@@ -718,6 +718,32 @@
     }
 }
 
+@media (pointer: coarse) {
+    input:focus-visible,
+    select:focus-visible,
+    textarea:focus-visible,
+    .allocation-picker-item input:focus-visible {
+        outline: none;
+    }
+    .field input,
+    .field textarea,
+    .field select,
+    .search-box input,
+    .date-input-shell {
+        transition: border-color 0.2s ease;
+    }
+    .field input:focus,
+    .field textarea:focus,
+    .field select:focus,
+    .search-box input:focus,
+    .date-input-shell:focus-within {
+        border-color: var(--blue);
+    }
+    .income-source-expected-input:focus-visible {
+        box-shadow: none;
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
