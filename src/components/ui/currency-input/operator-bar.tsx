@@ -55,6 +55,20 @@ const pressHandlers = (action: () => void) => ({
     onClick: action
 });
 
+/**
+ * Cancels every `touchstart` on the bar, through a listener React cannot make
+ * passive, so iOS runs none of its native tap handling for a press on the bar;
+ * the controls act from their own `touchend` handlers.
+ */
+function cancelNativeTaps(bar: HTMLDivElement | null) {
+    if (!bar) return;
+    const cancel = (event: TouchEvent) => event.preventDefault();
+
+    bar.addEventListener('touchstart', cancel, { passive: false });
+
+    return () => bar.removeEventListener('touchstart', cancel);
+}
+
 export const isCalculatorBarTarget = (target: EventTarget | null) =>
     target instanceof Element &&
     target.closest('[data-calculator-bar]') !== null;
@@ -199,6 +213,7 @@ export function CalculatorBar() {
     return createPortal(
         <div className='calculator-dock'>
             <div
+                ref={cancelNativeTaps}
                 className='calculator-bar'
                 data-calculator-bar=''
                 data-state={open ? 'open' : 'closing'}
