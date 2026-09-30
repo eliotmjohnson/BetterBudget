@@ -31,12 +31,14 @@ const KEYS: { key: OperatorBarKey; label: string; glyph: ReactNode }[] = [
 
 /**
  * An optional one-tap amount offered in the preview slot while no expression
- * is being typed, such as filling a plan with what is left to budget.
+ * is being typed, such as filling a plan with what is left to budget. An
+ * `over` fill takes an overage back out and is drawn red.
  */
 export type OperatorBarFill = {
     amount: string;
     caption: string;
     label: string;
+    tone?: 'over';
 };
 
 /**
@@ -218,6 +220,7 @@ export function CalculatorBar() {
                 {fill && !calculating ? (
                     <button
                         className='calculator-bar-fill'
+                        data-tone={fill.tone}
                         type='button'
                         tabIndex={-1}
                         aria-label={fill.label}

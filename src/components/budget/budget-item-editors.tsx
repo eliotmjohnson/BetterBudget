@@ -6,16 +6,7 @@ import { AppSwitch } from '@/components/ui/app-switch';
 import { CurrencyInput } from '@/components/ui/currency-input';
 import { NavigationDetail } from '@/components/ui/navigation-detail';
 import { useStillField } from '@/components/ui/still-focus';
-import {
-    leftToBudgetWithPlanDraft,
-    planFillingLeftToBudget
-} from '@/domain/budget-calculations';
-import {
-    formatCurrencyInput,
-    MAX_ENTRY_CENTS,
-    monthLabel,
-    shiftMonth
-} from '@/domain/money';
+import { formatCurrencyInput, monthLabel, shiftMonth } from '@/domain/money';
 import type {
     ActivityEntry,
     BudgetItemView,
@@ -30,6 +21,7 @@ import {
     ItemRemainingCard,
     ItemRemainingStrip
 } from '@/components/budget/item-remaining-summary';
+import { leftToBudgetFill } from '@/components/budget/left-to-budget-fill';
 import {
     money,
     signedMoney,
@@ -51,34 +43,6 @@ const dayLabel = (date: string) =>
 const isTransactionActivityEntry = (
     entry: ActivityEntry
 ): entry is TransactionActivityEntry => entry.type !== 'income';
-
-function leftToBudgetFill(
-    item: BudgetItemView,
-    leftToBudgetCents: string,
-    draftPlanCents: string
-) {
-    const remaining = BigInt(
-        leftToBudgetWithPlanDraft({
-            leftToBudgetCents,
-            savedPlanCents: item.plannedCents,
-            draftPlanCents
-        })
-    );
-    const valueCents = planFillingLeftToBudget({
-        leftToBudgetCents,
-        savedPlanCents: item.plannedCents
-    });
-
-    if (remaining <= 0n || BigInt(valueCents) > MAX_ENTRY_CENTS) return null;
-    const amount = money(remaining.toString());
-
-    return {
-        amount: `+${amount}`,
-        caption: 'Left to budget',
-        label: `Add the ${amount} left to budget to ${item.name}`,
-        valueCents
-    };
-}
 
 /**
  * Marks the document while a Budget-row planned amount is being edited, so the
@@ -248,6 +212,11 @@ export function EditItemForm({
                         plannedUnsaved ? 'item-planned-unsaved' : undefined
                     }
                     value={planned}
+                    fill={leftToBudgetFill(
+                        item,
+                        snapshot.summary.leftToBudgetCents,
+                        planned || '0'
+                    )}
                     stillFocus
                     onValueChange={(value) => {
                         setPlanned(value);

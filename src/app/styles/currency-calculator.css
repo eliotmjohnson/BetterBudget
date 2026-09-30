@@ -107,6 +107,13 @@
 .calculator-bar-fill:active {
     background: #d8e7ff;
 }
+.calculator-bar-fill[data-tone='over'] {
+    background: #fdecec;
+    color: #e3474d;
+}
+.calculator-bar-fill[data-tone='over']:active {
+    background: #fad8d9;
+}
 .calculator-bar-fill-caption,
 .calculator-bar-fill strong {
     max-width: 100%;
