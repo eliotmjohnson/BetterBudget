@@ -741,6 +741,11 @@ body > .sortable-drag-overlay {
 body > .sortable-drag-overlay[data-layer='nested'] {
     z-index: 74;
 }
+body > .sortable-drag-overlay:has(> .swipe-reveal-content) {
+    box-sizing: content-box;
+    margin-inline-start: -12px;
+    padding-inline: 12px;
+}
 body > .sortable-drag-overlay > * {
     width: 100%;
     min-height: 100%;

@@ -2,6 +2,7 @@
 
 import type { Dispatch, RefObject, SetStateAction } from 'react';
 import { flushSync } from 'react-dom';
+import { createPreviewOverlay } from './preview';
 
 export type DragState = {
     activeHeight: number;
@@ -401,35 +402,13 @@ export function startDrag<T>(
 
     if (!(sortableItem instanceof HTMLElement)) return;
     const source = previewElement(sortableItem);
-    const rect = source.getBoundingClientRect();
     const sortableRect = sortableItem.getBoundingClientRect();
-    const preview = source.cloneNode(true) as HTMLElement;
+    const { overlay, rect } = createPreviewOverlay(
+        source,
+        handle,
+        overlayLayer
+    );
 
-    preview.removeAttribute('id');
-    preview.removeAttribute('data-long-press-active');
-    preview.removeAttribute('data-long-press-pending');
-    preview.removeAttribute('data-settling');
-    for (const element of preview.querySelectorAll('[id]'))
-        element.removeAttribute('id');
-    for (const element of preview.querySelectorAll('[data-settling]'))
-        element.removeAttribute('data-settling');
-    const overlay = document.createElement('div');
-
-    overlay.className = 'sortable-drag-overlay';
-    overlay.dataset.layer = overlayLayer;
-    for (const className of source.closest('.category-section')?.classList ??
-        [])
-        if (className.startsWith('tone-')) overlay.classList.add(className);
-    overlay.setAttribute('aria-hidden', 'true');
-    overlay.inert = true;
-    overlay.append(preview);
-    Object.assign(overlay.style, {
-        height: `${rect.height}px`,
-        left: `${rect.left}px`,
-        top: `${rect.top}px`,
-        transform: 'translate3d(0, 0, 0) scale(1.012)',
-        width: `${rect.width}px`
-    });
     document.body.append(overlay);
     overlayRef.current = overlay;
     const onWindowPointerUp = (event: globalThis.PointerEvent) =>
