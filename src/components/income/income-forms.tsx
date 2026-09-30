@@ -1,5 +1,6 @@
 'use client';
 
+import { StillInput, StillTextarea } from '@/components/ui/still-focus';
 import { useState } from 'react';
 import { CurrencyInput } from '@/components/ui/currency-input';
 import { Sheet } from '@/components/ui/sheet';
@@ -64,7 +65,7 @@ export function AddIncomeSource({
                 </div>
                 <div className='field'>
                     <label htmlFor='income-name'>Source name</label>
-                    <input
+                    <StillInput
                         id='income-name'
                         placeholder='Paycheck'
                         value={name}
@@ -173,7 +174,7 @@ export function RecordIncome({
                 </div>
                 <div className='field'>
                     <label htmlFor='receipt-note'>Note (optional)</label>
-                    <textarea
+                    <StillTextarea
                         id='receipt-note'
                         value={note}
                         onChange={(event) => setNote(event.target.value)}

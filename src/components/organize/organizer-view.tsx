@@ -1,5 +1,6 @@
 'use client';
 
+import { StillInput } from '@/components/ui/still-focus';
 import { Info, ListTree, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRef, useState } from 'react';
@@ -345,7 +346,7 @@ export function OrganizerView({
                     ) : (
                         <div className='field'>
                             <label htmlFor='organizer-item-name'>Name</label>
-                            <input
+                            <StillInput
                                 id='organizer-item-name'
                                 value={name}
                                 onChange={(event) =>

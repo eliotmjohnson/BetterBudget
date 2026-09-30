@@ -30,7 +30,7 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    padding: 12px 0 0;
+    padding: 12px 0 var(--sheet-keyboard-inset, 0px);
     border-radius: calc(28px * var(--corner-radius-scale))
         calc(28px * var(--corner-radius-scale)) 0 0;
     background: white;
@@ -38,6 +38,14 @@
     backface-visibility: hidden;
     transform: translate3d(0, var(--sheet-drag-y, 0px), 0);
     will-change: transform, opacity;
+}
+.sheet-keyboard-shield {
+    position: absolute;
+    z-index: 3;
+    inset: auto 0 0;
+    height: 0;
+    background: white;
+    pointer-events: none;
 }
 .sheet-content[data-layer='nested'] {
     z-index: 73;
@@ -92,6 +100,7 @@
     background: #d3d6db;
 }
 .sheet-header {
+    min-height: 44px;
     display: flex;
     flex: 0 0 auto;
     align-items: center;
@@ -114,9 +123,6 @@
     display: flex;
     align-items: center;
     gap: 10px;
-}
-.sheet-header > .icon-button[data-visibility='desktop-with-mobile-action'] {
-    display: none;
 }
 .sheet-header-submit {
     min-width: 60px;

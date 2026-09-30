@@ -1,5 +1,5 @@
 import type { StillField } from './field';
-import { isKeyboardUp } from './keyboard';
+import { isKeyboardUp } from '@/components/ui/on-screen-keyboard';
 import { isQuietFocus } from './park';
 import { holdBehindStandIn, isHeld } from './stand-in';
 

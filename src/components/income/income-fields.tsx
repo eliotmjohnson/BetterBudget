@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { CurrencyInput } from '@/components/ui/currency-input';
-import { useStillField } from '@/components/ui/still-focus';
+import { StillInput } from '@/components/ui/still-focus';
 import type {
     CategoryTone,
     IncomePlanView,
@@ -105,10 +105,6 @@ export function EditableIncomeTitle({
 }) {
     const [editing, setEditing] = useState(false);
     const [draft, setDraft] = useState(plan.name);
-    const titleStill = useStillField<HTMLInputElement>({
-        autoFocus: true,
-        conceal: false
-    });
     const [baseline, setBaseline] = useState({
         name: plan.name,
         version: plan.version
@@ -139,8 +135,9 @@ export function EditableIncomeTitle({
     };
 
     return editing ? (
-        <input
-            {...titleStill}
+        <StillInput
+            autoFocus
+            conceal={false}
             className='navigation-detail-title-input'
             aria-label='Income source name'
             maxLength={80}
@@ -207,7 +204,6 @@ export function IncomePlanInput({
             className='income-source-expected-input'
             aria-label={`Expected amount for ${plan.name}`}
             value={value}
-            stillFocus
             onValueChange={setValue}
             onFocus={startEditing}
             onBlur={commit}

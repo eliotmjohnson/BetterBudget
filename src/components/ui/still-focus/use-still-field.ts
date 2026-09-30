@@ -5,6 +5,8 @@ import {
     type TouchEvent as ReactTouchEvent
 } from 'react';
 import type { StillField } from './field';
+import { holdViewportWhileFocused } from './hold-viewport';
+import { fadeAcrossKeyboardSwap } from './keyboard-swap';
 import { focusStill } from './park';
 import { pinPageWhileFocused } from './pin';
 import { revealAboveKeyboard } from './reveal';
@@ -28,7 +30,8 @@ type StillFieldOptions<T extends StillField> = StillFieldHandlers<T> & {
 /**
  * Wraps a field's focus and touch handlers so iOS never slides the page to
  * reveal it: a tap focuses it without the page scroll, a focus from the
- * keyboard's arrows is veiled, the page is held still while it has focus, and
+ * keyboard's arrows is veiled, the page is held still and the screen is not
+ * panned under a drag while it has focus, and
  * its nearest `data-still-scroller` container scrolls instead, just far
  * enough to clear the keyboard and, for a `calculator` field, the calculator
  * bar. The caller's own handlers run after that work. With `enabled` false
@@ -76,7 +79,9 @@ export function useStillField<T extends StillField>({
             const field = event.currentTarget;
 
             if (conceal) veilNativeFocus(field);
+            fadeAcrossKeyboardSwap(field, event.relatedTarget);
             pinPageWhileFocused(field);
+            holdViewportWhileFocused(field);
             revealAboveKeyboard(field, stillScroller(field), calculator);
             onFocus?.(event);
         }

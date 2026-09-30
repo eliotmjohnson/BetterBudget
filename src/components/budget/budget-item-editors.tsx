@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState, type RefObject } from 'react';
 import { AppSwitch } from '@/components/ui/app-switch';
 import { CurrencyInput } from '@/components/ui/currency-input';
 import { NavigationDetail } from '@/components/ui/navigation-detail';
-import { useStillField } from '@/components/ui/still-focus';
+import { StillInput } from '@/components/ui/still-focus';
 import { formatCurrencyInput, monthLabel, shiftMonth } from '@/domain/money';
 import type {
     ActivityEntry,
@@ -112,7 +112,6 @@ export function PlanInput({
             value={value}
             fill={leftToBudgetFill(item, leftToBudgetCents, value || '0')}
             onValueChange={setValue}
-            stillFocus
             onFocus={() => {
                 startEditing();
                 markEditingPlan(true);
@@ -217,7 +216,6 @@ export function EditItemForm({
                         snapshot.summary.leftToBudgetCents,
                         planned || '0'
                     )}
-                    stillFocus
                     onValueChange={(value) => {
                         setPlanned(value);
                         setPlannedUnsaved(false);
@@ -350,10 +348,6 @@ export function EditableItemTitle({
     mutate: Mutate;
 }) {
     const [editing, setEditing] = useState(false);
-    const titleStill = useStillField<HTMLInputElement>({
-        autoFocus: true,
-        conceal: false
-    });
     const [draft, setDraft] = useState(item.name);
     const [baseline, setBaseline] = useState({
         name: item.name,
@@ -382,8 +376,9 @@ export function EditableItemTitle({
     };
 
     return editing ? (
-        <input
-            {...titleStill}
+        <StillInput
+            autoFocus
+            conceal={false}
             className='navigation-detail-title-input'
             aria-label='Line item name'
             maxLength={80}

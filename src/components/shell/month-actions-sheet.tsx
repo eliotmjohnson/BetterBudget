@@ -1,5 +1,6 @@
 'use client';
 
+import { StillTextarea } from '@/components/ui/still-focus';
 import { Copy, FilePenLine, RotateCcw, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { Sheet } from '@/components/ui/sheet';
@@ -97,7 +98,7 @@ export function MonthActionsSheet({
                             <label htmlFor='month-note'>
                                 Note for {snapshot.label}
                             </label>
-                            <textarea
+                            <StillTextarea
                                 id='month-note'
                                 value={note}
                                 onChange={(event) =>

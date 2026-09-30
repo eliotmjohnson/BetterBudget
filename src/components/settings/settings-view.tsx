@@ -1,5 +1,6 @@
 'use client';
 
+import { StillInput } from '@/components/ui/still-focus';
 import {
     ChartColumn,
     Check,
@@ -397,7 +398,7 @@ export function SettingsView({
                         <label htmlFor='current-password'>
                             Current password
                         </label>
-                        <input
+                        <StillInput
                             id='current-password'
                             type='password'
                             value={currentPassword}
@@ -408,7 +409,7 @@ export function SettingsView({
                     </div>
                     <div className='field'>
                         <label htmlFor='new-password'>New password</label>
-                        <input
+                        <StillInput
                             id='new-password'
                             type='password'
                             minLength={10}

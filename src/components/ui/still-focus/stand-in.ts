@@ -1,7 +1,8 @@
 import type { StillField } from './field';
 
 const HEIGHT_TOLERANCE_PX = 0.5;
-const FOCUSED_LOOK = [
+
+export const FOCUSED_LOOK = [
     'background-color',
     'border-top-color',
     'border-right-color',
@@ -61,9 +62,22 @@ function exactBox(field: StillField) {
  * and only gets the field's height inline when that differs: a fixed-height
  * stand-in drew the Income expected amount, which is sized by `min-height`,
  * two device pixels lower than the field.
+ *
+ * A static parent is made `position: relative` while the stand-in is up, so
+ * the stand-in is positioned against the field's own parent and scrolls with
+ * it: in a sheet body, which is not positioned, it was otherwise anchored to
+ * the sheet and stayed put while the body scrolled the field away. The
+ * returned `unanchor` puts the parent back.
  */
 function createStandIn(field: StillField) {
     const standIn = field.cloneNode() as StillField;
+    const parent = field.parentElement;
+    const anchored =
+        parent && getComputedStyle(parent).position === 'static'
+            ? parent
+            : null;
+
+    anchored?.style.setProperty('position', 'relative');
     const { left, top, width, height } = exactBox(field);
 
     standIn.value = field.value;
@@ -81,14 +95,17 @@ function createStandIn(field: StillField) {
         margin: '0',
         pointerEvents: 'none'
     });
-    field.parentElement?.prepend(standIn);
+    parent?.prepend(standIn);
     if (
         Math.abs(standIn.getBoundingClientRect().height - height) >
         HEIGHT_TOLERANCE_PX
     )
         standIn.style.height = `${height}px`;
 
-    return standIn;
+    return {
+        standIn,
+        unanchor: () => anchored?.style.removeProperty('position')
+    };
 }
 
 /**
@@ -124,7 +141,7 @@ export function holdBehindStandIn(
     field: StillField,
     hide: { park: number } | 'veil'
 ) {
-    const standIn = createStandIn(field);
+    const { standIn, unanchor } = createStandIn(field);
     const matchFocus = () => wearFocusedLook(field, standIn);
     let released = false;
     const release = () => {
@@ -135,6 +152,7 @@ export function holdBehindStandIn(
         field.style.removeProperty('translate');
         field.style.removeProperty('opacity');
         standIn.remove();
+        unanchor();
         if (held?.field === field) held = null;
         if (document.activeElement !== field) return;
         const end = field.value.length;

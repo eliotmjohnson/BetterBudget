@@ -115,7 +115,7 @@ export function AssistantSheet({
             }
             variant='raised-mobile'
             restoreFocusRef={restoreFocusRef}
-            showClose={false}
+            keyboardFit={false}
             headerAction={
                 transcript.length ? (
                     <button

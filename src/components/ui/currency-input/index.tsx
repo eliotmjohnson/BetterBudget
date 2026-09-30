@@ -78,8 +78,8 @@ function fitExpression(input: HTMLInputElement, calculating: boolean) {
  * invisible copy of the displayed text follows the input, so a stylesheet can
  * size the surrounding box to the text while the input keeps one width:
  * WebKit scrolls the page to the caret whenever a focused field's text box
- * changes size. With `stillFocus`, focusing the field never slides the page
- * on iOS (`useStillField`).
+ * changes size. Focusing the field never slides the page on iOS
+ * (`useStillField`) unless `stillFocus` is false.
  */
 export function CurrencyInput({
     className,
@@ -93,7 +93,7 @@ export function CurrencyInput({
     onTouchStart,
     onValueChange,
     size,
-    stillFocus = false,
+    stillFocus = true,
     value,
     ...props
 }: CurrencyInputProps) {
@@ -116,29 +116,6 @@ export function CurrencyInput({
         if (inputRef.current)
             fitExpression(inputRef.current, expression !== null);
     }, [displayed, expression]);
-    useEffect(() => {
-        const input = inputRef.current;
-        const viewport = window.visualViewport;
-
-        if (!focused || !input || !viewport || !input.closest('.sheet-content'))
-            return;
-        let frame = 0;
-        const replaceCaret = () => {
-            cancelAnimationFrame(frame);
-            frame = requestAnimationFrame(() => {
-                if (document.activeElement === input) moveCaretToEnd(input);
-            });
-        };
-
-        viewport.addEventListener('scroll', replaceCaret);
-        viewport.addEventListener('resize', replaceCaret);
-
-        return () => {
-            cancelAnimationFrame(frame);
-            viewport.removeEventListener('scroll', replaceCaret);
-            viewport.removeEventListener('resize', replaceCaret);
-        };
-    }, [focused]);
 
     const updateExpression = (next: string) => {
         const nextResult = evaluateMoneyExpression(next);

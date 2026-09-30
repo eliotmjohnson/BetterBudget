@@ -1,5 +1,6 @@
 'use client';
 
+import { StillInput, StillTextarea } from '@/components/ui/still-focus';
 import { CalendarDays, Minus, Plus } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
 import { CurrencyInput } from '@/components/ui/currency-input';
@@ -280,7 +281,7 @@ export function TransactionSheet({
                 </div>
                 <div className='field'>
                     <label htmlFor='transaction-merchant'>Merchant</label>
-                    <input
+                    <StillInput
                         id='transaction-merchant'
                         placeholder='Whole Foods'
                         value={merchant}
@@ -390,7 +391,7 @@ export function TransactionSheet({
                 />
                 <div className='field'>
                     <label htmlFor='transaction-note'>Note (optional)</label>
-                    <textarea
+                    <StillTextarea
                         id='transaction-note'
                         placeholder='Add a note'
                         value={note}

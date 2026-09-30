@@ -1,5 +1,5 @@
 import type { StillField } from './field';
-import { isKeyboardUp } from './keyboard';
+import { isKeyboardUp } from '@/components/ui/on-screen-keyboard';
 import { holdBehindStandIn, isHeld } from './stand-in';
 
 const PARK_OFFSET_PX = 10000;

@@ -1,5 +1,6 @@
 'use client';
 
+import { StillInput } from '@/components/ui/still-focus';
 import { Trash2 } from 'lucide-react';
 import { CurrencyInput } from '@/components/ui/currency-input';
 import { Sheet } from '@/components/ui/sheet';
@@ -55,7 +56,7 @@ export function BudgetStructureSheets({
                         <label htmlFor='budget-new-item'>
                             Budget item name
                         </label>
-                        <input
+                        <StillInput
                             id='budget-new-item'
                             placeholder='Daycare'
                             value={editor.newName}

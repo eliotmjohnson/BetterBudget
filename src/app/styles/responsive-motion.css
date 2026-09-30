@@ -532,9 +532,6 @@
     .sheet-header-action[data-visibility='mobile'] {
         display: none;
     }
-    .sheet-header > .icon-button[data-visibility='desktop-with-mobile-action'] {
-        display: inline-grid;
-    }
     .date-input-shell input[type='date']::-webkit-datetime-edit,
     .date-input-shell input[type='date']::-webkit-datetime-edit-fields-wrapper {
         width: 100%;

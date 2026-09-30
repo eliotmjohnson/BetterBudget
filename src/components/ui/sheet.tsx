@@ -1,9 +1,9 @@
 'use client';
 
 import * as Dialog from '@radix-ui/react-dialog';
-import { X } from 'lucide-react';
 import { useContinuousCorners } from './continuous-corners';
 import { isCalculatorBarTarget } from './currency-input/operator-bar';
+import { useKeyboardFit } from './keyboard-fit';
 import { isToastTarget } from './toast-provider';
 import {
     useCallback,
@@ -75,7 +75,7 @@ export function Sheet({
     headerAction,
     headerActionVisibility = 'all',
     showHandle = true,
-    showClose = true,
+    keyboardFit = true,
     restoreFocusRef,
     restoreFocusVisible,
     interactionDisabled = false,
@@ -98,7 +98,7 @@ export function Sheet({
     headerAction?: ReactNode;
     headerActionVisibility?: 'all' | 'mobile';
     showHandle?: boolean;
-    showClose?: boolean;
+    keyboardFit?: boolean;
     restoreFocusRef?: RefObject<HTMLElement | null>;
     restoreFocusVisible?: boolean;
     interactionDisabled?: boolean;
@@ -118,6 +118,8 @@ export function Sheet({
     const restoreFocusVisibleRef = useRef(true);
     const settleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    useKeyboardFit(contentRef, open && keyboardFit);
 
     useEffect(
         () => () => {
@@ -392,27 +394,22 @@ export function Sheet({
                                     {headerAction}
                                 </div>
                             ) : null}
-                            {showClose &&
-                            (!headerAction ||
-                                headerActionVisibility === 'mobile') ? (
-                                <Dialog.Close
-                                    className='icon-button'
-                                    aria-label='Close'
-                                    data-visibility={
-                                        headerAction
-                                            ? 'desktop-with-mobile-action'
-                                            : 'all'
-                                    }
-                                >
-                                    <X size={22} strokeWidth={2} />
-                                </Dialog.Close>
-                            ) : null}
+                            <Dialog.Close className='sr-only' tabIndex={-1}>
+                                Close
+                            </Dialog.Close>
                         </div>
                     </div>
-                    <div className='sheet-body'>{children}</div>
+                    <div className='sheet-body' data-still-scroller>
+                        {children}
+                    </div>
                     {footer ? (
                         <div className='sheet-footer'>{footer}</div>
                     ) : null}
+                    <div
+                        className='sheet-keyboard-shield'
+                        data-keyboard-shield
+                        aria-hidden='true'
+                    />
                 </Dialog.Content>
             </Dialog.Portal>
         </Dialog.Root>
