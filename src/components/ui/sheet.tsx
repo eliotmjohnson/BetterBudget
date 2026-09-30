@@ -88,7 +88,11 @@ export function Sheet({
     title: string;
     titleAdornment?: ReactNode;
     variant?:
-        'standard' | 'raised-mobile' | 'capped-mobile' | 'full-screen-mobile';
+        | 'standard'
+        | 'raised-mobile'
+        | 'capped-mobile'
+        | 'tall-mobile'
+        | 'full-screen-mobile';
     layer?: 'base' | 'nested';
     footer?: ReactNode;
     headerAction?: ReactNode;

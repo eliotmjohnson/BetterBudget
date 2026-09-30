@@ -106,6 +106,17 @@
             var(--viewport-height) - max(6px, var(--safe-area-top)) - 77px
         );
     }
+    .sheet-content[data-variant='tall-mobile'] {
+        height: calc(
+            var(--viewport-height) - max(6px, var(--safe-area-top)) - 77px
+        );
+        max-height: calc(
+            var(--viewport-height) - max(6px, var(--safe-area-top)) - 77px
+        );
+    }
+    .sheet-content[data-variant='tall-mobile'] .sheet-body {
+        flex: 1 1 auto;
+    }
     .sheet-content:not([data-variant='full-screen-mobile']):not(
             :has([data-buddy-seat])
         ) {

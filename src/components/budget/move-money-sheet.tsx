@@ -21,19 +21,28 @@ const modeCopy: Record<MoveMode, string> = {
 type PreviewShape =
     | { kind: 'change'; afterCents: string }
     | { kind: 'limit' }
-    | { kind: 'unchanged' };
+    | { kind: 'current' }
+    | { kind: 'muted' };
 
 function PreviewRow({
     item,
     shape
 }: {
-    item: BudgetItemView;
+    item: BudgetItemView | undefined;
     shape: PreviewShape;
 }) {
+    if (!item)
+        return (
+            <li className='move-money-preview-row' data-tone='muted'>
+                <span>Choose an item</span>
+                <span>—</span>
+            </li>
+        );
+
     return (
         <li
             className='move-money-preview-row'
-            data-tone={shape.kind === 'unchanged' ? 'muted' : undefined}
+            data-tone={shape.kind === 'muted' ? 'muted' : undefined}
         >
             <span>{item.name}</span>
             {shape.kind === 'change' ? (
@@ -177,6 +186,17 @@ export function MoveMoneySheet({
             onOpenChange={onOpenChange}
             onExitComplete={onExitComplete}
             title='Move money'
+            variant='tall-mobile'
+            footer={
+                <button
+                    className='primary-button primary-button--wide'
+                    type='button'
+                    disabled={!canMove}
+                    onClick={submit}
+                >
+                    {amountCents > 0n ? `Move ${money(amount)}` : 'Move'}
+                </button>
+            }
         >
             <div className='form-grid'>
                 <div
@@ -241,46 +261,37 @@ export function MoveMoneySheet({
                         onValueChange={setAmount}
                     />
                 </div>
-                {ready && after ? (
-                    <ul
-                        className='move-money-preview'
-                        id='move-money-preview'
-                        aria-label='After the move'
-                        aria-live='polite'
-                        data-invalid={overPlan || undefined}
-                    >
-                        <PreviewRow
-                            item={source}
-                            shape={
-                                overPlan
-                                    ? { kind: 'limit' }
-                                    : {
-                                          kind: 'change',
-                                          afterCents: after.source
-                                      }
-                            }
-                        />
-                        <PreviewRow
-                            item={destination}
-                            shape={
-                                overPlan
-                                    ? { kind: 'unchanged' }
-                                    : {
-                                          kind: 'change',
-                                          afterCents: after.destination
-                                      }
-                            }
-                        />
-                    </ul>
-                ) : null}
-                <button
-                    className='primary-button primary-button--wide'
-                    type='button'
-                    disabled={!canMove}
-                    onClick={submit}
+                <ul
+                    className='move-money-preview'
+                    id='move-money-preview'
+                    aria-label='Remaining'
+                    aria-live='polite'
+                    data-invalid={overPlan || undefined}
                 >
-                    {amountCents > 0n ? `Move ${money(amount)}` : 'Move'}
-                </button>
+                    <PreviewRow
+                        item={source}
+                        shape={
+                            overPlan
+                                ? { kind: 'limit' }
+                                : after
+                                  ? { kind: 'change', afterCents: after.source }
+                                  : { kind: 'current' }
+                        }
+                    />
+                    <PreviewRow
+                        item={destination}
+                        shape={
+                            overPlan
+                                ? { kind: 'muted' }
+                                : after
+                                  ? {
+                                        kind: 'change',
+                                        afterCents: after.destination
+                                    }
+                                  : { kind: 'current' }
+                        }
+                    />
+                </ul>
             </div>
         </Sheet>
     );

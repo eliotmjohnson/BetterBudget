@@ -18,7 +18,7 @@
 }
 .sheet-overlay[data-state='closed'] {
     animation: fade-out var(--sheet-dismiss-duration, 0.45s)
-        cubic-bezier(0.4, 1, 0.4, 1) forwards;
+        cubic-bezier(0.45, 0, 0.25, 1) forwards;
 }
 .sheet-content {
     position: fixed;
@@ -58,7 +58,7 @@
 }
 .sheet-content[data-state='closed'] {
     animation: sheet-out var(--sheet-dismiss-duration, 0.45s)
-        cubic-bezier(0.4, 1, 0.4, 1) forwards;
+        cubic-bezier(0.45, 0, 0.25, 1) forwards;
 }
 .sheet-content[data-dragging='true'],
 .sheet-content[data-has-dragged='true'][data-state='open'] {
