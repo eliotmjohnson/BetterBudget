@@ -56,6 +56,10 @@ The implemented product supports:
   organizer reuses the Budget list's hold-to-drag and keyboard ordering,
   category appearance editor, and shared sheet behavior while limiting its
   scope to renaming, reordering, and deletion.
+  On phones, once the Planned/Available toggle scrolls away, the balance strip
+  docked under the header slides in its own P/R switch, and a floating blue plus button springs in at the
+  bottom right once the Add transaction button has scrolled away; the
+  Transactions page shows the same button once its Add button scrolls away.
   Switching the amount view directly on the Budget page remains active for the
   current app session and resets from this default only on a fresh load. At
   1100 px and wider the Budget page shows Planned, Spent, and Available

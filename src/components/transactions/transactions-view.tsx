@@ -1,11 +1,13 @@
 'use client';
 
 import { Plus, Search, SlidersHorizontal, X } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Sheet } from '@/components/ui/sheet';
+import { useScrolledPast } from '@/components/ui/use-scrolled-past';
 import { formatCurrency } from '@/domain/money';
 import type { ActivityEntry, MonthSnapshot } from '@/domain/types';
 import type { Mutate } from '@/components/shared/budget-view-helpers';
+import { FloatingAddButton } from '@/components/shared/floating-add-button';
 import { useTransactionHoldMenu } from '@/components/shared/transaction-hold-menu';
 import { TransactionRow } from '@/components/shared/transaction-row';
 import { TransactionSheet } from './transaction-sheet';
@@ -109,6 +111,8 @@ export function TransactionsView({
         useState<SplitFilter>('all');
     const [filtersOpen, setFiltersOpen] = useState(false);
     const [adding, setAdding] = useState(false);
+    const addButtonRef = useRef<HTMLButtonElement>(null);
+    const addButtonPassed = useScrolledPast(addButtonRef);
     const [selected, setSelected] = useState<TransactionActivityEntry | null>(
         null
     );
@@ -191,13 +195,14 @@ export function TransactionsView({
     };
 
     return (
-        <section className='screen standard-screen'>
+        <section className='screen screen--floating-add standard-screen'>
             <div className='screen-heading-row'>
                 <div>
                     <p className='eyebrow'>{snapshot.label}</p>
                     <h1 className='screen-heading'>Transactions</h1>
                 </div>
                 <button
+                    ref={addButtonRef}
                     className='primary-button compact-action'
                     type='button'
                     onClick={() => setAdding(true)}
@@ -299,6 +304,10 @@ export function TransactionsView({
                 ))
             )}
             {holdMenu.menu}
+            <FloatingAddButton
+                visible={addButtonPassed}
+                onAdd={() => setAdding(true)}
+            />
             <TransactionSheet
                 open={adding}
                 onOpenChange={setAdding}

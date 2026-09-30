@@ -51,16 +51,7 @@ export function TransactionSheet({
     const initialItem = items.find((item) => item.id === initialItemId);
     const editing =
         transaction && transaction.type !== 'income' ? transaction : null;
-    const [kind, setKind] = useState<'expense' | 'refund'>(() =>
-        editing?.type === 'refund' ? 'refund' : 'expense'
-    );
-    const [merchant, setMerchant] = useState(() => editing?.title ?? '');
-    const [amount, setAmount] = useState(() => editing?.amountCents ?? '0');
-    const [occurredOn, setOccurredOn] = useState(
-        () => editing?.occurredOn ?? defaultDateForMonth(snapshot.monthKey)
-    );
-    const [note, setNote] = useState(() => editing?.note ?? '');
-    const [splits, setSplits] = useState<SplitDraft[]>(() =>
+    const draftSplits = (): SplitDraft[] =>
         (editing?.allocations?.length
             ? editing.allocations
             : initialItem
@@ -75,8 +66,32 @@ export function TransactionSheet({
             key: `${editing?.id ?? 'new'}-${index}`,
             monthlyItemId: allocation.monthlyItemId,
             amount: editing ? allocation.amountCents : '0'
-        }))
+        }));
+    const [kind, setKind] = useState<'expense' | 'refund'>(() =>
+        editing?.type === 'refund' ? 'refund' : 'expense'
     );
+    const [merchant, setMerchant] = useState(() => editing?.title ?? '');
+    const [amount, setAmount] = useState(() => editing?.amountCents ?? '0');
+    const [occurredOn, setOccurredOn] = useState(
+        () => editing?.occurredOn ?? defaultDateForMonth(snapshot.monthKey)
+    );
+    const [note, setNote] = useState(() => editing?.note ?? '');
+    const [splits, setSplits] = useState<SplitDraft[]>(draftSplits);
+    const [openedWith, setOpenedWith] = useState(open);
+
+    if (open !== openedWith) {
+        setOpenedWith(open);
+        if (open) {
+            setKind(editing?.type === 'refund' ? 'refund' : 'expense');
+            setMerchant(editing?.title ?? '');
+            setAmount(editing?.amountCents ?? '0');
+            setOccurredOn(
+                editing?.occurredOn ?? defaultDateForMonth(snapshot.monthKey)
+            );
+            setNote(editing?.note ?? '');
+            setSplits(draftSplits());
+        }
+    }
     const [allocationPickerOpen, setAllocationPickerOpen] = useState(false);
     const [allocationPickerActive, setAllocationPickerActive] = useState(false);
     const [allocationPickerSession, setAllocationPickerSession] = useState(0);
@@ -202,20 +217,6 @@ export function TransactionSheet({
 
         if (!accepted) return;
         onOpenChange(false);
-        setMerchant('');
-        setAmount('');
-        setNote('');
-        setSplits(
-            initialItem
-                ? [
-                      {
-                          key: 'new-0',
-                          monthlyItemId: initialItem.id,
-                          amount: ''
-                      }
-                  ]
-                : []
-        );
     };
 
     return (

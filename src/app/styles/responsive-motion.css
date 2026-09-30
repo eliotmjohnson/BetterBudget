@@ -113,6 +113,12 @@
 }
 
 @media (max-width: 759.98px) {
+    .floating-add-button {
+        display: grid;
+    }
+    .screen--floating-add {
+        padding-bottom: calc(var(--bottom-nav-height) + 86px);
+    }
     .budget-balance-dock {
         position: sticky;
         z-index: 10;
@@ -800,6 +806,37 @@
         --navigation-detail-title-progress: 1;
         --navigation-detail-title-tail: 0;
         --navigation-detail-title-head: 1;
+    }
+}
+@keyframes floating-add-button-enter {
+    from {
+        opacity: 0;
+        scale: 0.2;
+        translate: 0 36px;
+    }
+    to {
+        opacity: 1;
+        scale: 1;
+        translate: 0 0;
+    }
+}
+@keyframes floating-add-button-twist {
+    from {
+        rotate: -135deg;
+    }
+    to {
+        rotate: 0deg;
+    }
+}
+@keyframes floating-add-button-leave {
+    from {
+        opacity: 1;
+        scale: 1;
+    }
+    to {
+        opacity: 0;
+        scale: 0.4;
+        translate: 0 18px;
     }
 }
 @keyframes budget-balance-reveal {

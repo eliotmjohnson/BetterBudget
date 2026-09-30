@@ -10,6 +10,7 @@ import {
     useSyncExternalStore
 } from 'react';
 import { AppSwitch } from '@/components/ui/app-switch';
+import { useScrolledPast } from '@/components/ui/use-scrolled-past';
 import { useSortableList } from '@/components/ui/sortable-list';
 import { monthLabel, shiftMonth } from '@/domain/money';
 import type { BudgetAmountView } from '@/domain/budget-preferences';
@@ -20,12 +21,16 @@ import type {
 } from '@/domain/types';
 import { createUuid } from '@/domain/uuid';
 import { createDetailHistory } from '@/components/shared/detail-history';
+import { FloatingAddButton } from '@/components/shared/floating-add-button';
 import { TransactionSheet } from '@/components/transactions/transaction-sheet';
 import type {
     Mutate,
     MutateConfirmed
 } from '@/components/shared/budget-view-helpers';
-import { BudgetBalanceStrip } from './budget-balance-strip';
+import {
+    BudgetBalanceStrip,
+    budgetBalanceStripHeight
+} from './budget-balance-strip';
 import { EditItemDetails } from './budget-item-editors';
 import { BudgetCategorySection } from './budget-category-section';
 import { BudgetRail } from './budget-rail';
@@ -68,6 +73,18 @@ export function BudgetView({
     const budgetLayoutRef = useRef<HTMLElement>(null);
     const previousAnimationKeyRef = useRef(animationKey);
     const itemTriggerRef = useRef<HTMLElement | null>(null);
+    const addTransactionRef = useRef<HTMLButtonElement>(null);
+    const amountSwitchRef = useRef<HTMLDivElement>(null);
+    const addTransactionPassed = useScrolledPast(
+        addTransactionRef,
+        budgetBalanceStripHeight,
+        snapshot.categories.length > 0
+    );
+    const amountSwitchPassed = useScrolledPast(
+        amountSwitchRef,
+        budgetBalanceStripHeight,
+        snapshot.categories.length > 0
+    );
     const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
     const [transactionOpen, setTransactionOpen] = useState(false);
     const [moveMoney, setMoveMoney] = useState<{
@@ -163,9 +180,14 @@ export function BudgetView({
     return (
         <section
             ref={budgetLayoutRef}
-            className='screen budget-layout budget-bars-enter'
+            className='screen screen--floating-add budget-layout budget-bars-enter'
         >
-            <BudgetBalanceStrip snapshot={snapshot} />
+            <BudgetBalanceStrip
+                snapshot={snapshot}
+                amountView={amountView}
+                switchVisible={amountSwitchPassed}
+                onAmountViewChange={onAmountViewChange}
+            />
             <div className='budget-main'>
                 <BudgetSummaryCard snapshot={snapshot} />
                 {snapshot.categories.length === 0 ? (
@@ -208,6 +230,7 @@ export function BudgetView({
                 ) : (
                     <>
                         <button
+                            ref={addTransactionRef}
                             className='primary-button budget-primary-action'
                             type='button'
                             onClick={() => setTransactionOpen(true)}
@@ -217,6 +240,7 @@ export function BudgetView({
                         </button>
                         <div className='budget-list-toolbar'>
                             <div
+                                ref={amountSwitchRef}
                                 className='budget-amount-switch'
                                 role='group'
                                 aria-label='Budget amount display'
@@ -358,6 +382,10 @@ export function BudgetView({
                         : () => setTransactionOpen(true)
                 }
                 onDeleteTransaction={onDeleteTransaction}
+            />
+            <FloatingAddButton
+                visible={addTransactionPassed && snapshot.categories.length > 0}
+                onAdd={() => setTransactionOpen(true)}
             />
             <TransactionSheet
                 open={transactionOpen}

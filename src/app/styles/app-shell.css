@@ -191,6 +191,12 @@
     animation: none !important;
     transition: none !important;
 }
+.page-slide-out--floating {
+    position: absolute;
+    inset: 0;
+    padding: 0;
+    overflow: visible;
+}
 .mobile-header {
     position: sticky;
     z-index: 20;
@@ -404,4 +410,97 @@ textarea:focus-visible {
 }
 .right-rail {
     display: none;
+}
+:root {
+    --floating-add-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.floating-add-button {
+    --floating-add-button-lift: 0px;
+    position: fixed;
+    z-index: 35;
+    right: max(18px, calc(env(safe-area-inset-right) + 8px));
+    bottom: calc(
+        var(--bottom-nav-height) + 14px + var(--floating-add-button-lift)
+    );
+    width: 56px;
+    height: 56px;
+    display: none;
+    place-items: center;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: var(--blue);
+    color: #fff;
+    box-shadow: 0 10px 24px rgb(23 105 224 / 32%);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition:
+        bottom 0.42s cubic-bezier(0.32, 0.72, 0, 1),
+        transform 160ms ease,
+        background 160ms ease;
+}
+.floating-add-button[data-visible='true'] {
+    animation: floating-add-button-enter 720ms var(--floating-add-spring) both;
+}
+.floating-add-button[data-visible='true'] .floating-add-button-icon {
+    animation: floating-add-button-twist 720ms var(--floating-add-spring) both;
+}
+.floating-add-button[data-visible='false'] {
+    pointer-events: none;
+    animation: floating-add-button-leave 220ms cubic-bezier(0.55, 0, 0.8, 0.3)
+        forwards;
+}
+.floating-add-button:active {
+    background: #0f5dce;
+    transform: scale(0.94);
+}
+.floating-add-button:focus-visible {
+    outline: 3px solid rgb(23 105 224 / 28%);
+    outline-offset: 3px;
+}
+@supports (animation-timing-function: linear(0, 1)) {
+    :root {
+        --floating-add-spring: linear(
+            0,
+            0.048,
+            0.171,
+            0.342,
+            0.534,
+            0.724,
+            0.895,
+            1.037,
+            1.142,
+            1.211,
+            1.245,
+            1.249,
+            1.229,
+            1.193,
+            1.148,
+            1.1,
+            1.053,
+            1.012,
+            0.98,
+            0.957,
+            0.943,
+            0.938,
+            0.939,
+            0.946,
+            0.956,
+            0.967,
+            0.979,
+            0.991,
+            1,
+            1.007,
+            1.012,
+            1.015,
+            1.016,
+            1.015,
+            1.013,
+            1.01,
+            1
+        );
+    }
+}
+:root:has([data-app-toast]) .floating-add-button {
+    --floating-add-button-lift: 66px;
 }

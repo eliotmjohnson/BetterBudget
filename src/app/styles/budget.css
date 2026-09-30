@@ -184,6 +184,60 @@
     letter-spacing: -0.04em;
     white-space: nowrap;
     font-variant-numeric: tabular-nums;
+    transition: translate 0.5s var(--budget-balance-switch-ease);
+}
+.budget-balance-strip {
+    --budget-balance-switch-label: 22px;
+    --budget-balance-switch-width: calc(
+        2 * var(--budget-balance-switch-label) + 58px
+    );
+    --budget-balance-switch-overhang: 12px;
+    --budget-balance-switch-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+.budget-balance-strip[data-switch='hidden'] .summary-amount {
+    translate: calc(
+            var(--budget-balance-switch-width) + 10px -
+                var(--budget-balance-switch-overhang)
+        )
+        0;
+}
+.budget-balance-switch {
+    width: var(--budget-balance-switch-width);
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    margin-right: calc(-1 * var(--budget-balance-switch-overhang));
+    opacity: 0;
+    translate: 28px 0;
+    transition:
+        opacity 0.22s ease,
+        translate 0.5s var(--budget-balance-switch-ease);
+}
+.budget-balance-switch[data-visible='true'] {
+    opacity: 1;
+    translate: 0 0;
+    transition:
+        opacity 0.34s ease 0.06s,
+        translate 0.5s var(--budget-balance-switch-ease);
+}
+.budget-balance-switch-label {
+    width: var(--budget-balance-switch-label);
+    height: 44px;
+    flex: 0 0 auto;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #8b929c;
+    font-size: 13px;
+    font-weight: 760;
+    cursor: pointer;
+    transition: color 0.45s cubic-bezier(0.4, 1, 0.4, 1);
+}
+.budget-balance-switch-label.planned[aria-pressed='true'] {
+    color: var(--blue);
+}
+.budget-balance-switch-label.available[aria-pressed='true'] {
+    color: #199d67;
 }
 @supports (animation-timeline: scroll()) and (animation-range: 0px 1px) {
     @media (prefers-reduced-motion: no-preference) {
@@ -897,6 +951,11 @@ body > .sortable-drag-overlay * {
 }
 :root[data-editing-plan] .budget-balance-clip::after {
     translate: 0 -100%;
+}
+:root[data-editing-plan] .floating-add-button[data-visible='true'] {
+    pointer-events: none;
+    animation: floating-add-button-leave 220ms cubic-bezier(0.55, 0, 0.8, 0.3)
+        forwards;
 }
 :root[data-editing-plan] .app-content {
     overscroll-behavior-y: contain;

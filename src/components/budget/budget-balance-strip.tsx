@@ -1,7 +1,9 @@
 'use client';
 
 import { useLayoutEffect, useRef } from 'react';
+import type { BudgetAmountView } from '@/domain/budget-preferences';
 import type { MonthSnapshot } from '@/domain/types';
+import { AppSwitch } from '@/components/ui/app-switch';
 import { trackDockedSummary } from '@/components/ui/docked-summary';
 import { mobileMedia } from '@/components/ui/navigation-detail/title-motion';
 import {
@@ -10,6 +12,7 @@ import {
     summaryArcTrack
 } from './budget-summary-card';
 
+export const budgetBalanceStripHeight = 44;
 const shadowReach = 40;
 const anchorSelector = '[data-budget-balance-anchor]';
 const progressProperty = '--budget-balance-progress';
@@ -64,7 +67,64 @@ function setupBalanceStrip(dock: HTMLElement | null) {
     });
 }
 
-export function BudgetBalanceStrip({ snapshot }: { snapshot: MonthSnapshot }) {
+function StripAmountSwitch({
+    amountView,
+    visible,
+    onAmountViewChange
+}: {
+    amountView: BudgetAmountView;
+    visible: boolean;
+    onAmountViewChange: (view: BudgetAmountView) => void;
+}) {
+    return (
+        <div
+            className='budget-balance-switch'
+            role='group'
+            aria-label='Budget amount display'
+            data-visible={visible ? 'true' : 'false'}
+            inert={!visible}
+        >
+            <button
+                className='budget-balance-switch-label planned'
+                type='button'
+                aria-label='Planned'
+                aria-pressed={amountView === 'planned'}
+                onClick={() => onAmountViewChange('planned')}
+            >
+                P
+            </button>
+            <AppSwitch
+                accessibilityLabel='Show available amounts'
+                checked={amountView === 'available'}
+                onCheckedChange={(available) =>
+                    onAmountViewChange(available ? 'available' : 'planned')
+                }
+                variant='budget-view'
+            />
+            <button
+                className='budget-balance-switch-label available'
+                type='button'
+                aria-label='Remaining'
+                aria-pressed={amountView === 'available'}
+                onClick={() => onAmountViewChange('available')}
+            >
+                R
+            </button>
+        </div>
+    );
+}
+
+export function BudgetBalanceStrip({
+    snapshot,
+    amountView,
+    switchVisible,
+    onAmountViewChange
+}: {
+    snapshot: MonthSnapshot;
+    amountView: BudgetAmountView;
+    switchVisible: boolean;
+    onAmountViewChange: (view: BudgetAmountView) => void;
+}) {
     const dockRef = useRef<HTMLDivElement>(null);
     const { isOverBudget, label, amount } = budgetBalanceView(snapshot);
     const { progress, path } = summaryArcProgress(snapshot);
@@ -72,7 +132,7 @@ export function BudgetBalanceStrip({ snapshot }: { snapshot: MonthSnapshot }) {
     useLayoutEffect(() => setupBalanceStrip(dockRef.current), []);
 
     return (
-        <div ref={dockRef} className='budget-balance-dock' aria-hidden='true'>
+        <div ref={dockRef} className='budget-balance-dock'>
             <div
                 className='budget-balance-clip'
                 data-scroll-progress={progressProperty}
@@ -80,8 +140,10 @@ export function BudgetBalanceStrip({ snapshot }: { snapshot: MonthSnapshot }) {
                 <div
                     className='budget-balance-strip'
                     data-state={isOverBudget ? 'negative' : 'positive'}
+                    data-switch={switchVisible ? 'shown' : 'hidden'}
                 >
                     <svg
+                        aria-hidden='true'
                         className='budget-balance-arc'
                         viewBox='0 0 232 118'
                         preserveAspectRatio='none'
@@ -105,12 +167,20 @@ export function BudgetBalanceStrip({ snapshot }: { snapshot: MonthSnapshot }) {
                             />
                         ) : null}
                     </svg>
-                    <span className='summary-label'>{label}</span>
+                    <span className='summary-label' aria-hidden='true'>
+                        {label}
+                    </span>
                     <strong
                         className={`summary-amount${isOverBudget ? ' budget-balance-over' : ''}`}
+                        aria-hidden='true'
                     >
                         {amount}
                     </strong>
+                    <StripAmountSwitch
+                        amountView={amountView}
+                        visible={switchVisible}
+                        onAmountViewChange={onAmountViewChange}
+                    />
                 </div>
             </div>
         </div>

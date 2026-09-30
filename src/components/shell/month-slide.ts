@@ -12,6 +12,7 @@ type MonthSlideCapture = {
     width: number;
     height: number;
     scrollTop: number;
+    floating: HTMLElement | null;
 };
 
 let capture: MonthSlideCapture | null = null;
@@ -39,6 +40,59 @@ function freezeScrollProgress(content: HTMLElement, clone: HTMLElement) {
         });
 }
 
+/**
+ * Pins each `content-visibility: auto` element of the clone to the height the
+ * live one has now; the intrinsic size excludes padding and borders. A fresh clone has no remembered sizes, so its off-screen
+ * sections would fall back to their placeholder height and shorten the page.
+ */
+function freezeIntrinsicSizes(content: HTMLElement, clone: HTMLElement) {
+    const live = content.querySelectorAll<HTMLElement>('*');
+    const copies = clone.querySelectorAll<HTMLElement>('*');
+
+    live.forEach((element, index) => {
+        const style = getComputedStyle(element);
+
+        if (style.contentVisibility !== 'auto') return;
+
+        const frame = [
+            style.paddingTop,
+            style.paddingBottom,
+            style.borderTopWidth,
+            style.borderBottomWidth
+        ].reduce((sum, value) => sum + (parseFloat(value) || 0), 0);
+
+        copies[index]?.style.setProperty(
+            'contain-intrinsic-size',
+            `auto ${element.getBoundingClientRect().height - frame}px`
+        );
+    });
+}
+
+/**
+ * Copies the page's shown floating add button at its place inside the
+ * content area, so the button leaves with the outgoing month.
+ */
+function cloneFloatingAction(contentRect: DOMRect) {
+    const button = document.querySelector<HTMLElement>(
+        ".floating-add-button[data-visible='true']"
+    );
+
+    if (!button) return null;
+
+    const rect = button.getBoundingClientRect();
+    const clone = button.cloneNode(true) as HTMLElement;
+
+    Object.assign(clone.style, {
+        position: 'absolute',
+        top: `${rect.top - contentRect.top}px`,
+        left: `${rect.left - contentRect.left}px`,
+        right: 'auto',
+        bottom: 'auto'
+    });
+
+    return clone;
+}
+
 export function captureMonthSlide(sourceMonthKey: string) {
     const content = document.querySelector('.app-content');
 
@@ -50,6 +104,7 @@ export function captureMonthSlide(sourceMonthKey: string) {
     clone.className = 'page-slide-out';
     clone.removeAttribute('style');
     freezeScrollProgress(content, clone);
+    freezeIntrinsicSizes(content, clone);
     capture = {
         content: clone,
         sourceMonthKey,
@@ -57,7 +112,8 @@ export function captureMonthSlide(sourceMonthKey: string) {
         left: rect.left,
         width: rect.width,
         height: rect.height,
-        scrollTop: content.scrollTop
+        scrollTop: content.scrollTop,
+        floating: cloneFloatingAction(rect)
     };
 }
 
@@ -95,12 +151,18 @@ export function playMonthSlide(
     layer.style.width = `${pending.width}px`;
     layer.style.height = `${pending.height}px`;
     layer.append(pending.content);
+    if (pending.floating) {
+        const floatingLayer = document.createElement('div');
+
+        floatingLayer.className = 'page-slide-out page-slide-out--floating';
+        floatingLayer.append(pending.floating);
+        layer.append(floatingLayer);
+    }
     layer.addEventListener('animationend', (event) => {
         if (event.target === pending.content) finish();
     });
     document.body.append(layer);
 
-    // scrollTop only sticks once the clone is part of the document.
     pending.content.scrollTop = pending.scrollTop;
     activeLayer = layer;
     cleanupTimer = window.setTimeout(finish, SLIDE_CLEANUP_MS);

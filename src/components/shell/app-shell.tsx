@@ -1,6 +1,7 @@
 'use client';
 
 import {
+    CalendarCog,
     ChevronLeft,
     ChevronRight,
     CircleDollarSign,
@@ -177,7 +178,11 @@ export function AppShell({
                                   : 'Settings'
                         }
                     >
-                        <Settings size={21} strokeWidth={1.8} />
+                        {view === 'budget' ? (
+                            <CalendarCog size={21} strokeWidth={1.8} />
+                        ) : (
+                            <Settings size={21} strokeWidth={1.8} />
+                        )}
                     </button>
                 </header>
                 {online ? null : (

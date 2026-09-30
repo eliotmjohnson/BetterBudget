@@ -87,6 +87,7 @@ html[data-safe-area-pending] ::after {
 .income-progress,
 .income-progress div,
 .navigation-detail-add-transaction,
+.floating-add-button,
 .line-item-remaining::after,
 .desktop-bar-fill,
 .sheet-handle,
