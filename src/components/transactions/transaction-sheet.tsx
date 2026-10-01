@@ -234,16 +234,16 @@ export function TransactionSheet({
                 <button
                     className='sheet-header-submit'
                     type='button'
+                    data-kind={kind}
                     disabled={submitDisabled}
                     onClick={submit}
                 >
                     {transaction ? 'Save' : 'Add'}
                 </button>
             }
-        >
-            <div className='form-grid'>
+            headerAccessory={
                 <div
-                    className='segmented'
+                    className='segmented segmented--compact'
                     data-kind={kind}
                     aria-label='Transaction type'
                 >
@@ -265,6 +265,9 @@ export function TransactionSheet({
                         Income
                     </button>
                 </div>
+            }
+        >
+            <div className='form-grid'>
                 <div className='field'>
                     <label htmlFor='transaction-amount'>Amount</label>
                     <CurrencyInput
@@ -401,6 +404,7 @@ export function TransactionSheet({
                 <button
                     className='primary-button primary-button--wide'
                     type='button'
+                    data-kind={kind}
                     disabled={submitDisabled}
                     onClick={submit}
                 >

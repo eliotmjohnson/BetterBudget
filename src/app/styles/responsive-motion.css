@@ -521,7 +521,8 @@
     .sheet-handle {
         display: none;
     }
-    .sheet-header {
+    .sheet-header,
+    .sheet-header-accessory {
         padding-inline: 22px;
     }
     .sheet-header-action[data-visibility='mobile'] {

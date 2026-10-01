@@ -147,6 +147,7 @@
     transition:
         background 160ms ease,
         border-color 160ms ease,
+        color 160ms ease,
         transform 160ms ease;
 }
 @media (hover: hover) and (pointer: fine) {
@@ -158,11 +159,32 @@
 .sheet-header-submit:active {
     transform: scale(0.97);
 }
+.sheet-header-submit[data-kind='refund']:not(:disabled) {
+    border-color: color-mix(in srgb, var(--green) 20%, white);
+    background: color-mix(in srgb, var(--green) 8%, white);
+    color: var(--green);
+}
+@media (hover: hover) and (pointer: fine) {
+    .sheet-header-submit[data-kind='refund']:not(:disabled):hover {
+        border-color: color-mix(in srgb, var(--green) 30%, white);
+        background: color-mix(in srgb, var(--green) 12%, white);
+    }
+}
 .sheet-header-submit:disabled {
     border-color: var(--line);
     background: var(--soft);
     color: #9ca3ad;
     cursor: not-allowed;
+}
+.sheet-header:has(+ .sheet-header-accessory) {
+    margin-bottom: 8px;
+}
+.sheet-header-accessory {
+    display: flex;
+    flex: 0 0 auto;
+    justify-content: center;
+    margin-bottom: 18px;
+    padding: 0 18px;
 }
 .sheet-body {
     min-height: 0;
@@ -325,6 +347,49 @@
 }
 .segment.active {
     color: white;
+}
+.segmented[data-kind] {
+    transition:
+        border-color 0.45s cubic-bezier(0.4, 1, 0.4, 1),
+        background 0.45s cubic-bezier(0.4, 1, 0.4, 1);
+}
+.segmented[data-kind] .segmented-thumb {
+    transition:
+        transform 0.45s cubic-bezier(0.4, 1, 0.4, 1),
+        background 0.45s cubic-bezier(0.4, 1, 0.4, 1),
+        box-shadow 0.45s cubic-bezier(0.4, 1, 0.4, 1);
+}
+.segmented[data-kind='refund'] {
+    border-color: color-mix(in srgb, var(--green) 22%, white);
+    background: color-mix(in srgb, var(--green) 6%, white);
+}
+.segmented[data-kind='refund'] .segmented-thumb {
+    background: var(--green);
+    box-shadow: 0 3px 8px rgb(30 181 116 / 24%);
+}
+.segmented--compact {
+    width: min(100%, 250px);
+    overflow: visible;
+    padding: 2px;
+    border-radius: 999px;
+}
+.segmented--compact .segmented-thumb {
+    top: 2px;
+    bottom: 2px;
+    left: 2px;
+    width: calc(50% - 2px);
+    border-radius: 999px;
+    box-shadow: 0 3px 8px rgb(23 105 224 / 22%);
+}
+.segmented--compact .segment {
+    min-height: 34px;
+    border-radius: 999px;
+    font-size: 14px;
+}
+.segmented--compact .segment::after {
+    content: '';
+    position: absolute;
+    inset: -5px 0;
 }
 .move-money-route {
     display: grid;

@@ -28,7 +28,11 @@ const SWITCH_HOLD_MS = 600;
  * the sheet's shield (`shield.ts`), which follows the keyboard's edge itself.
  * A change
  * while the keyboard stays up, such as the suggestions row iOS adds a moment
- * after the keyboard's first size, appears at once, so it follows in 100 ms.
+ * after the keyboard's first size, appears at once, so it follows in 100 ms,
+ * unless it arrives while the sheet is still rising: then the rise is
+ * retargeted on its own motion, since a first check that measured little or
+ * no cover left the whole rise to the 100 ms motion, and the sheet snapped up
+ * ahead of the keyboard.
  * A sheet that grows to make room, rather than shrinking its body, moves as a
  * whole: it rises on the same curve from the frame after the keyboard over
  * 440 ms, slightly behind the keyboard. One that reaches its `max-height`
@@ -113,6 +117,7 @@ export function useKeyboardFit(
                 switchedAt = performance.now();
         };
         let staged = false;
+        let risingUntil = 0;
         const apply = (
             sheet: HTMLElement,
             inset: number,
@@ -132,6 +137,10 @@ export function useKeyboardFit(
                 sheet.style.setProperty(INSET, `${inset}px`);
                 settle = motion.settle;
             }
+            risingUntil =
+                kind === 'raise' || kind === 'grow'
+                    ? performance.now() + settle
+                    : 0;
             settleTimer = window.setTimeout(() => {
                 if (then) then();
                 else if (kind === 'lower') clearFit(sheet);
@@ -207,8 +216,11 @@ export function useKeyboardFit(
                         Number.parseFloat(sheet.style.getPropertyValue(INSET))
                 ) >= 1
             ) {
-                moveShield(sheet, inset, 'adjust');
-                apply(sheet, inset, 'adjust');
+                if (performance.now() < risingUntil) raise(sheet, inset);
+                else {
+                    moveShield(sheet, inset, 'adjust');
+                    apply(sheet, inset, 'adjust');
+                }
             }
         };
         const schedule = () => {

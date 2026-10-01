@@ -1,6 +1,7 @@
 'use client';
 
 import { StillInput, StillTextarea } from '@/components/ui/still-focus';
+import { CalendarDays } from 'lucide-react';
 import { useState } from 'react';
 import { CurrencyInput } from '@/components/ui/currency-input';
 import { Sheet } from '@/components/ui/sheet';
@@ -165,12 +166,19 @@ export function RecordIncome({
                 </div>
                 <div className='field'>
                     <label htmlFor='receipt-date'>Date</label>
-                    <input
-                        id='receipt-date'
-                        type='date'
-                        value={date}
-                        onChange={(event) => setDate(event.target.value)}
-                    />
+                    <div className='date-input-shell'>
+                        <input
+                            id='receipt-date'
+                            type='date'
+                            value={date}
+                            onChange={(event) => setDate(event.target.value)}
+                        />
+                        <CalendarDays
+                            aria-hidden='true'
+                            size={18}
+                            strokeWidth={1.8}
+                        />
+                    </div>
                 </div>
                 <div className='field'>
                     <label htmlFor='receipt-note'>Note (optional)</label>

@@ -84,6 +84,9 @@ function focusedFieldIn(content: HTMLElement) {
  * the sheet's transform, so it floated where the field had been. The
  * `data-caret-hidden` rule makes it transparent, and the selection is widened
  * and restored because iOS repaints a caret only when the selection changes.
+ * An empty field has nothing to select, so it briefly holds a space to
+ * select instead: the widened selection was otherwise no change at all, and
+ * the caret of an empty Change password field stayed visible mid-drag.
  */
 function hideCaretIn(content: HTMLElement, hidden: boolean) {
     if (content.hasAttribute(CARET_HIDDEN) === hidden) return;
@@ -91,10 +94,15 @@ function hideCaretIn(content: HTMLElement, hidden: boolean) {
     const field = focusedFieldIn(content);
 
     if (!field) return;
-    const { selectionEnd, selectionStart } = field;
+    const { selectionEnd, selectionStart, value } = field;
 
     if (selectionStart === null || selectionEnd === null) return;
-    field.setSelectionRange(0, field.value.length);
+    if (value) field.setSelectionRange(0, value.length);
+    else {
+        field.value = ' ';
+        field.setSelectionRange(0, 1);
+        field.value = value;
+    }
     field.setSelectionRange(selectionStart, selectionEnd);
 }
 
@@ -129,6 +137,7 @@ export function Sheet({
     footer,
     headerAction,
     headerActionVisibility = 'all',
+    headerAccessory,
     showHandle = true,
     followKeyboard = false,
     restoreFocusRef,
@@ -152,6 +161,7 @@ export function Sheet({
     footer?: ReactNode;
     headerAction?: ReactNode;
     headerActionVisibility?: 'all' | 'mobile';
+    headerAccessory?: ReactNode;
     showHandle?: boolean;
     followKeyboard?: boolean;
     restoreFocusRef?: RefObject<HTMLElement | null>;
@@ -473,6 +483,11 @@ export function Sheet({
                                 Close
                             </Dialog.Close>
                         </div>
+                        {headerAccessory ? (
+                            <div className='sheet-header-accessory'>
+                                {headerAccessory}
+                            </div>
+                        ) : null}
                     </div>
                     <div className='sheet-body' data-still-scroller>
                         {children}

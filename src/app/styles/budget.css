@@ -132,8 +132,8 @@
     height: 4px;
     background: linear-gradient(
         to bottom,
-        rgb(21 25 31 / 10%),
-        rgb(21 25 31 / 3%) 1.5px,
+        rgb(21 25 31 / 7%),
+        rgb(21 25 31 / 2%) 1.5px,
         rgb(21 25 31 / 0%)
     );
     opacity: min(1, calc(var(--budget-balance-progress) * 3));
@@ -273,6 +273,13 @@
 }
 .primary-button:active {
     transform: translateY(1px) scale(0.99);
+}
+.primary-button[data-kind='refund'] {
+    background: var(--green);
+    box-shadow: 0 8px 18px rgb(30 181 116 / 22%);
+}
+.primary-button[data-kind='refund']:hover {
+    background: color-mix(in srgb, var(--green) 88%, black);
 }
 .primary-button--wide {
     width: 100%;

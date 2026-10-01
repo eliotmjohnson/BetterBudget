@@ -42,9 +42,37 @@ navigation, and responsive summary rail; and PGlite, PostgreSQL, and Docker
 development paths.
 
 Version 5 adds Better Buddy, an optional in-app budget assistant driven by Claude.
+Version 6 refines the transaction, income, and Budget-page interface.
 
 `docs/agents/product.md` holds the complete implemented-capability inventory.
 Approved design references live in [`docs/design`](./docs/design).
+
+## Version 6 interface release
+
+Version `6.0.0` is a user-directed major release of interface refinements. It
+changes no API, data, authentication, or deployment contract; the major number
+marks the release rather than an incompatibility.
+
+**What changed:**
+
+- The Expense/Income selector on Add and Edit transaction moved out of the
+  scrolling form into the sheet's fixed header, under the title. It is a
+  smaller, centered capsule, and choosing Income turns the selector and both
+  submit buttons green, so the two kinds read differently at a glance.
+- The Record income date field uses the same date field as Add transaction,
+  so it no longer runs past the sheet's right edge on iPhone.
+- The shadow the header casts onto the docked Left to budget strip is lighter.
+- A sheet now rises with the on-screen keyboard even when its first
+  measurement of the keyboard comes back short, instead of snapping up ahead of
+  it, and the caret of an empty field no longer stays visible while a sheet is
+  dragged.
+
+**Migrations:** none. There is no schema, environment-variable,
+authentication, or infrastructure change, and a push to `main` deploys it like
+any other release.
+
+**Compatibility:** every Version 1 product boundary and every Version 2–5
+deployment and assistant rule is unchanged.
 
 ## Version 5 assistant release
 

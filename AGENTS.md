@@ -40,6 +40,25 @@ Each calendar month holds its own budget built from household-scoped category an
 
 Read `docs/agents/product.md` for the complete implemented-capability inventory before adding, removing, or reshaping a user-facing capability.
 
+## Version 6 interface release
+
+Version `6.0.0` is a user-directed major release of interface refinements: the
+Expense/Income selector in the transaction sheet's fixed header with a green
+Income scheme, a Record income date field that stays inside its sheet, a
+lighter header shadow on the docked Left to budget strip, and keyboard-fit and
+drag-caret fixes for sheets. The Version 1 financial model, database schema,
+authentication model, and every Version 2–5 deployment and assistant rule are
+unchanged, and there is no migration.
+
+These rules are load-bearing:
+
+- **A control that must not scroll goes in `headerAccessory`.** `Sheet` renders it inside the fixed drag region under the title row. Buttons there stay tappable because a drag never starts on a `button`.
+- **Every date field sits in `.date-input-shell`** with the `CalendarDays` icon. iOS sizes a bare `<input type='date'>` to its content, which overflowed the Record income sheet.
+- **Income's green is `--green` (`#1eb574`) in `tokens.css`.** It is brighter than the `#199d67` Remaining text color at the user's request, and white text on it is below the AA contrast bar; do not darken it back without direction.
+
+`docs/agents/design/sheets-and-menus.md` holds the selector and date-field
+detail, and `docs/agents/design/navigation-detail.md` the strip shadow.
+
 ## Version 5 assistant release
 
 Version `5.0.0` adds Better Buddy, an optional budget assistant: a draggable floating robot button on every authenticated page that opens a chat driven by Claude Haiku 4.5. It answers questions about the household's budget and commits basic changes. The Version 1 financial model, database schema, authentication model, and every Version 2–4 deployment rule are unchanged.

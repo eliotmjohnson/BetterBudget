@@ -2,6 +2,7 @@
     --blue: #1769e0;
     --blue-strong: #0f5fd5;
     --mint: #55d49b;
+    --green: #1eb574;
     --sky: #9fc0ff;
     --yellow: #ffd977;
     --coral: #ff7e83;
@@ -103,7 +104,10 @@ html[data-safe-area-pending] ::after {
 .assistant-suggestion,
 .assistant-typing span,
 .hold-menu-item,
-.move-money-swap {
+.move-money-swap,
+.segmented--compact,
+.segmented--compact .segmented-thumb,
+.segmented--compact .segment {
     corner-shape: round;
 }
 [data-continuous-border] {
