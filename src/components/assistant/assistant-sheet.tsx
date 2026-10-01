@@ -12,6 +12,7 @@ import {
     type RefObject
 } from 'react';
 import { Sheet } from '@/components/ui/sheet';
+import { StillTextarea } from '@/components/ui/still-focus';
 import { BetterBuddyFigure } from './better-buddy-figure';
 import { useKeyboardLayout } from './keyboard-layout';
 import type { TranscriptEntry } from './use-assistant';
@@ -135,7 +136,7 @@ export function AssistantSheet({
                         submit();
                     }}
                 >
-                    <textarea
+                    <StillTextarea
                         aria-label='Message Better Buddy'
                         rows={1}
                         maxLength={2_000}

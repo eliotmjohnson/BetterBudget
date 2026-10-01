@@ -2,39 +2,19 @@
 
 import { useEffect, type RefObject } from 'react';
 import { isKeyboardUp } from '@/components/ui/on-screen-keyboard';
+import {
+    keyboardCover,
+    keyboardTransition,
+    type KeyboardMotion
+} from './motion';
 import { FITTED, INSET, insetInHeight, sheetGrowth } from './pending';
 import { settleBodyScroll, sheetBody } from './scroll-settle';
 import { clearShield, moveShield } from './shield';
 
 const MOBILE_QUERY = '(width < 760px)';
 const SETTLE_MARGIN_MS = 40;
+const RELEASE_SETTLE_MS = 450;
 const SWITCH_HOLD_MS = 600;
-const RAISE_MOTION = {
-    ms: 360,
-    delay: 0,
-    curve: 'cubic-bezier(0.2, 1, 0.45, 1)'
-};
-const LOWER_MOTION = {
-    ms: 230,
-    delay: -16,
-    curve: 'cubic-bezier(0.2, 0.05, 0.3, 1)'
-};
-const GROW_MOTION = {
-    ms: 440,
-    delay: 0,
-    curve: 'cubic-bezier(0.2, 1, 0.45, 1)'
-};
-const ADJUST_MOTION = {
-    ms: 100,
-    delay: 0,
-    curve: 'cubic-bezier(0.2, 1, 0.45, 1)'
-};
-const MOTIONS = {
-    raise: RAISE_MOTION,
-    grow: GROW_MOTION,
-    lower: LOWER_MOTION,
-    adjust: ADJUST_MOTION
-};
 
 /**
  * The inset's transition, fitted frame by frame to a recording of the iOS
@@ -65,27 +45,8 @@ const MOTIONS = {
  * showed a blank frame, as iOS applies the scroll a frame apart from the
  * shift.
  */
-function insetMotion(kind: keyof typeof MOTIONS) {
-    const { ms, delay, curve } = MOTIONS[kind];
-
-    return {
-        transition: `padding-bottom ${ms}ms ${curve} ${delay}ms`,
-        settle: Math.max(0, ms + delay)
-    };
-}
-
-/**
- * How far the keyboard covers `sheet`, from the sheet's bottom edge to the
- * keyboard's top edge in layout-viewport pixels. It is measured rather than
- * taken as the keyboard's height, so a layout viewport that iOS has already
- * moved to meet the keyboard covers less, or nothing.
- */
-function keyboardCover(sheet: HTMLElement, viewport: VisualViewport) {
-    return Math.max(
-        0,
-        sheet.getBoundingClientRect().bottom -
-            (viewport.offsetTop + viewport.height)
-    );
+function insetMotion(kind: KeyboardMotion) {
+    return keyboardTransition(['padding-bottom'], kind);
 }
 
 function clearFit(sheet: HTMLElement) {
@@ -111,8 +72,13 @@ function clearFit(sheet: HTMLElement) {
  * resizing the sheet. When the keyboard closes or
  * focus leaves the sheet, the inset eases back to zero. It re-checks on the
  * visual viewport's `scroll` as well as `resize`, because iOS moves the layout
- * viewport to meet the keyboard as a scroll of the visual viewport. A drag in
- * progress is left alone.
+ * viewport to meet the keyboard as a scroll of the visual viewport. A sheet
+ * being dragged, springing back, or swiped away is left alone: changing the
+ * inset mid-spring would replace the spring's transition, and a sheet swiped
+ * away leaves with its inset while the keyboard closes. It re-checks when a
+ * finger lifts and again once a spring back has finished
+ * (`RELEASE_SETTLE_MS`, past the sheet's 400 ms settle), for any change it
+ * skipped meanwhile.
  */
 export function useKeyboardFit(
     sheetRef: RefObject<HTMLElement | null>,
@@ -140,7 +106,7 @@ export function useKeyboardFit(
         const apply = (
             sheet: HTMLElement,
             inset: number,
-            kind: keyof typeof MOTIONS,
+            kind: KeyboardMotion,
             then?: () => void
         ) => {
             const motion = insetMotion(kind);
@@ -197,6 +163,8 @@ export function useKeyboardFit(
             if (
                 !sheet ||
                 sheet.dataset.dragging === 'true' ||
+                sheet.dataset.settling === 'true' ||
+                sheet.dataset.dismissing === 'true' ||
                 !window.matchMedia(MOBILE_QUERY).matches
             )
                 return;
@@ -229,19 +197,30 @@ export function useKeyboardFit(
             cancelAnimationFrame(frame);
             frame = requestAnimationFrame(update);
         };
+        let releaseTimer = 0;
+        const afterRelease = () => {
+            schedule();
+            window.clearTimeout(releaseTimer);
+            releaseTimer = window.setTimeout(schedule, RELEASE_SETTLE_MS);
+        };
 
         viewport.addEventListener('resize', schedule);
         viewport.addEventListener('scroll', schedule);
         document.addEventListener('focusout', schedule);
         document.addEventListener('focusin', noteSwitch);
+        document.addEventListener('pointerup', afterRelease);
+        document.addEventListener('pointercancel', afterRelease);
 
         return () => {
             cancelAnimationFrame(frame);
             window.clearTimeout(settleTimer);
+            window.clearTimeout(releaseTimer);
             viewport.removeEventListener('resize', schedule);
             viewport.removeEventListener('scroll', schedule);
             document.removeEventListener('focusout', schedule);
             document.removeEventListener('focusin', noteSwitch);
+            document.removeEventListener('pointerup', afterRelease);
+            document.removeEventListener('pointercancel', afterRelease);
             if (fitted) clearFit(fitted);
         };
     }, [active, sheetRef]);
@@ -253,3 +232,7 @@ export {
     pendingSheetRise,
     settledClientHeight
 } from './pending';
+
+export { keyboardCover, keyboardTransition } from './motion';
+export { INSET } from './pending';
+export { clearShield, moveShield } from './shield';

@@ -75,6 +75,9 @@
 .sheet-content[data-dragging='true'] {
     transition: none;
 }
+.sheet-content[data-caret-hidden] :is(input, textarea) {
+    caret-color: transparent;
+}
 .sheet-content[data-settling='true'] {
     transition: transform 0.38s cubic-bezier(0.29, 1, 0.29, 1);
 }

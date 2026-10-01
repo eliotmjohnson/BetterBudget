@@ -34,6 +34,8 @@ const settleDuration = 400;
 const settleCurve = 'cubic-bezier(0.29, 1, 0.29, 1)';
 const exitOvershoot = 64;
 const translateY = (distance: number) => `translate3d(0, ${distance}px, 0)`;
+const DRAG_CARET_PX = 4;
+const CARET_HIDDEN = 'data-caret-hidden';
 
 function renderedOffset(content: HTMLElement) {
     return new DOMMatrixReadOnly(getComputedStyle(content).transform).m42;
@@ -60,6 +62,39 @@ export function restoreSheetFocus(target: HTMLElement, focusVisible: boolean) {
         target.addEventListener('blur', clearRestoredFocus, { once: true });
         target.addEventListener('keydown', clearRestoredFocus, { once: true });
     });
+}
+
+/**
+ * The text field inside `content` that has focus, if any.
+ */
+function focusedFieldIn(content: HTMLElement) {
+    const active = document.activeElement;
+
+    return (active instanceof HTMLInputElement ||
+        active instanceof HTMLTextAreaElement) &&
+        content.contains(active)
+        ? active
+        : null;
+}
+
+/**
+ * Hides or shows the caret of a focused text field inside `content` while a
+ * drag moves the sheet. iOS draws the caret itself and does not move it with
+ * the sheet's transform, so it floated where the field had been. The
+ * `data-caret-hidden` rule makes it transparent, and the selection is widened
+ * and restored because iOS repaints a caret only when the selection changes.
+ */
+function hideCaretIn(content: HTMLElement, hidden: boolean) {
+    if (content.hasAttribute(CARET_HIDDEN) === hidden) return;
+    content.toggleAttribute(CARET_HIDDEN, hidden);
+    const field = focusedFieldIn(content);
+
+    if (!field) return;
+    const { selectionEnd, selectionStart } = field;
+
+    if (selectionStart === null || selectionEnd === null) return;
+    field.setSelectionRange(0, field.value.length);
+    field.setSelectionRange(selectionStart, selectionEnd);
 }
 
 /**
@@ -203,6 +238,7 @@ export function Sheet({
 
         content.style.transform = translateY(offset);
         fadeOverlay(offset / drag.height);
+        if (offset > DRAG_CARET_PX) hideCaretIn(content, true);
     };
     const settleDrag = (content: HTMLDivElement) => {
         content.style.removeProperty('transition');
@@ -213,10 +249,17 @@ export function Sheet({
         settleTimerRef.current = setTimeout(() => {
             delete content.dataset.settling;
             content.style.removeProperty('transform');
+            hideCaretIn(content, false);
             overlayRef.current?.style.removeProperty('opacity');
             overlayRef.current?.style.removeProperty('transition');
             settleTimerRef.current = null;
         }, settleDuration);
+    };
+    const releaseInPlace = (content: HTMLDivElement) => {
+        content.style.removeProperty('transform');
+        overlayRef.current?.style.removeProperty('opacity');
+        overlayRef.current?.style.removeProperty('transition');
+        hideCaretIn(content, false);
     };
     const dismissDrag = (
         content: HTMLDivElement,
@@ -275,7 +318,11 @@ export function Sheet({
                 (distance >= 32 && velocity >= 0.65) ||
                 (distance >= 24 && projectedDistance >= threshold * 1.12));
 
-        if (dismiss) dismissDrag(content, offset, velocity);
+        if (dismiss) {
+            focusedFieldIn(content)?.blur();
+            hideCaretIn(content, false);
+            dismissDrag(content, offset, velocity);
+        } else if (offset < 1) releaseInPlace(content);
         else settleDrag(content);
     };
     const startDrag = (event: ReactPointerEvent<HTMLDivElement>) => {

@@ -348,7 +348,7 @@
             0 0 0 0 #fff,
             0 -22px 55px rgb(19 28 45 / 18%);
     }
-    .sheet-content[data-keyboard-open]:has([data-buddy-seat]) {
+    .sheet-content[data-keyboard-full]:has([data-buddy-seat]) {
         border-radius: 0;
         box-shadow:
             0 calc(var(--assistant-status-overlap) - var(--safe-area-top)) 0 0
@@ -357,15 +357,39 @@
     }
     .sheet-content:has([data-buddy-seat]) .sheet-handle {
         transition:
-            height 520ms cubic-bezier(0.32, 0.72, 0, 1),
-            margin-bottom 520ms cubic-bezier(0.32, 0.72, 0, 1),
+            height 440ms cubic-bezier(0.2, 1, 0.45, 1),
+            margin-bottom 440ms cubic-bezier(0.2, 1, 0.45, 1),
             opacity 260ms ease;
+    }
+    .sheet-content:has([data-buddy-seat]) .sheet-header {
+        transition: margin-bottom 440ms cubic-bezier(0.2, 1, 0.45, 1);
+    }
+    .sheet-content:has([data-buddy-seat]) .sheet-body {
+        transition: padding-bottom 440ms cubic-bezier(0.2, 1, 0.45, 1);
+    }
+    .sheet-content:has([data-buddy-seat]) .assistant-empty {
+        transition: row-gap 440ms cubic-bezier(0.2, 1, 0.45, 1);
     }
     .sheet-content[data-keyboard-open]:has([data-buddy-seat]) .sheet-handle {
         height: 0;
         margin-bottom: 0;
         opacity: 0;
-        transition-delay: 60ms;
+    }
+    .sheet-content[data-keyboard-open]:has([data-buddy-seat]) .sheet-header {
+        margin-bottom: 10px;
+    }
+    .sheet-content[data-keyboard-open]:has([data-buddy-seat]) .sheet-body {
+        padding-bottom: 8px;
+    }
+    .sheet-content[data-keyboard-open] .assistant-thread {
+        min-height: 0;
+    }
+    .sheet-content[data-keyboard-open] .assistant-empty {
+        row-gap: 10px;
+    }
+    .sheet-content[data-keyboard-measuring]:has([data-buddy-seat])
+        :is(.sheet-handle, .sheet-header, .sheet-body, .assistant-empty) {
+        transition: none;
     }
     .sheet-content[data-keyboard-open]:has([data-buddy-seat]) .sheet-footer {
         padding-bottom: 12px;
