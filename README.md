@@ -42,30 +42,66 @@ navigation, and responsive summary rail; and PGlite, PostgreSQL, and Docker
 development paths.
 
 Version 5 adds Better Buddy, an optional in-app budget assistant driven by Claude.
-Version 6 refines the transaction, income, and Budget-page interface.
+Version 6 adds Move money, fill-from-Left-to-budget, calculator math, and a
+long run of mobile and desktop interface polish.
 
 `docs/agents/product.md` holds the complete implemented-capability inventory.
 Approved design references live in [`docs/design`](./docs/design).
 
 ## Version 6 interface release
 
-Version `6.0.0` is a user-directed major release of interface refinements. It
-changes no API, data, authentication, or deployment contract; the major number
-marks the release rather than an incompatibility.
+Version `6.0.0` rolls up everything shipped since `5.0.0`: new budgeting tools,
+a reworked desktop layout, and a long run of iOS polish. It changes no API,
+data, authentication, or deployment contract; the major number marks the
+release rather than an incompatibility.
 
-**What changed:**
+**Budgeting:**
 
-- The Expense/Income selector on Add and Edit transaction moved out of the
-  scrolling form into the sheet's fixed header, under the title. It is a
-  smaller, centered capsule, and choosing Income turns the selector and both
-  submit buttons green, so the two kinds read differently at a glance.
-- The Record income date field uses the same date field as Add transaction,
-  so it no longer runs past the sheet's right edge on iPhone.
-- The shadow the header casts onto the docked Left to budget strip is lighter.
-- A sheet now rises with the on-screen keyboard even when its first
-  measurement of the keyboard comes back short, instead of snapping up ahead of
-  it, and the caret of an empty field no longer stays visible while a sheet is
-  dragged.
+- **Move money** between budget items from a Budget row's swipe action, as a
+  planned-amount move or a paired transfer of what's remaining.
+- **Fill** a planned amount with what's left to budget, or take back an
+  overage, from a chip on the Budget row and in the line-item detail; a
+  transaction split can likewise fill with what's left.
+- **Calculator math** in every money field, such as `$120.00 + 5`, with
+  exact cents and an operator bar above the iOS number pad.
+- A **touch-and-hold menu** on transactions with Edit, Duplicate, and Delete.
+- Items with carryover on show the logo coin at the end of their progress bar.
+
+**Budget page and navigation:**
+
+- On phones, a **Left to budget strip** docks under the header as the summary
+  card scrolls away, with a compact Planned/Remaining switch, and a floating
+  add button appears once the page's own add button scrolls away.
+- The line-item detail docks a remaining-this-month strip under its collapsing
+  header.
+- Budget-row swipe actions fan out like iOS, and drag reordering is smoother.
+- The month picker hangs from the header, and the month actions button is a
+  calendar with a gear, shown the same way on every page.
+- **Desktop** shows Planned, Spent, and Available side by side from 1100 px,
+  and the summary rail leads with Add transaction and lists recent
+  transactions that open for editing.
+- The installed iOS app runs edge to edge, with a landscape phone layout.
+
+**Sheets and fields:**
+
+- Fields no longer slide the page when focused, and sheets make room for the
+  keyboard without jumping. Sheets have no close button: swipe down, tap
+  outside, or press Escape. They dim the page slightly, close smoothly, and
+  return focus to whatever opened them.
+- On Add and Edit transaction, the Expense/Income selector is a compact
+  capsule fixed in the header, and Income turns it and the submit buttons
+  green.
+- The Add transaction sheet starts a fresh draft each time it opens.
+- The Record income date field stays inside its sheet on iPhone.
+
+**Better Buddy and reliability:**
+
+- Better Buddy explains a failed reply and offers Try again. Throw him and he
+  can topple over, or beam him up to his spaceship to turn him off, with Undo.
+  His chat now fits the keyboard and scrolls like every other sheet.
+- A save that finally fails shows a persistent toast with Retry instead of
+  vanishing, sheets keep their drafts when a save is refused offline, and a
+  slow save no longer disappears while a refresh is in flight.
 
 **Migrations:** none. There is no schema, environment-variable,
 authentication, or infrastructure change, and a push to `main` deploys it like

@@ -42,13 +42,14 @@ Read `docs/agents/product.md` for the complete implemented-capability inventory 
 
 ## Version 6 interface release
 
-Version `6.0.0` is a user-directed major release of interface refinements: the
-Expense/Income selector in the transaction sheet's fixed header with a green
-Income scheme, a Record income date field that stays inside its sheet, a
-lighter header shadow on the docked Left to budget strip, and keyboard-fit and
-drag-caret fixes for sheets. The Version 1 financial model, database schema,
-authentication model, and every Version 2–5 deployment and assistant rule are
-unchanged, and there is no migration.
+Version `6.0.0` is a user-directed major release that rolls up the 5.1–5.13
+interface work (Move money, fill from Left to budget, calculator math, the
+transaction hold menu, docked strips and floating add buttons, the desktop
+layout rework, still focus and keyboard-fit sheets, and Better Buddy's throws
+and failure recovery) with the transaction sheet's header-anchored kind
+selector. `README.md` holds the full list. The Version 1 financial model,
+database schema, authentication model, and every Version 2–5 deployment and
+assistant rule are unchanged, and there is no migration.
 
 These rules are load-bearing:
 
