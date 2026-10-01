@@ -8,6 +8,7 @@ import { isToastTarget } from './toast-provider';
 import {
     useCallback,
     useEffect,
+    useId,
     useRef,
     type PointerEvent as ReactPointerEvent,
     type RefObject,
@@ -129,7 +130,7 @@ export function Sheet({
     headerAction,
     headerActionVisibility = 'all',
     showHandle = true,
-    keyboardFit = true,
+    followKeyboard = false,
     restoreFocusRef,
     restoreFocusVisible,
     interactionDisabled = false,
@@ -152,7 +153,7 @@ export function Sheet({
     headerAction?: ReactNode;
     headerActionVisibility?: 'all' | 'mobile';
     showHandle?: boolean;
-    keyboardFit?: boolean;
+    followKeyboard?: boolean;
     restoreFocusRef?: RefObject<HTMLElement | null>;
     restoreFocusVisible?: boolean;
     interactionDisabled?: boolean;
@@ -168,13 +169,14 @@ export function Sheet({
         [cornersRef]
     );
     const overlayRef = useRef<HTMLDivElement>(null);
+    const shieldId = useId();
     const dragRef = useRef<DragState | null>(null);
     const restoreFocusVisibleRef = useRef(true);
     const openerRef = useRef<HTMLElement | null>(null);
     const settleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    useKeyboardFit(contentRef, open && keyboardFit);
+    useKeyboardFit(contentRef, open, followKeyboard);
 
     useEffect(
         () => () => {
@@ -381,6 +383,7 @@ export function Sheet({
                     }
                     data-layer={layer}
                     data-variant={variant}
+                    data-keyboard-shield-id={shieldId}
                     inert={interactionDisabled}
                     onEscapeKeyDown={(event) => {
                         if (interactionDisabled) event.preventDefault();
@@ -477,12 +480,13 @@ export function Sheet({
                     {footer ? (
                         <div className='sheet-footer'>{footer}</div>
                     ) : null}
-                    <div
-                        className='sheet-keyboard-shield'
-                        data-keyboard-shield
-                        aria-hidden='true'
-                    />
                 </Dialog.Content>
+                <div
+                    className='sheet-keyboard-shield'
+                    data-keyboard-shield={shieldId}
+                    data-layer={layer}
+                    aria-hidden='true'
+                />
             </Dialog.Portal>
         </Dialog.Root>
     );

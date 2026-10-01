@@ -25,6 +25,7 @@ type StillFieldOptions<T extends StillField> = StillFieldHandlers<T> & {
     calculator?: boolean;
     autoFocus?: boolean;
     conceal?: boolean;
+    reveal?: boolean;
 };
 
 /**
@@ -43,13 +44,15 @@ type StillFieldOptions<T extends StillField> = StillFieldHandlers<T> & {
  * hides the field behind a stand-in (no parking, no veil), for a field whose
  * box is moved by a transform, such as a navigation-detail title, where a
  * stand-in would land out of place; it still focuses without the page scroll
- * and holds the page still.
+ * and holds the page still. `reveal` false skips scrolling the container to
+ * clear the keyboard, for a field that stays in view by itself.
  */
 export function useStillField<T extends StillField>({
     enabled = true,
     calculator = false,
     autoFocus = false,
     conceal = true,
+    reveal = true,
     onFocus,
     onTouchStart,
     onTouchEnd
@@ -82,7 +85,8 @@ export function useStillField<T extends StillField>({
             fadeAcrossKeyboardSwap(field, event.relatedTarget);
             pinPageWhileFocused(field);
             holdViewportWhileFocused(field);
-            revealAboveKeyboard(field, stillScroller(field), calculator);
+            if (reveal)
+                revealAboveKeyboard(field, stillScroller(field), calculator);
             onFocus?.(event);
         }
     };

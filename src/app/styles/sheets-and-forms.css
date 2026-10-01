@@ -40,14 +40,16 @@
     will-change: transform, opacity;
 }
 .sheet-keyboard-shield {
-    position: absolute;
-    z-index: 3;
-    inset: auto 0 0;
+    position: fixed;
+    z-index: 71;
+    inset: var(--viewport-height) 0 auto;
     height: 0;
+    translate: 0 -100%;
     background: white;
     pointer-events: none;
 }
-.sheet-content[data-layer='nested'] {
+.sheet-content[data-layer='nested'],
+.sheet-keyboard-shield[data-layer='nested'] {
     z-index: 73;
 }
 .sheet-content[data-variant='full-screen-mobile'] {

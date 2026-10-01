@@ -7,9 +7,10 @@ import {
     keyboardTransition,
     type KeyboardMotion
 } from './motion';
+import { followKeyboard } from './follow';
 import { FITTED, INSET, insetInHeight, sheetGrowth } from './pending';
 import { settleBodyScroll, sheetBody } from './scroll-settle';
-import { clearShield, moveShield } from './shield';
+import { clearShield, moveShield, shieldRaised } from './shield';
 
 const MOBILE_QUERY = '(width < 760px)';
 const SETTLE_MARGIN_MS = 40;
@@ -53,6 +54,7 @@ function clearFit(sheet: HTMLElement) {
     sheet.removeAttribute(FITTED);
     sheet.style.removeProperty('transition');
     sheet.style.removeProperty(INSET);
+    sheet.style.removeProperty('height');
     clearShield(sheet);
 }
 
@@ -73,16 +75,24 @@ function clearFit(sheet: HTMLElement) {
  * focus leaves the sheet, the inset eases back to zero. It re-checks on the
  * visual viewport's `scroll` as well as `resize`, because iOS moves the layout
  * viewport to meet the keyboard as a scroll of the visual viewport. A sheet
- * being dragged, springing back, or swiped away is left alone: changing the
- * inset mid-spring would replace the spring's transition, and a sheet swiped
- * away leaves with its inset while the keyboard closes. It re-checks when a
+ * being dragged, springing back, or swiped away keeps its inset: changing it
+ * mid-spring would replace the spring's transition, and a sheet swiped away
+ * leaves with its inset while the keyboard closes. Its shield, a fixed layer
+ * that does not move with the sheet, still lowers with the keyboard. It re-checks when a
  * finger lifts and again once a spring back has finished
  * (`RELEASE_SETTLE_MS`, past the sheet's 400 ms settle), for any change it
- * skipped meanwhile.
+ * skipped meanwhile. With `follow`, the inset moves in one motion on the
+ * keyboard's own curve however much of it the sheet grows by, and the
+ * sheet's height eases to where it ends on a motion of its own
+ * (`followKeyboard`), for a sheet whose focused field rides on the keyboard,
+ * such as the Better Buddy composer stuck to the bottom of its body: growing
+ * first and shortening the body afterwards left the composer behind the
+ * keyboard until the growth had finished.
  */
 export function useKeyboardFit(
     sheetRef: RefObject<HTMLElement | null>,
-    active: boolean
+    active: boolean,
+    follow: boolean
 ) {
     useEffect(() => {
         const viewport = window.visualViewport;
@@ -109,17 +119,24 @@ export function useKeyboardFit(
             kind: KeyboardMotion,
             then?: () => void
         ) => {
-            const motion = insetMotion(kind);
+            let settle: number;
 
             window.clearTimeout(settleTimer);
             fitted = sheet;
-            sheet.style.transition = motion.transition;
-            sheet.style.setProperty(INSET, `${inset}px`);
+            if (follow && kind !== 'grow')
+                settle = followKeyboard(sheet, inset, kind);
+            else {
+                const motion = insetMotion(kind);
+
+                sheet.style.transition = motion.transition;
+                sheet.style.setProperty(INSET, `${inset}px`);
+                settle = motion.settle;
+            }
             settleTimer = window.setTimeout(() => {
                 if (then) then();
                 else if (kind === 'lower') clearFit(sheet);
                 else sheet.style.removeProperty('transition');
-            }, motion.settle + SETTLE_MARGIN_MS);
+            }, settle + SETTLE_MARGIN_MS);
         };
         const raise = (sheet: HTMLElement, inset: number) => {
             const growth = sheetGrowth(sheet, inset);
@@ -129,7 +146,7 @@ export function useKeyboardFit(
 
             sheet.toggleAttribute(FITTED, true);
             moveShield(sheet, inset, 'raise');
-            if (growth < 1) apply(sheet, inset, 'raise');
+            if (follow || growth < 1) apply(sheet, inset, 'raise');
             else if (padding + growth >= inset - 1) apply(sheet, inset, 'grow');
             else {
                 staged = true;
@@ -146,7 +163,7 @@ export function useKeyboardFit(
             staged = false;
             sheet.toggleAttribute(FITTED, false);
             moveShield(sheet, 0, 'lower');
-            if (inHeight < 1) {
+            if (follow || inHeight < 1) {
                 apply(sheet, 0, 'lower');
 
                 return;
@@ -160,17 +177,18 @@ export function useKeyboardFit(
         const update = () => {
             const sheet = sheetRef.current;
 
-            if (
-                !sheet ||
-                sheet.dataset.dragging === 'true' ||
-                sheet.dataset.settling === 'true' ||
-                sheet.dataset.dismissing === 'true' ||
-                !window.matchMedia(MOBILE_QUERY).matches
-            )
-                return;
+            if (!sheet || !window.matchMedia(MOBILE_QUERY).matches) return;
             const raised =
                 isKeyboardUp(viewport) &&
                 sheet.contains(document.activeElement);
+
+            if (!raised && shieldRaised(sheet)) moveShield(sheet, 0, 'lower');
+            if (
+                sheet.dataset.dragging === 'true' ||
+                sheet.dataset.settling === 'true' ||
+                sheet.dataset.dismissing === 'true'
+            )
+                return;
             const wasRaised = sheet.hasAttribute(FITTED);
 
             if (!raised) {
@@ -223,7 +241,7 @@ export function useKeyboardFit(
             document.removeEventListener('pointercancel', afterRelease);
             if (fitted) clearFit(fitted);
         };
-    }, [active, sheetRef]);
+    }, [active, follow, sheetRef]);
 }
 
 export {
@@ -232,7 +250,3 @@ export {
     pendingSheetRise,
     settledClientHeight
 } from './pending';
-
-export { keyboardCover, keyboardTransition } from './motion';
-export { INSET } from './pending';
-export { clearShield, moveShield } from './shield';

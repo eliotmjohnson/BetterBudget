@@ -6,13 +6,29 @@ const SHIELD_MOTIONS = {
     adjust: `height 100ms ${SHIELD_CURVE}`
 };
 
+/**
+ * The white strip that belongs to `sheet`. It is a fixed layer beside the
+ * sheet rather than inside it, because the sheet clips its children to its
+ * own height: a short sheet grows more slowly than the keyboard rises, and a
+ * strip inside it could not reach above the sheet's top, so the dimmed page
+ * showed through the keyboard until the sheet caught up.
+ */
 function shieldOf(sheet: HTMLElement) {
-    return sheet.querySelector<HTMLElement>(`:scope > [${SHIELD}]`);
+    const id = sheet.dataset.keyboardShieldId;
+
+    return id
+        ? document.querySelector<HTMLElement>(`[${SHIELD}="${CSS.escape(id)}"]`)
+        : null;
+}
+
+/** Whether `sheet`'s white strip is currently covering anything. */
+export function shieldRaised(sheet: HTMLElement) {
+    return Number.parseFloat(shieldOf(sheet)?.style.height ?? '') > 0;
 }
 
 /**
- * Moves the white strip at the bottom of `sheet` to `cover`, the height the
- * keyboard covers, on the keyboard's own motion. The iOS keyboard is
+ * Moves the white strip at the bottom of the screen in front of `sheet` to
+ * `cover`, the height the keyboard covers, on the keyboard's own motion. The iOS keyboard is
  * translucent, and the sheet's inset cannot always keep content out from
  * under it: a sheet that grows eases its inset slower than the keyboard, and
  * one that reaches its `max-height` partway takes the rest from its body only

@@ -297,10 +297,22 @@
 .assistant-typing span:nth-child(3) {
     animation-delay: 0.3s;
 }
+.sheet-body:has(> .assistant-composer) {
+    --assistant-composer-block: calc(91px + env(safe-area-inset-bottom));
+    padding-bottom: 0;
+    overscroll-behavior-y: none;
+}
 .assistant-composer {
+    position: sticky;
+    z-index: 1;
+    bottom: 0;
     display: flex;
     align-items: flex-end;
     gap: 10px;
+    margin: 18px -18px 0;
+    padding: 12px 18px calc(16px + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--line);
+    background: white;
 }
 .assistant-composer textarea {
     min-width: 0;
@@ -343,56 +355,23 @@
 }
 @media (width < 760px) {
     .sheet-content:has([data-buddy-seat]) {
-        --assistant-status-overlap: 8px;
-        box-shadow:
-            0 0 0 0 #fff,
-            0 -22px 55px rgb(19 28 45 / 18%);
-    }
-    .sheet-content[data-keyboard-full]:has([data-buddy-seat]) {
-        border-radius: 0;
-        box-shadow:
-            0 calc(var(--assistant-status-overlap) - var(--safe-area-top)) 0 0
-                #fff,
-            0 -22px 55px rgb(19 28 45 / 18%);
-    }
-    .sheet-content:has([data-buddy-seat]) .sheet-handle {
-        transition:
-            height 440ms cubic-bezier(0.2, 1, 0.45, 1),
-            margin-bottom 440ms cubic-bezier(0.2, 1, 0.45, 1),
-            opacity 260ms ease;
-    }
-    .sheet-content:has([data-buddy-seat]) .sheet-header {
-        transition: margin-bottom 440ms cubic-bezier(0.2, 1, 0.45, 1);
+        --assistant-reserve: min(42dvh, 380px);
+        max-height: calc(
+            var(--viewport-height) - max(6px, var(--safe-area-top)) + 6px
+        );
+        padding-bottom: max(
+            0px,
+            var(--sheet-keyboard-inset, 0px) - env(safe-area-inset-bottom) -
+                13px
+        );
     }
     .sheet-content:has([data-buddy-seat]) .sheet-body {
-        transition: padding-bottom 440ms cubic-bezier(0.2, 1, 0.45, 1);
+        max-height: calc(
+            var(--assistant-reserve) + var(--assistant-composer-block)
+        );
     }
-    .sheet-content:has([data-buddy-seat]) .assistant-empty {
-        transition: row-gap 440ms cubic-bezier(0.2, 1, 0.45, 1);
-    }
-    .sheet-content[data-keyboard-open]:has([data-buddy-seat]) .sheet-handle {
-        height: 0;
-        margin-bottom: 0;
-        opacity: 0;
-    }
-    .sheet-content[data-keyboard-open]:has([data-buddy-seat]) .sheet-header {
-        margin-bottom: 10px;
-    }
-    .sheet-content[data-keyboard-open]:has([data-buddy-seat]) .sheet-body {
-        padding-bottom: 8px;
-    }
-    .sheet-content[data-keyboard-open] .assistant-thread {
-        min-height: 0;
-    }
-    .sheet-content[data-keyboard-open] .assistant-empty {
-        row-gap: 10px;
-    }
-    .sheet-content[data-keyboard-measuring]:has([data-buddy-seat])
-        :is(.sheet-handle, .sheet-header, .sheet-body, .assistant-empty) {
-        transition: none;
-    }
-    .sheet-content[data-keyboard-open]:has([data-buddy-seat]) .sheet-footer {
-        padding-bottom: 12px;
+    .sheet-content:has([data-buddy-seat]) .assistant-thread {
+        min-height: var(--assistant-reserve);
     }
     .sheet-content:has([data-buddy-seat])[data-state='closed'] {
         animation: sheet-out var(--sheet-dismiss-duration, 0.6s)
@@ -591,5 +570,11 @@
             [data-away]
         ) {
         animation-delay: 0s;
+    }
+}
+@media (min-width: 760px) {
+    .assistant-composer {
+        margin-inline: -22px;
+        padding: 12px 22px 18px;
     }
 }

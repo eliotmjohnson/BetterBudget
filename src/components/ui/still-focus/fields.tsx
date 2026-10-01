@@ -30,18 +30,24 @@ export function StillInput({
     return <input {...props} {...still} />;
 }
 
-/** The `<textarea>` counterpart of `StillInput`. */
+/**
+ * The `<textarea>` counterpart of `StillInput`. `reveal` false never scrolls
+ * its container to clear the keyboard, for a field that stays in view by
+ * itself, such as the Better Buddy composer stuck to the bottom of its body.
+ */
 export function StillTextarea({
     autoFocus,
     conceal,
+    reveal,
     onFocus,
     onTouchStart,
     onTouchEnd,
     ...props
-}: StillFieldProps<'textarea'>) {
+}: StillFieldProps<'textarea'> & { reveal?: boolean }) {
     const still = useStillField<HTMLTextAreaElement>({
         autoFocus,
         conceal,
+        reveal,
         onFocus,
         onTouchStart,
         onTouchEnd

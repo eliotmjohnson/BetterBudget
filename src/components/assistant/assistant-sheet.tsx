@@ -14,7 +14,7 @@ import {
 import { Sheet } from '@/components/ui/sheet';
 import { StillTextarea } from '@/components/ui/still-focus';
 import { BetterBuddyFigure } from './better-buddy-figure';
-import { useKeyboardLayout } from './keyboard-layout';
+import { stickToEnd } from './stick-to-end';
 import type { TranscriptEntry } from './use-assistant';
 
 const suggestions = [
@@ -77,18 +77,21 @@ export function AssistantSheet({
     onReset: () => void;
 }) {
     const [draft, setDraft] = useState('');
-
-    useKeyboardLayout(open);
     const endRef = useRef<HTMLDivElement>(null);
     const jumpToEnd = useCallback((node: HTMLDivElement | null) => {
         endRef.current = node;
         const body = node?.closest<HTMLElement>('.sheet-body');
 
-        if (body) body.scrollTop = body.scrollHeight;
+        if (!body) return;
+        body.scrollTop = body.scrollHeight;
+
+        return stickToEnd(body);
     }, []);
 
     useEffect(() => {
-        endRef.current?.scrollIntoView({ block: 'end', behavior: 'smooth' });
+        const body = endRef.current?.closest<HTMLElement>('.sheet-body');
+
+        body?.scrollTo({ top: body.scrollHeight, behavior: 'smooth' });
     }, [transcript.length, pending]);
 
     const submit = (text = draft) => {
@@ -115,8 +118,8 @@ export function AssistantSheet({
                 </span>
             }
             variant='raised-mobile'
+            followKeyboard
             restoreFocusRef={restoreFocusRef}
-            keyboardFit={false}
             headerAction={
                 transcript.length ? (
                     <button
@@ -127,33 +130,6 @@ export function AssistantSheet({
                         New chat
                     </button>
                 ) : null
-            }
-            footer={
-                <form
-                    className='assistant-composer'
-                    onSubmit={(event) => {
-                        event.preventDefault();
-                        submit();
-                    }}
-                >
-                    <StillTextarea
-                        aria-label='Message Better Buddy'
-                        rows={1}
-                        maxLength={2_000}
-                        placeholder='Ask about your budget…'
-                        value={draft}
-                        onChange={(event) => setDraft(event.target.value)}
-                        onKeyDown={handleKeyDown}
-                    />
-                    <button
-                        className='assistant-send'
-                        type='submit'
-                        disabled={pending || !draft.trim()}
-                        aria-label='Send'
-                    >
-                        <ArrowUp size={20} strokeWidth={2.2} />
-                    </button>
-                </form>
             }
         >
             <div className='assistant-thread'>
@@ -215,6 +191,32 @@ export function AssistantSheet({
                 </div>
                 <div ref={jumpToEnd} />
             </div>
+            <form
+                className='assistant-composer'
+                onSubmit={(event) => {
+                    event.preventDefault();
+                    submit();
+                }}
+            >
+                <StillTextarea
+                    aria-label='Message Better Buddy'
+                    reveal={false}
+                    rows={1}
+                    maxLength={2_000}
+                    placeholder='Ask about your budget…'
+                    value={draft}
+                    onChange={(event) => setDraft(event.target.value)}
+                    onKeyDown={handleKeyDown}
+                />
+                <button
+                    className='assistant-send'
+                    type='submit'
+                    disabled={pending || !draft.trim()}
+                    aria-label='Send'
+                >
+                    <ArrowUp size={20} strokeWidth={2.2} />
+                </button>
+            </form>
         </Sheet>
     );
 }
