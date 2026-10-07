@@ -195,6 +195,7 @@
 .assistant-thread {
     min-height: min(52dvh, 460px);
     display: flex;
+    flex: 1 0 auto;
     flex-direction: column;
     gap: 12px;
 }
@@ -235,6 +236,7 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
+    margin-top: auto;
 }
 .assistant-message {
     max-width: 86%;
@@ -298,7 +300,9 @@
     animation-delay: 0.3s;
 }
 .sheet-body:has(> .assistant-composer) {
-    --assistant-composer-block: calc(91px + env(safe-area-inset-bottom));
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
     padding-bottom: 0;
     overscroll-behavior-y: none;
 }
@@ -307,6 +311,7 @@
     z-index: 1;
     bottom: 0;
     display: flex;
+    flex: none;
     align-items: flex-end;
     gap: 10px;
     margin: 18px -18px 0;
@@ -354,8 +359,14 @@
     cursor: default;
 }
 @media (width < 760px) {
-    .sheet-content:has([data-buddy-seat]) {
+    .sheet-content[data-variant='raised-mobile']:has([data-buddy-seat]) {
         --assistant-reserve: min(42dvh, 380px);
+        --assistant-header-block: 95px;
+        --assistant-composer-block: calc(91px + env(safe-area-inset-bottom));
+        min-height: calc(
+            var(--assistant-header-block) + var(--assistant-reserve) +
+                var(--assistant-composer-block)
+        );
         max-height: calc(
             var(--viewport-height) - max(6px, var(--safe-area-top)) + 6px
         );
@@ -365,13 +376,8 @@
                 13px
         );
     }
-    .sheet-content:has([data-buddy-seat]) .sheet-body {
-        max-height: calc(
-            var(--assistant-reserve) + var(--assistant-composer-block)
-        );
-    }
     .sheet-content:has([data-buddy-seat]) .assistant-thread {
-        min-height: var(--assistant-reserve);
+        min-height: 0;
     }
     .sheet-content:has([data-buddy-seat])[data-state='closed'] {
         animation: sheet-out var(--sheet-dismiss-duration, 0.6s)

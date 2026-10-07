@@ -18,6 +18,38 @@ const months = [
     'Nov',
     'Dec'
 ];
+const CLICK_WAIT_MS = 500;
+
+/**
+ * Swallows the click that ends the press dismissing the picker, so a tap
+ * outside it only closes it, as an iOS popover does, rather than also
+ * activating whatever sits under the finger. It stands down at the next press,
+ * when the press turns into a scroll, or shortly after the finger lifts, so a
+ * press that produces no click never eats a later one.
+ */
+function swallowDismissingClick() {
+    let timer = 0;
+    const swallow = (event: MouseEvent) => {
+        event.preventDefault();
+        event.stopPropagation();
+        standDown();
+    };
+    const lifted = () => {
+        timer = window.setTimeout(standDown, CLICK_WAIT_MS);
+    };
+    const standDown = () => {
+        window.clearTimeout(timer);
+        document.removeEventListener('click', swallow, true);
+        document.removeEventListener('pointerup', lifted, true);
+        document.removeEventListener('pointercancel', standDown, true);
+        document.removeEventListener('pointerdown', standDown, true);
+    };
+
+    document.addEventListener('click', swallow, true);
+    document.addEventListener('pointerup', lifted, true);
+    document.addEventListener('pointercancel', standDown, true);
+    document.addEventListener('pointerdown', standDown, true);
+}
 
 function parts(monthKey: MonthKey) {
     const [year, month] = monthKey.split('-');
@@ -56,8 +88,10 @@ export function MonthPicker({
         if (!open) return;
 
         const dismiss = (event: PointerEvent) => {
-            if (!rootRef.current?.contains(event.target as Node))
-                setOpen(false);
+            if (rootRef.current?.contains(event.target as Node)) return;
+            event.preventDefault();
+            swallowDismissingClick();
+            setOpen(false);
         };
         const escape = (event: KeyboardEvent) => {
             if (event.key === 'Escape') {

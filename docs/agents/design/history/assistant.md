@@ -12,6 +12,19 @@ was revealed mid-turn.
 
 ## Keyboard fit
 
+### The capped body and the thread's reserve (until 6.0.4)
+
+Until 6.0.4 the reserve was the thread's `min-height` and the body was capped at
+the reserve plus the composer's block, so the sheet stayed the same height
+however long the conversation got and left room to rise when the keyboard
+opened. The user found two long replies scrolling inside that 380 px box
+needlessly small, and with the keyboard up the thread's reserve, with the
+messages at its top, left a large blank gap between the last message and the
+composer. `stickToEnd` also skipped a body whose content fit (`scrollTop > 0`),
+which kept it from gliding into that blank end. 6.0.4 moved the reserve to the
+sheet's `min-height`, uncapped the body, and anchored the messages to the
+composer.
+
 ### The section before it was trimmed
 
 The Keyboard fit section as it stood in 6.0.2, including the tuning that was

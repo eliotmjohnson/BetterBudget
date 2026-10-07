@@ -239,6 +239,14 @@ height. An offset from the picker button instead left it floating a few pixels
 below the header. Do not make the shell, the month switcher, or anything between
 them and the header positioned.
 
+A press outside the open picker only dismisses it: the press's `pointerdown` is
+prevented and `swallowDismissingClick` in `month-picker.tsx` swallows the click
+that ends it, in the capture phase on `document`, so the tap that closes the
+picker never also activates the row, tab, or button beneath it. The swallow
+stands down at the next press, when the press becomes a scroll
+(`pointercancel`), or 500 ms after the finger lifts, so a press that produces no
+click never eats a later one.
+
 `.app-content` is the vertical overscroll surface for every route, continues
 behind the floating glass bottom navigation, and must retain enough bottom
 padding/scroll padding to expose the final content above that navigation. The

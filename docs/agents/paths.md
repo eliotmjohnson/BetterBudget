@@ -152,7 +152,9 @@ moved, renamed, or takes on a new responsibility.
   until iOS has swapped to another keyboard), and `reveal.ts` with
   `scroll-room.ts` (the smooth scroll of the field's `data-still-scroller`
   container that clears the keyboard, after any transition moving it has
-  finished). `stand-in.ts` holds the shared stand-in state.
+  finished). `stand-in.ts` holds the shared stand-in state, and `press.ts`
+  (`focusKeepingPress`) the press handlers for a button that acts without taking
+  focus from the field, used by the operator bar and the chat's send button.
   `src/components/ui/on-screen-keyboard.ts` is the keyboard-up test it shares
   with `keyboard-fit/`. `docs/agents/design/budget-and-inputs.md` holds the
   contract.

@@ -355,14 +355,15 @@ scrolls from the window's `scroll` handler, and reading in the viewport's own
 handler could catch the page before that undo. Animation-frame callbacks run
 after every scroll handler in the same rendering update, so this adds no frame
 of lag. The input must never blur mid-expression, since blur commits a
-half-typed plan: keys prevent `pointerdown` and act on `touchend` with its
-default prevented, which stops iOS synthesizing the focus-moving click, while
-`onClick` covers VoiceOver and mouse activation; keys carry `tabIndex={-1}`. The
-bar lives outside any Radix dialog, so `sheet.tsx` and
-`navigation-detail/index.tsx` exempt `isCalculatorBarTarget` from
-outside-pointer dismissal, and it sets `pointer-events: auto` for the same
-reason as the toast (`sheets-and-menus.md`). Desktop has no bar; hardware keys
-`+ - * / x =` drive the same expression.
+half-typed plan: keys use `focusKeepingPress` (`still-focus/press.ts`), which
+prevents `pointerdown` and acts on `touchend` with its default prevented,
+stopping iOS synthesizing the focus-moving click, while `onClick` covers
+VoiceOver and mouse activation; a touch that travels more than 10 px is a drag
+and does not act. Keys carry `tabIndex={-1}`. The bar lives outside any Radix
+dialog, so `sheet.tsx` and `navigation-detail/index.tsx` exempt
+`isCalculatorBarTarget` from outside-pointer dismissal, and it sets
+`pointer-events: auto` for the same reason as the toast (`sheets-and-menus.md`).
+Desktop has no bar; hardware keys `+ - * / x =` drive the same expression.
 
 There is one bar for the whole app, mounted once in `providers.tsx`, never one
 per input. The focused `CurrencyInput` publishes its display state and handlers

@@ -4,7 +4,6 @@ const easeOutCubic = (t: number) => 1 - (1 - t) ** 3;
 
 function restsOnEnd(body: HTMLElement) {
     return (
-        body.scrollTop > 0 &&
         body.scrollTop >= body.scrollHeight - body.clientHeight - END_SLACK_PX
     );
 }
@@ -18,7 +17,7 @@ function restsOnEnd(body: HTMLElement) {
  * sheet's own 440 ms rise, re-reading the end each frame because the body is still
  * shrinking, so the newest message slides in behind the composer riding on
  * the keyboard. A touch on the body stops the glide. A body left scrolled up
- * the conversation, or one whose content fits, is left where it is, and
+ * the conversation is left where it is, and
  * nothing happens as it lengthens again, which the sheet's own keyboard fit
  * settles. Returns a function that stops it.
  */

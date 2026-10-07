@@ -218,26 +218,38 @@ non-drag close slides the chat out over 0.6 s on
 shared 0.45 s sheet exit, whose curve starts at full speed and read as abrupt
 with no finger motion behind it; the rules key off the seat with `:has()` in
 `assistant.css`, and a drag dismissal still sets its own matched exit. The
-composer uses a 16 px font so iOS does not zoom on focus.
+composer uses a 16 px font so iOS does not zoom on focus. The send button is a
+plain `type='button'` using `focusKeepingPress` (`budget-and-inputs.md`, under
+Operator bar), so sending keeps the composer focused and the keyboard up; a drag
+that starts on the button, such as scrolling the thread, does not send.
 
 ### Keyboard fit
 
 Below 760 px the chat is the standard raised sheet, pinned by its top edge like
 every other half sheet and sized to its content up to the screen height less the
 status bar plus 6 px, so with the keyboard up its top rises 6 px into the status
-bar. The thread reserves `--assistant-reserve`, `min(42dvh, 380px)`
-(`min(52dvh, 460px)` at 760 px and wider, lowered on phones at the user's
-request), so the chat opens roomy and does not grow with every reply, and the
-body is capped at that reserve plus the composer's block, so a long conversation
-scrolls inside it instead of opening the sheet to its full cap: it then has room
-to rise when the keyboard opens, as the other half sheets do.
+bar. The sheet's `min-height` is `--assistant-reserve`, `min(42dvh, 380px)`,
+plus the 95 px header block and the composer's block (91 px plus the bottom safe
+area), so the chat opens roomy and a short conversation does not grow it with
+every reply. Its selector names the `raised-mobile` variant so it outranks that
+variant's `min(310px, 52dvh)` minimum in `responsive-motion.css`, which loads
+later and otherwise wins on equal specificity. At 760 px and wider the thread
+itself keeps a `min(52dvh, 460px)` minimum instead. The body is uncapped, so a
+long conversation grows the sheet to its full height rather than scrolling
+inside a 380 px box, which the user found needlessly small. The body is a flex
+column that fills the sheet, the thread grows to fill the body above the
+composer, and the messages take `margin-top: auto`, so any spare room sits above
+them and the newest message always rests just over the composer. Because the
+reserve lives on the sheet, not the thread, the keyboard's inset (inside the
+sheet's border-box) takes up the reserve, and a short conversation stays snug
+against the composer with the keyboard up instead of leaving the reserve's empty
+space between the messages and the field.
 
 The composer is a `StillTextarea` (`budget-and-inputs.md`) inside `.sheet-body`,
 after the thread, with `position: sticky` at the body's bottom and the old
 footer's border, padding, and white background (the body drops its own bottom
-padding, and the body's cap adds the composer's 91 px plus the bottom safe area
-to the reserve). It must not be in the sheet's `footer`: with the keyboard up,
-iOS would not scroll the thread at all while the focused field sat outside the
+padding). It must not be in the sheet's `footer`: with the keyboard up, iOS
+would not scroll the thread at all while the focused field sat outside the
 scroll container (reproduced in the iOS Simulator). The body's
 `overscroll-behavior-y` is `none`, so it never rubber-bands: iOS bounces a
 scroll container's whole content, the stuck composer with it, and keeping the
@@ -268,8 +280,9 @@ over 360 ms, the keyboard's own length but on an ease-out of its own, quicker
 than the sheet's 440 ms rise, re-reading the end each frame while the body
 shrinks, rather than holding it at once, which moved the messages up as fast as
 the keyboard; the newest message slides in behind the composer, and a touch on
-the body stops the glide; a body scrolled up the conversation, or one whose
-content fits, is left alone, and nothing happens as the body lengthens again,
-which `useKeyboardFit` settles. The still-focus stand-in that parks the composer
-while the keyboard opens is the shared one, with the composer's own native focus
-otherwise unchanged.
+the body stops the glide; a body scrolled up the conversation is left alone (one
+whose content fits counts as resting on the end, so a conversation the keyboard
+pushes past the body's height still glides to its newest message), and nothing
+happens as the body lengthens again, which `useKeyboardFit` settles. The
+still-focus stand-in that parks the composer while the keyboard opens is the
+shared one, with the composer's own native focus otherwise unchanged.

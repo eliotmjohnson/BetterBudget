@@ -9,6 +9,7 @@ import {
     type ReactNode
 } from 'react';
 import { createPortal } from 'react-dom';
+import { focusKeepingPress } from '@/components/ui/still-focus';
 import type { MoneyOperator } from '@/domain/money-expression';
 import {
     currentCalculator,
@@ -40,22 +41,6 @@ export type OperatorBarFill = {
     label: string;
     tone?: 'over';
 };
-
-/**
- * Press handlers for a bar control that must act without taking focus from
- * the input: `pointerdown` is prevented, the touch acts on `touchend` with its
- * default prevented so iOS synthesizes no focus-moving click, and `onClick`
- * covers VoiceOver and mouse activation.
- */
-const pressHandlers = (action: () => void) => ({
-    onPointerDown: (event: { preventDefault: () => void }) =>
-        event.preventDefault(),
-    onTouchEnd: (event: { preventDefault: () => void }) => {
-        event.preventDefault();
-        action();
-    },
-    onClick: action
-});
 
 export const isCalculatorBarTarget = (target: EventTarget | null) =>
     target instanceof Element &&
@@ -224,7 +209,7 @@ export function CalculatorBar() {
                         type='button'
                         tabIndex={-1}
                         aria-label={fill.label}
-                        {...pressHandlers(onFill)}
+                        {...focusKeepingPress(onFill)}
                     >
                         <span className='calculator-bar-fill-caption'>
                             {fill.caption}
@@ -258,7 +243,7 @@ export function CalculatorBar() {
                                     : undefined
                             }
                             data-key={key}
-                            {...pressHandlers(() => onKey(key))}
+                            {...focusKeepingPress(() => onKey(key))}
                         >
                             {glyph}
                         </button>

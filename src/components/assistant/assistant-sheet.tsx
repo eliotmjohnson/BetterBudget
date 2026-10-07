@@ -12,7 +12,7 @@ import {
     type RefObject
 } from 'react';
 import { Sheet } from '@/components/ui/sheet';
-import { StillTextarea } from '@/components/ui/still-focus';
+import { focusKeepingPress, StillTextarea } from '@/components/ui/still-focus';
 import { BetterBuddyFigure } from './better-buddy-figure';
 import { stickToEnd } from './stick-to-end';
 import type { TranscriptEntry } from './use-assistant';
@@ -210,9 +210,10 @@ export function AssistantSheet({
                 />
                 <button
                     className='assistant-send'
-                    type='submit'
+                    type='button'
                     disabled={pending || !draft.trim()}
                     aria-label='Send'
+                    {...focusKeepingPress(() => submit())}
                 >
                     <ArrowUp size={20} strokeWidth={2.2} />
                 </button>
