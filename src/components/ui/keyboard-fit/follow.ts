@@ -9,23 +9,41 @@ const HEIGHT_MOTION = {
 } as const;
 
 /**
+ * Holds a sheet that follows the keyboard at the height it shows now, with
+ * its own `min-height` and `max-height` lifted until the fit is cleared, before
+ * anything that sizes it changes as it is fitted or unfitted, so that change
+ * eases with the keyboard instead of applying at once: the Better Buddy chat
+ * is both at least and at most its full height while it is fitted, and
+ * either limit outranks any height set on the sheet.
+ */
+export function holdHeight(sheet: HTMLElement) {
+    sheet.style.height = `${sheet.getBoundingClientRect().height}px`;
+    sheet.style.minHeight = '0px';
+    sheet.style.maxHeight = 'none';
+}
+
+/**
  * How tall `sheet` sizes itself with an inset of `inset`, read with its
- * transition and any set height out of the way. Its body's scroll position is
+ * transition and any set height or limits out of the way. Its body's scroll position is
  * put back afterwards, since a body measured longer clamps its scroll.
  */
 function naturalHeight(sheet: HTMLElement, inset: number) {
     const body = sheetBody(sheet);
     const scrolled = body?.scrollTop ?? 0;
-    const { transition, height } = sheet.style;
+    const { transition, height, minHeight, maxHeight } = sheet.style;
     const current = sheet.style.getPropertyValue(INSET);
 
     sheet.style.transition = 'none';
     sheet.style.removeProperty('height');
+    sheet.style.removeProperty('min-height');
+    sheet.style.removeProperty('max-height');
     sheet.style.setProperty(INSET, `${inset}px`);
     const measured = sheet.getBoundingClientRect().height;
 
     sheet.style.setProperty(INSET, current);
     sheet.style.height = height;
+    sheet.style.minHeight = minHeight;
+    sheet.style.maxHeight = maxHeight;
     void sheet.offsetHeight;
     sheet.style.transition = transition;
     if (body) body.scrollTop = scrolled;

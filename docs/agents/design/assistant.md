@@ -209,41 +209,68 @@ messages already present when the sheet opens are recorded at mount by
 `TranscriptMessages` and never replay; reopening at the latest message (a stable
 ref callback on the end marker sets the sheet body's `scrollTop` when the sheet
 mounts, instantly rather than smoothly), and the composer stuck to the bottom of
-the sheet body; a new message or the typing indicator smoothly scrolls the body
-to its very end (`scrollTo` its `scrollHeight`), not the end marker into view,
-which left the newest message under the stuck composer; closing the sheet
-returns focus to the launcher. Below 760 px an overlay tap, Escape, or any other
-non-drag close slides the chat out over 0.6 s on
-`cubic-bezier(0.45, 0, 0.25, 1)` with the overlay fading in step, instead of the
-shared 0.45 s sheet exit, whose curve starts at full speed and read as abrupt
-with no finger motion behind it; the rules key off the seat with `:has()` in
-`assistant.css`, and a drag dismissal still sets its own matched exit. The
-composer uses a 16 px font so iOS does not zoom on focus. The send button is a
-plain `type='button'` using `focusKeepingPress` (`budget-and-inputs.md`, under
-Operator bar), so sending keeps the composer focused and the keyboard up; a drag
-that starts on the button, such as scrolling the thread, does not send.
+the sheet body. A new message or the typing indicator showing or hiding is
+handled by `MessageGlide` (`message-glide.tsx`), the message list: it puts the
+body on its very end at once (its `scrollHeight`, not the end marker into view,
+which left the newest message under the stuck composer), then slides the
+messages from where they sat to where that leaves them, over 440 ms on the
+keyboard's `cubic-bezier(0.2, 1, 0.45, 1)` (a `transform` Web Animation on the
+list, from the measured offset to none), so they rise the same way whether the
+conversation fits, grows the sheet, or scrolls (history: Message arrival). When
+the sheet grows, its height eases from the old size over the same motion while
+the body stays on its end, so its top rises with the messages; a sheet whose
+height keyboard fit has set in pixels is left alone. It is a class component
+because `getSnapshotBeforeUpdate` is the only way to read where the messages sat
+before React committed the change. Do not bring back a smooth scroll alongside
+it: the slide's offset adds scroll room below the list, so a scroll to the end
+would chase it and move the messages twice. Reduced motion keeps the jump to the
+end and skips both animations. Closing the sheet returns focus to the launcher.
+Below 760 px an overlay tap, Escape, or any other non-drag close slides the chat
+out over 0.6 s on `cubic-bezier(0.45, 0, 0.25, 1)` with the overlay fading in
+step, instead of the shared 0.45 s sheet exit, whose curve starts at full speed
+and read as abrupt with no finger motion behind it; the rules key off the seat
+with `:has()` in `assistant.css`, and a drag dismissal still sets its own
+matched exit. The composer uses a 16 px font so iOS does not zoom on focus. The
+send button is a plain `type='button'` using `focusKeepingPress`
+(`budget-and-inputs.md`, under Operator bar), so sending keeps the composer
+focused and the keyboard up; a drag that starts on the button, such as scrolling
+the thread, does not send.
 
 ### Keyboard fit
 
 Below 760 px the chat is the standard raised sheet, pinned by its top edge like
-every other half sheet and sized to its content up to the screen height less the
-status bar plus 6 px, so with the keyboard up its top rises 6 px into the status
-bar. The sheet's `min-height` is `--assistant-reserve`, `min(42dvh, 380px)`,
-plus the 95 px header block and the composer's block (91 px plus the bottom safe
-area), so the chat opens roomy and a short conversation does not grow it with
-every reply. Its selector names the `raised-mobile` variant so it outranks that
-variant's `min(310px, 52dvh)` minimum in `responsive-motion.css`, which loads
-later and otherwise wins on equal specificity. At 760 px and wider the thread
-itself keeps a `min(52dvh, 460px)` minimum instead. The body is uncapped, so a
-long conversation grows the sheet to its full height rather than scrolling
-inside a 380 px box, which the user found needlessly small. The body is a flex
-column that fills the sheet, the thread grows to fill the body above the
-composer, and the messages take `margin-top: auto`, so any spare room sits above
-them and the newest message always rests just over the composer. Because the
-reserve lives on the sheet, not the thread, the keyboard's inset (inside the
-sheet's border-box) takes up the reserve, and a short conversation stays snug
-against the composer with the keyboard up instead of leaving the reserve's empty
-space between the messages and the field.
+every other half sheet. With the keyboard down it is sized to its content up to
+108 px below the mobile header bar, 80 px shorter than the `capped-mobile` Add
+transaction sheet's 28 px, so the month header and the top of the page stay in
+view however long the conversation (history: The focused height). While the
+composer has focus with the keyboard up (the sheet carries `data-keyboard-fit`),
+its `min-height` and `max-height` are both its full height, the screen height
+less the status bar plus 6 px (`--assistant-full-height`), so the focused chat
+always opens all the way, however short the conversation, and its top rises 6 px
+into the status bar. Just before the attribute is set, `holdHeight`
+(`keyboard-fit/follow.ts`) holds the sheet at its current height in pixels with
+an inline `min-height: 0` and `max-height: none`, because either limit outranks
+a set height (history: The focused height). `followKeyboard` then measures the
+sheet with the attribute set and the hold lifted, so the rise eases to full
+height on the keyboard's motion; the attribute is removed before the lowering
+measure, so the sheet eases back to its content size, and the hold is cleared
+with the rest of the fit. The sheet's `min-height` is `--assistant-reserve`,
+`min(42dvh, 380px)`, plus the 95 px header block and the composer's block (91 px
+plus the bottom safe area), so the chat opens roomy and a short conversation
+does not grow it with every reply. Its selector names the `raised-mobile`
+variant so it outranks that variant's `min(310px, 52dvh)` minimum in
+`responsive-motion.css`, which loads later and otherwise wins on equal
+specificity. At 760 px and wider the thread itself keeps a `min(52dvh, 460px)`
+minimum instead. The body is uncapped, so a long conversation grows the sheet to
+its cap rather than scrolling inside a 380 px box, which the user found
+needlessly small. The body is a flex column that fills the sheet, the thread
+grows to fill the body above the composer, and the messages take
+`margin-top: auto`, so any spare room sits above them and the newest message
+always rests just over the composer. Because the reserve lives on the sheet, not
+the thread, the keyboard's inset (inside the sheet's border-box) takes up the
+reserve, and a short conversation stays snug against the composer with the
+keyboard up instead of leaving the reserve's empty space between the messages
+and the field.
 
 The composer is a `StillTextarea` (`budget-and-inputs.md`) inside `.sheet-body`,
 after the thread, with `position: sticky` at the body's bottom and the old

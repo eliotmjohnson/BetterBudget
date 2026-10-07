@@ -12,6 +12,32 @@ was revealed mid-turn.
 
 ## Keyboard fit
 
+### Message arrival (until 6.0.5)
+
+Until 6.0.5 a new message or the typing indicator smoothly scrolled the body to
+its end (`scrollTo` its `scrollHeight`). That only moved a body that scrolled,
+so with the keyboard up the messages slid up, but with the keyboard down a short
+conversation grows the content-sized sheet, and it grew in one frame, its top
+and the older messages snapping up by the new message's height; the messages
+also jumped when the conversation fit with room to spare. `MessageGlide`
+replaced it. A smooth scroll must not run beside the glide: the list's
+`translateY` adds scroll room below it, so a scroll to the end would chase that
+room and move the messages twice.
+
+### The focused height (6.0.5)
+
+In 6.0.5 the user asked for the chat to open to its full height whenever the
+composer is focused. The first build set the full-height `min-height` under
+`data-keyboard-fit` alone; a screen recording showed the sheet at its resting
+height at 1.52 s and at the status bar at 1.55 s, one frame later, with the
+keyboard barely started, because a `min-height` outranks the pixel height
+`followKeyboard` eases. `holdHeight` fixed it. The same release capped the
+keyboard-down chat: content-sized up to full height, it grew all the way up
+without the keyboard, which the user found too much; the `capped-mobile` cap (28
+px below the header bar) was still too tall, so it stops 80 px lower. That cap
+made the hold lift `max-height` too, or the sheet would snap from full height to
+the cap as the keyboard closed.
+
 ### The capped body and the thread's reserve (until 6.0.4)
 
 Until 6.0.4 the reserve was the thread's `min-height` and the body was capped at

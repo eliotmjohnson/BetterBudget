@@ -7,7 +7,7 @@ import {
     keyboardTransition,
     type KeyboardMotion
 } from './motion';
-import { followKeyboard } from './follow';
+import { followKeyboard, holdHeight } from './follow';
 import { FITTED, INSET, insetInHeight, sheetGrowth } from './pending';
 import { settleBodyScroll, sheetBody } from './scroll-settle';
 import { clearShield, moveShield, shieldRaised } from './shield';
@@ -59,6 +59,8 @@ function clearFit(sheet: HTMLElement) {
     sheet.style.removeProperty('transition');
     sheet.style.removeProperty(INSET);
     sheet.style.removeProperty('height');
+    sheet.style.removeProperty('min-height');
+    sheet.style.removeProperty('max-height');
     clearShield(sheet);
 }
 
@@ -153,6 +155,7 @@ export function useKeyboardFit(
                 getComputedStyle(sheet).paddingBottom
             );
 
+            if (follow) holdHeight(sheet);
             sheet.toggleAttribute(FITTED, true);
             moveShield(sheet, inset, 'raise');
             if (follow || growth < 1) apply(sheet, inset, 'raise');

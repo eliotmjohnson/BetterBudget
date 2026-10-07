@@ -4,8 +4,6 @@ import { ArrowUp, RotateCcw } from 'lucide-react';
 import {
     Fragment,
     useCallback,
-    useEffect,
-    useRef,
     useState,
     type KeyboardEvent,
     type ReactNode,
@@ -14,6 +12,7 @@ import {
 import { Sheet } from '@/components/ui/sheet';
 import { focusKeepingPress, StillTextarea } from '@/components/ui/still-focus';
 import { BetterBuddyFigure } from './better-buddy-figure';
+import { MessageGlide } from './message-glide';
 import { stickToEnd } from './stick-to-end';
 import type { TranscriptEntry } from './use-assistant';
 
@@ -77,9 +76,7 @@ export function AssistantSheet({
     onReset: () => void;
 }) {
     const [draft, setDraft] = useState('');
-    const endRef = useRef<HTMLDivElement>(null);
     const jumpToEnd = useCallback((node: HTMLDivElement | null) => {
-        endRef.current = node;
         const body = node?.closest<HTMLElement>('.sheet-body');
 
         if (!body) return;
@@ -87,13 +84,6 @@ export function AssistantSheet({
 
         return stickToEnd(body);
     }, []);
-
-    useEffect(() => {
-        const body = endRef.current?.closest<HTMLElement>('.sheet-body');
-
-        body?.scrollTo({ top: body.scrollHeight, behavior: 'smooth' });
-    }, [transcript.length, pending]);
-
     const submit = (text = draft) => {
         if (!text.trim() || pending) return;
         onSend(text);
@@ -156,11 +146,7 @@ export function AssistantSheet({
                         </div>
                     </div>
                 ) : null}
-                <div
-                    className='assistant-messages'
-                    role='log'
-                    aria-live='polite'
-                >
+                <MessageGlide trigger={`${transcript.length}:${pending}`}>
                     <TranscriptMessages
                         transcript={transcript}
                         retryAction={
@@ -188,7 +174,7 @@ export function AssistantSheet({
                             <span />
                         </p>
                     ) : null}
-                </div>
+                </MessageGlide>
                 <div ref={jumpToEnd} />
             </div>
             <form

@@ -96,12 +96,16 @@ are already pinned to the top.
 A sheet whose focused field rides on the keyboard passes `followKeyboard`, which
 raises the whole inset on the keyboard's `raise` curve instead of staging growth
 and body: the Better Buddy chat (`assistant.md`) and Move money, a content-sized
-sheet that reaches its `max-height` partway up the number pad. While a following
-sheet is fitted its height is set in pixels, so `inSetHeightSheet` counts it as
-a set-height sheet and a reveal's scroll-room loan is applied at once rather
-than eased in as extra height. Its height transition also counts as keyboard-fit
-motion (`isKeyboardFitMotion`), so the reveal scrolls the Amount field alongside
-the rise instead of waiting the 440 ms for the height to settle.
+sheet that reaches its `max-height` partway up the number pad. A following sheet
+is held at its current height, with an inline `min-height: 0`, just before it is
+marked fitted (`holdHeight`), so CSS that resizes a fitted sheet, such as the
+chat's full height while fitted, eases with the keyboard rather than snapping;
+the hold also lifts `max-height` (`none`) until the fit is cleared. While a
+following sheet is fitted its height is set in pixels, so `inSetHeightSheet`
+counts it as a set-height sheet and a reveal's scroll-room loan is applied at
+once rather than eased in as extra height. Its height transition also counts as
+keyboard-fit motion (`isKeyboardFitMotion`), so the reveal scrolls the Amount
+field alongside the rise instead of waiting the 440 ms for the height to settle.
 
 A sheet's focused field must sit inside its `.sheet-body`, never in its
 `footer`: with a field in the footer focused and the keyboard up, iOS would not

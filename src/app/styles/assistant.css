@@ -363,18 +363,27 @@
         --assistant-reserve: min(42dvh, 380px);
         --assistant-header-block: 95px;
         --assistant-composer-block: calc(91px + env(safe-area-inset-bottom));
+        --assistant-full-height: calc(
+            var(--viewport-height) - max(6px, var(--safe-area-top)) + 6px
+        );
         min-height: calc(
             var(--assistant-header-block) + var(--assistant-reserve) +
                 var(--assistant-composer-block)
         );
         max-height: calc(
-            var(--viewport-height) - max(6px, var(--safe-area-top)) + 6px
+            var(--viewport-height) - max(6px, var(--safe-area-top)) - 157px
         );
         padding-bottom: max(
             0px,
             var(--sheet-keyboard-inset, 0px) - env(safe-area-inset-bottom) -
                 13px
         );
+    }
+    .sheet-content[data-variant='raised-mobile'][data-keyboard-fit]:has(
+            [data-buddy-seat]
+        ) {
+        min-height: var(--assistant-full-height);
+        max-height: var(--assistant-full-height);
     }
     .sheet-content:has([data-buddy-seat]) .assistant-thread {
         min-height: 0;

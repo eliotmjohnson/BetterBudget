@@ -120,12 +120,13 @@ moved, renamed, or takes on a new responsibility.
   `src/app/styles/assistant-ship.css`), `better-buddy.png` the transparent 256
   px robot icon cut from the approved artwork, `better-buddy-figure.tsx` the
   floating robot with its gradient halo and floor shadow, `assistant-sheet.tsx`
-  the chat sheet, `stick-to-end.ts` the thread's hold on its latest message as
-  the keyboard shortens the body (the chat otherwise makes room for the keyboard
-  through the shared `useKeyboardFit`, and its composer is a `StillTextarea`
-  with `reveal={false}` stuck to the bottom of the sheet body, never in the
-  footer), and `use-assistant.ts` the in-memory conversation and snapshot
-  invalidation. Styles live in `src/app/styles/assistant.css`.
+  the chat sheet, `message-glide.tsx` its message list, which slides the
+  messages into place as new ones arrive, `stick-to-end.ts` the thread's hold on
+  its latest message as the keyboard shortens the body (the chat otherwise makes
+  room for the keyboard through the shared `useKeyboardFit`, and its composer is
+  a `StillTextarea` with `reveal={false}` stuck to the bottom of the sheet body,
+  never in the footer), and `use-assistant.ts` the in-memory conversation and
+  snapshot invalidation. Styles live in `src/app/styles/assistant.css`.
   `src/components/settings/settings-assistant-section.tsx` is the Settings
   switch.
 - `src/components/ui/navigation-detail/` — mobile push navigation, fixed detail
