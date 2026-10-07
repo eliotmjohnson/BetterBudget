@@ -327,7 +327,7 @@ export function BudgetView({
                                                 selectedCategory,
                                                 item
                                             ) =>
-                                                editor.setDeleteItemTarget({
+                                                editor.openItemDelete({
                                                     category: selectedCategory,
                                                     item
                                                 })

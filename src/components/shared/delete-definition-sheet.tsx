@@ -65,7 +65,8 @@ export function DeleteDefinitionSheet({
     excludedCategoryId,
     pending,
     layer = 'base',
-    onConfirm
+    onConfirm,
+    onExitComplete
 }: {
     open: boolean;
     onOpenChange: (open: boolean) => void;
@@ -76,6 +77,7 @@ export function DeleteDefinitionSheet({
     pending: boolean;
     layer?: 'base' | 'nested';
     onConfirm: (reassignment: Reassignment | undefined) => void;
+    onExitComplete?: () => void;
 }) {
     const [destinationItemId, setDestinationItemId] = useState('');
     const [movePlan, setMovePlan] = useState(true);
@@ -114,6 +116,7 @@ export function DeleteDefinitionSheet({
             onExitComplete={() => {
                 setDestinationItemId('');
                 setMovePlan(true);
+                onExitComplete?.();
             }}
             title={`Delete ${sourceLabel}?`}
             layer={layer}

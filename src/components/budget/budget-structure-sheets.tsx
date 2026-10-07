@@ -197,10 +197,9 @@ export function BudgetStructureSheets({
                 />
             </Sheet>
             <DeleteDefinitionSheet
-                open={editor.deleteItemTarget !== null}
-                onOpenChange={(open) => {
-                    if (!open) editor.setDeleteItemTarget(null);
-                }}
+                open={editor.deleteItemOpen}
+                onOpenChange={editor.setDeleteItemOpen}
+                onExitComplete={() => editor.setDeleteItemTarget(null)}
                 snapshot={snapshot}
                 sourceLabel={editor.deleteItemTarget?.item.name ?? 'this item'}
                 sourceItems={

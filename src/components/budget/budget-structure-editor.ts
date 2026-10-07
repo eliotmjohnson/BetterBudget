@@ -49,12 +49,17 @@ export function useBudgetStructureEditor(
     const [categoryTone, setCategoryTone] = useState<CategoryTone>('blue');
     const [deleteItemTarget, setDeleteItemTarget] =
         useState<DeleteItemTarget | null>(null);
+    const [deleteItemOpen, setDeleteItemOpen] = useState(false);
     const [newName, setNewName] = useState('');
     const [newCategoryIcon, setNewCategoryIcon] =
         useState<CategoryIconValue>('sparkles');
     const [newCategoryTone, setNewCategoryTone] =
         useState<CategoryTone>('blue');
     const [newPlanned, setNewPlanned] = useState('');
+    const openItemDelete = (target: DeleteItemTarget) => {
+        setDeleteItemTarget(target);
+        setDeleteItemOpen(true);
+    };
     const openCategoryCreator = () => {
         setNewName('');
         setNewCategoryIcon('sparkles');
@@ -130,7 +135,7 @@ export function useBudgetStructureEditor(
         editedCategory,
         deleteItemTarget,
         onCategoryDeleted: () => setEditedCategory(null),
-        onItemDeleted: () => setDeleteItemTarget(null),
+        onItemDeleted: () => setDeleteItemOpen(false),
         setCategoryDeleteState
     });
 
@@ -151,6 +156,9 @@ export function useBudgetStructureEditor(
         setCategoryTone,
         deleteItemTarget,
         setDeleteItemTarget,
+        deleteItemOpen,
+        setDeleteItemOpen,
+        openItemDelete,
         newName,
         setNewName,
         newCategoryIcon,
