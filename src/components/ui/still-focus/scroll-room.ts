@@ -1,4 +1,7 @@
-import { keyboardFitSettled } from '@/components/ui/keyboard-fit';
+import {
+    inSetHeightSheet,
+    keyboardFitSettled
+} from '@/components/ui/keyboard-fit';
 import { isKeyboardUp } from '@/components/ui/on-screen-keyboard';
 
 const LEND_MOTION = 'padding-bottom 360ms cubic-bezier(0.2, 1, 0.45, 1)';
@@ -40,10 +43,14 @@ function trimOnceSettled(scroller: HTMLElement) {
 /**
  * Whether `scroller` is as tall as its content, as a sheet body is while its
  * sheet sizes to fit, so padding its end makes it, and the sheet, taller
- * rather than giving it room to scroll.
+ * rather than giving it room to scroll. A body whose content just fits a
+ * sheet of a set height is not: its padding is scroll room.
  */
 function sizesToContent(scroller: HTMLElement) {
-    return scroller.scrollHeight - scroller.clientHeight <= 1;
+    return (
+        scroller.scrollHeight - scroller.clientHeight <= 1 &&
+        !inSetHeightSheet(scroller)
+    );
 }
 
 /**

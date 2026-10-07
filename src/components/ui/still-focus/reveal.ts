@@ -1,7 +1,8 @@
 import type { StillField } from './field';
 import {
     isKeyboardFitMotion,
-    pendingSheetRise
+    pendingSheetRise,
+    settledClientHeight
 } from '@/components/ui/keyboard-fit';
 import { isKeyboardUp } from '@/components/ui/on-screen-keyboard';
 import { lendScrollRoom } from './scroll-room';
@@ -61,6 +62,21 @@ function topOverlap(field: HTMLElement, scroller: HTMLElement) {
 }
 
 /**
+ * Where `scroller`'s visible part will end once a sheet around it has
+ * finished fitting the keyboard, on the same footing as the field, which
+ * rises with the sheet: a sheet's footer, such as the allocation picker's
+ * **Done** button, stays above the keyboard and ends the body there, above the line
+ * the keyboard and calculator bar draw.
+ */
+function settledBottom(scroller: HTMLElement) {
+    return (
+        scroller.getBoundingClientRect().top +
+        scroller.clientTop +
+        settledClientHeight(scroller)
+    );
+}
+
+/**
  * The transitions running on `element` or any ancestor, such as a pushed
  * detail sliding in, since a field measured while one runs would be scrolled
  * for where it was, not where it ends. A sheet's keyboard inset is left out:
@@ -88,7 +104,9 @@ function movingAncestors(element: HTMLElement) {
 /**
  * Once the on-screen keyboard reports its size, smoothly scrolls `scroller`
  * just far enough that the focused field clears the keyboard and, for a
- * `calculator` field, the calculator bar docked above it, and that the next
+ * `calculator` field, the calculator bar docked above it, or the end of the
+ * scroller itself where that comes first, such as above a sheet's footer, and
+ * that the next
  * field's center is not left under the bar, where the keyboard's next arrow
  * would skip it. A field partly hidden at the top instead, such as under a
  * sheet's title, is scrolled down just clear of the scroller's covered top
@@ -139,7 +157,9 @@ export function revealAboveKeyboard(
             rise;
         const fieldOverlap = Math.max(
             0,
-            shown.getBoundingClientRect().bottom + FIELD_CLEARANCE_PX - barTop
+            shown.getBoundingClientRect().bottom +
+                FIELD_CLEARANCE_PX -
+                Math.min(barTop, settledBottom(scroller))
         );
         const overlap = calculator
             ? Math.max(

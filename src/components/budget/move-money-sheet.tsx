@@ -186,21 +186,20 @@ export function MoveMoneySheet({
             onOpenChange={onOpenChange}
             onExitComplete={onExitComplete}
             title='Move money'
-            variant='tall-mobile'
-            footer={
+            followKeyboard
+            headerAction={
                 <button
-                    className='primary-button primary-button--wide'
+                    className='sheet-header-submit'
                     type='button'
                     disabled={!canMove}
                     onClick={submit}
                 >
-                    {amountCents > 0n ? `Move ${money(amount)}` : 'Move'}
+                    Move
                 </button>
             }
-        >
-            <div className='form-grid'>
+            headerAccessory={
                 <div
-                    className='segmented'
+                    className='segmented segmented--compact'
                     data-segment={mode === 'plan' ? 'first' : 'second'}
                     aria-label='How to move money'
                 >
@@ -222,6 +221,9 @@ export function MoveMoneySheet({
                         Remaining
                     </button>
                 </div>
+            }
+        >
+            <div className='form-grid'>
                 <p className='confirmation-copy'>{modeCopy[mode]}</p>
                 <div className='move-money-route'>
                     <div className='field'>

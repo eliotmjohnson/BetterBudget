@@ -1,13 +1,25 @@
 export const FITTED = 'data-keyboard-fit';
 export const INSET = '--sheet-keyboard-inset';
 const INSET_PROPERTY = 'padding-bottom';
-const FIXED_HEIGHT_VARIANTS = new Set(['tall-mobile', 'full-screen-mobile']);
+const FIXED_HEIGHT_VARIANTS = new Set(['full-screen-mobile']);
 
-/** Whether `animation` is a sheet's keyboard inset easing in or out. */
+/**
+ * Whether `animation` is a sheet's keyboard inset easing in or out, or the
+ * height a sheet following the keyboard eases alongside it
+ * (`followKeyboard`).
+ */
 export function isKeyboardFitMotion(animation: Animation) {
+    if (!(animation instanceof CSSTransition)) return false;
+    if (animation.transitionProperty === INSET_PROPERTY) return true;
+    const target =
+        animation.effect instanceof KeyframeEffect
+            ? animation.effect.target
+            : null;
+
     return (
-        animation instanceof CSSTransition &&
-        animation.transitionProperty === INSET_PROPERTY
+        animation.transitionProperty === 'height' &&
+        target instanceof HTMLElement &&
+        target.style.getPropertyValue(INSET) !== ''
     );
 }
 
@@ -29,6 +41,23 @@ export function keyboardFitSettled(element: HTMLElement) {
     return Promise.allSettled(moving);
 }
 
+/**
+ * Whether `element` sits in a sheet whose height is set rather than taken
+ * from its content, a `full-screen-mobile` sheet or one following the
+ * keyboard, whose height is set in pixels while it does (`followKeyboard`),
+ * so padding its body's end gives the body room to scroll instead of making
+ * it taller.
+ */
+export function inSetHeightSheet(element: HTMLElement) {
+    const sheet = element.closest<HTMLElement>('.sheet-content');
+
+    return (
+        sheet !== null &&
+        (FIXED_HEIGHT_VARIANTS.has(sheet.dataset.variant ?? '') ||
+            sheet.style.height !== '')
+    );
+}
+
 function insetSheet(body: HTMLElement) {
     for (
         let node = body.parentElement;
@@ -46,7 +75,7 @@ function insetSheet(body: HTMLElement) {
  * much taller its body will. A content-sized sheet ends as tall as its header
  * and footer, the body's full content, and the target inset, up to its own
  * `max-height`, so it changes height by the inset and keeps its body's. A
- * sheet at its cap, or a `tall-mobile` or `full-screen-mobile` sheet, whose
+ * sheet at its cap, or a `full-screen-mobile` sheet, whose
  * height is set rather than taken from its content, keeps its own height and
  * its body gives or takes the inset instead. Zero for a container outside
  * such a sheet.

@@ -257,6 +257,7 @@ export function useKeyboardFit(
 }
 
 export {
+    inSetHeightSheet,
     isKeyboardFitMotion,
     keyboardFitSettled,
     pendingSheetRise,
