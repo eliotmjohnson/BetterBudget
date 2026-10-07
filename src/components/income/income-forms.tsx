@@ -31,6 +31,17 @@ export function AddIncomeSource({
     const [expected, setExpected] = useState('');
     const [icon, setIcon] = useState<IncomeIconValue>('wallet');
     const [tone, setTone] = useState<CategoryTone>('mint');
+    const [openedWith, setOpenedWith] = useState(open);
+
+    if (open !== openedWith) {
+        setOpenedWith(open);
+        if (open) {
+            setName('');
+            setExpected('');
+            setIcon('wallet');
+            setTone('mint');
+        }
+    }
     const submit = () => {
         const accepted = mutate({
             type: 'addIncomePlan',
@@ -42,12 +53,7 @@ export function AddIncomeSource({
             expectedCents: expected || '0'
         });
 
-        if (!accepted) return;
-        onOpenChange(false);
-        setName('');
-        setExpected('');
-        setIcon('wallet');
-        setTone('mint');
+        if (accepted) onOpenChange(false);
     };
 
     return (
@@ -126,6 +132,11 @@ export function RecordIncome({
     if (plan !== previousPlan) {
         setPreviousPlan(plan);
         if (plan) setRenderedPlan(plan);
+        if (plan && plan.id !== previousPlan?.id) {
+            setAmount('');
+            setDate(defaultDateForMonth(snapshot.monthKey));
+            setNote('');
+        }
     }
 
     if (!renderedPlan) return null;
@@ -140,10 +151,7 @@ export function RecordIncome({
             note: note || undefined
         });
 
-        if (!accepted) return;
-        onOpenChange(false);
-        setAmount('');
-        setNote('');
+        if (accepted) onOpenChange(false);
     };
 
     return (

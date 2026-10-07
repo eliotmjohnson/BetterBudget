@@ -85,8 +85,6 @@ export function SettingsView({
             return;
         }
         setPasswordOpen(false);
-        setCurrentPassword('');
-        setNewPassword('');
         onMessage('Password changed. Other sessions were signed out.');
     };
 
@@ -201,7 +199,11 @@ export function SettingsView({
                 <button
                     className='settings-row'
                     type='button'
-                    onClick={() => setPasswordOpen(true)}
+                    onClick={() => {
+                        setCurrentPassword('');
+                        setNewPassword('');
+                        setPasswordOpen(true);
+                    }}
                 >
                     <KeyRound size={20} />
                     <span>

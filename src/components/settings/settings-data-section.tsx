@@ -163,7 +163,6 @@ export function SettingsDataSection({
             );
             if (!result?.ok) return;
             setImportOpen(false);
-            setFile(null);
             await queryClient.invalidateQueries({
                 queryKey: ['budget-snapshot']
             });
@@ -200,7 +199,11 @@ export function SettingsDataSection({
                 <button
                     className='settings-row'
                     type='button'
-                    onClick={() => setImportOpen(true)}
+                    onClick={() => {
+                        setFile(null);
+                        setMode('merge');
+                        setImportOpen(true);
+                    }}
                 >
                     <Upload size={20} />
                     <span>
@@ -212,10 +215,7 @@ export function SettingsDataSection({
             </div>
             <Sheet
                 open={importOpen}
-                onOpenChange={(open) => {
-                    setImportOpen(open);
-                    if (!open) setFile(null);
-                }}
+                onOpenChange={setImportOpen}
                 title='Import backup'
             >
                 <div className='form-grid'>
