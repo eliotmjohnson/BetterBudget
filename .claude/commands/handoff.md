@@ -60,7 +60,8 @@ and apply a single Semantic Versioning bump:
   data-model additions.
 - **Major** — incompatible API, data, authentication, deployment, or workflow
   changes requiring migration. A major release must also add a new version
-  section to both `README.md` and `AGENTS.md`.
+  section to both `README.md` and `docs/agents/releases.md`, and its
+  load-bearing rules to **Release guardrails** in `AGENTS.md`.
 
 Take the highest bump the change set requires, once. Skip the bump entirely for
 read-only investigation or changes limited to documentation, comments,
@@ -81,7 +82,7 @@ If this change set altered workflows, environment variables, architecture,
 commands, or product behavior, update `README.md`, `AGENTS.md`, or the relevant
 `docs/agents/` reference in the same change set — whichever one actually owns
 the behavior, rather than restating it in several. Moving or renaming a source
-file counts: `AGENTS.md` names specific paths, and the `README.md` directory
+file counts: `docs/agents/paths.md` names specific paths, and the `README.md` directory
 tree lists every component folder. State explicitly whether documentation
 needed updating.
 

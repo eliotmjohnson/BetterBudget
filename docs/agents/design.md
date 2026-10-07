@@ -3,8 +3,8 @@
 Read this before changing layout, motion, gestures, sheets, swipes, reordering,
 navigation-detail behavior, or any other interaction contract. It holds the
 palette, reference viewports, and desktop layout; each interaction contract
-lives in one topic file under `docs/agents/design/`. Read only the topic you
-are changing.
+lives in one topic file under `docs/agents/design/`. Read only the topic you are
+changing.
 
 `AGENTS.md` owns the standing rule against replacing the visual language. This
 file owns the palette and the reference viewports, and indexes the interaction
@@ -21,6 +21,14 @@ contracts built on them.
 When a contract changes, update the topic file that owns it. Add a new topic
 file, and a row here, only when a new area does not fit an existing one.
 
+Each topic file states the current contract and the short reason behind each
+rule. The evidence behind those rules (screen recordings, Simulator probes,
+measurements, and builds that were tried and replaced) lives in the matching
+file under `docs/agents/design/history/`, so a topic file stays cheap to read.
+When a change supersedes a rule or is settled by an investigation, put the
+narrative there and leave the topic file with the rule and a one-line reason.
+Read the history file before reverting a rule.
+
 ## References, viewports, and palette
 
 The approved visual references are stored in `docs/design/`:
@@ -30,8 +38,8 @@ The approved visual references are stored in `docs/design/`:
 - `transactions.png`: transaction list, editing, and split flows.
 - `auth-income-organizer.png`: sign-in, income, month copying, and organization.
 
-Important responsive reference viewports are 390 x 844 for mobile and
-1440 x 1000 for desktop.
+Important responsive reference viewports are 390 x 844 for mobile and 1440 x
+1000 for desktop.
 
 The visual system is deliberately iOS-like and restrained: true-white surfaces,
 charcoal text, and cool-gray dividers; cornflower blue `#1769E0` as the primary
@@ -43,31 +51,35 @@ left navigation, a primary budget column, and a summary/activity rail.
 
 ### Desktop layout
 
-The
-scroll container spans the whole main panel so its scrollbar sits at the window
-edge, and each screen centers its own width inside it. Below 1100 px the 190 px sidebar cannot fit the wordmark, so it shows the
-centered icon alone, as the landscape-phone layout does. On desktop the category
-header's menu column is 44 px, the button's full width: `.category-section` uses
-`content-visibility: auto`, whose paint containment clips anything past its edge,
-so the narrower phone column cut off the right of the hover circle. Between 760 and 1019 px the rail leaves the
-budget column under 500 px, too narrow for the desktop bars, so the summary card
-keeps the phone arc there and switches to the bars from 1020 px. The rail sticks 24 px
-below the header, which is exactly where the summary card starts, so it never
-jumps when scrolling begins. The header button opens month actions on every page, phone and desktop,
+The scroll container spans the whole main panel so its scrollbar sits at the
+window edge, and each screen centers its own width inside it. Below 1100 px the
+190 px sidebar cannot fit the wordmark, so it shows the centered icon alone, as
+the landscape-phone layout does. On desktop the category header's menu column is
+44 px, the button's full width: `.category-section` uses
+`content-visibility: auto`, whose paint containment clips anything past its
+edge, so the narrower phone column cut off the right of the hover circle.
+Between 760 and 1019 px the rail leaves the budget column under 500 px, too
+narrow for the desktop bars, so the summary card keeps the phone arc there and
+switches to the bars from 1020 px. The rail sticks 24 px below the header, which
+is exactly where the summary card starts, so it never jumps when scrolling
+begins. The header button opens month actions on every page, phone and desktop,
 drawn as a calendar with a gear (`CalendarCog`) because it holds this month's
 settings and a plain gear already means the Settings tab. Before 5.13.2 it was
-drawn as the plain gear and labelled Settings outside Budget, and hidden there on
-desktop, although it opened month actions on every page. The rail leads with Add transaction on desktop, so the
-in-page Add transaction button is hidden from 760 px and shown again by the
-landscape-phone block, where the rail is hidden. Recent transactions rows in the
-rail open the edit transaction sheet, and an empty month says so instead of
-leaving the heading bare.
-Interactive targets are at least 44 px, with safe-area padding, keyboard focus
-management, accessible status announcements, and reduced-motion support.
+drawn as the plain gear and labelled Settings outside Budget, and hidden there
+on desktop, although it opened month actions on every page. The rail leads with
+Add transaction on desktop, so the in-page Add transaction button is hidden from
+760 px and shown again by the landscape-phone block, where the rail is hidden.
+Recent transactions rows in the rail open the edit transaction sheet, and an
+empty month says so instead of leaving the heading bare. Interactive targets are
+at least 44 px, with safe-area padding, keyboard focus management, accessible
+status announcements, and reduced-motion support.
 
 ## General rules
 
-- A slim desktop left navigation, primary budget column, and summary/activity rail.
-- At least 44 px interactive targets, plus safe-area padding, keyboard focus management, accessible status announcements, and reduced-motion support.
+- A slim desktop left navigation, primary budget column, and summary/activity
+  rail.
+- At least 44 px interactive targets, plus safe-area padding, keyboard focus
+  management, accessible status announcements, and reduced-motion support.
 
-Do not replace the established brand or visual language with a generic dashboard theme. Extend existing primitives and tokens first.
+Do not replace the established brand or visual language with a generic dashboard
+theme. Extend existing primitives and tokens first.

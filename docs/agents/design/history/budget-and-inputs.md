@@ -1,0 +1,542 @@
+# Budget page and inputs: history
+
+The investigations and superseded builds behind the rules in
+`../budget-and-inputs.md`. Read a section here before reverting or reworking the
+rule it explains.
+
+## Row actions
+
+Move money's **Move** was a footer button until 6.0.1, which rode the keyboard
+inset and so showed every misstep in it: in a 60 fps phone recording iOS
+reported the number pad about 87 pt short for roughly 300 ms after focus, so the
+button rose, slid back behind the keyboard, and then jumped into place once the
+correct size arrived. Sheets without a footer hide the same misstep behind the
+keyboard and its shield.
+
+## Reordering
+
+An earlier version switched swap rules on whether the source and its lifted copy
+matched in height, so a collapsed category swapped halfway through an expanded
+neighbor's items while an expanded one swapped halfway through its own.
+
+## Money inputs as of 6.0.2
+
+The still-focus file list, stand-in, reveal, caret, operator bar, fill chip, and
+floating-chrome sections as they stood before the history was trimmed out of the
+topic file. They hold the frame-by-frame recordings, the Simulator probe of the
+Left to budget chip's page jump (5.8.13 to 5.8.16), the per-input caret fix
+removed in 5.13.0, the operator bar's tuning, and the 5.8.7–5.8.10 recordings of
+the page slide that led to still focus. Names in it may have moved since:
+`stillFocusHandlers` is now `useStillField`, and `RECLAIM_MS` gave way to
+`easeRoomBack`.
+
+- `hold-viewport.ts` beats a one-finger drag that no scroll container takes,
+  blocked from panning the screen while a field has focus. With the keyboard up
+  the visual viewport is shorter than the page, and iOS panned it under a drag
+  on a sheet whose content fits, or on its overlay: in the 5.13.0 phone
+  recording the header and sheet slid up under the status bar and `pin.ts`
+  snapped them back mid-drag. iOS also pans the viewport under a drag that
+  starts inside a scroll container already at its end in the drag's direction:
+  the Better Buddy thread rests on its latest message while the keyboard is up,
+  and in 5.13.4 dragging it slid the whole screen and often would not scroll the
+  thread at all. A vertical drag is therefore stopped when its scroll container
+  has no room left in the drag's direction, measured from where the touch
+  started, as body-scroll-lock does; a drag a scroll container can take, in
+  either axis, is left alone.
+- `keyboard-swap.ts` beats the border fade across a keyboard swap. Moving focus
+  with the keyboard up between fields on different keyboards (compared by
+  `inputMode`, such as Name to Planned this month in Add line item) makes iOS
+  hold the page's drawing while it swaps the keyboard; in a 60 fps recording in
+  September 2026 both borders changed in one frame, together with the new
+  keyboard, because the 0.2 s fade had run out during the hold. Both fields keep
+  their pre-move look inline, each taken from the other since they have just
+  traded looks, until the frame after the keyboard's resize (or 400 ms), then
+  fade. A veiled field is left to its stand-in.
+- `reveal.ts`, `scroll-room.ts` beats our replacement reveal: a smooth scroll of
+  the container, down past the keyboard or, for a field partly hidden at the top
+  (under a sheet's title, or the part of a scroller its `scroll-padding-top`
+  marks as covered, such as the page's pull band or a pushed detail's header),
+  up until it clears that edge by the same 16 px, padding the container's end
+  when a bottom row could not otherwise clear the keyboard, and gliding that
+  padding back once the keyboard closes. On the frame after the keyboard's
+  resize, the loan eases out as a transition of the container's bottom padding
+  on the keyboard's closing curve (`easeRoomBack`), so a list scrolled into it
+  is held at its end as the end eases in, follows the keyboard down, and lands
+  on its real end in one motion; in a container that sizes to its content, such
+  as the body of a sheet below its `max-height`, the loan is height rather than
+  scroll room, and the container eases shorter instead (the loan also eases in
+  there, on the rising curve). Earlier builds glided the list with a smooth
+  scroll to an estimated end and dropped the padding once it arrived: a glide
+  aimed at the body's keyboard-up end stopped short and the body jumped the rest
+  of the way; aimed at the settled end, it was cancelled by the list's own
+  lengthening as a sheet's inset eased out, leaving the Add transaction note 16
+  pt past its real end (measured with in-page logging in the iOS Simulator's
+  installed web app, September 2026), and a second glide half a second later
+  read as the list sliding down twice. Dropping the loan at once snapped Edit
+  category and the income source sheet shorter after the keyboard had closed. A
+  loan made while a sheet's inset is still easing in is sized for the body's
+  taller, pre-keyboard height, since a smooth scroll is clamped to the room
+  there is when it starts, so once the inset settles the surplus beyond the
+  furthest scroll target is dropped (`trimOnceSettled`): in the same recording a
+  flick on the Add transaction body scrolled about 230 pt into an empty stretch
+  below the last field. The loan is added to the container's stylesheet padding,
+  read at the first loan, because `.navigation-detail-body` has its own bottom
+  padding (20 px, or 94 px beside a floating action, plus the safe area) that an
+  inline value would otherwise replace.
+
+`stand-in.ts` holds the one stand-in shared by parking and veiling, and
+`reveal.ts` measures the stand-in rather than the hidden field while one is up.
+The stand-in is the first child of the field's parent, because a positioned
+stand-in placed after the field was drawn over positioned siblings that sit over
+the field: on Transactions search it hid the magnifying glass for as long as the
+field was parked. As soon as the field has focus the stand-in takes its focused
+border, background, shadow, and outline (`wearFocusedLook`), read with the
+field's transitions off so the target is the finished style. It gets there
+through its own stylesheet transitions, so it fades to blue over the same 0.2 s
+as an unparked field (`shell-and-platform.md`); its current look is resolved
+first so that a stand-in inserted in the same task has something to fade from.
+It is placed from the field's unrounded bounding box relative to its offset
+parent (`exactBox`), not from `offsetLeft`/`offsetTop`, which round to whole
+pixels: the Income expected amount sits at a fractional position, and its value
+visibly nudged down and back as the stand-in came and went. Its height is left
+to its stylesheet unless that differs from the field's by more than half a
+pixel: a 60 fps recording in September 2026 showed a fixed-height stand-in's
+text two device pixels lower than the field's, with the border box identical.
+The only layout difference was the stand-in's fixed height against the field's
+`height: auto` with `min-height: 36px`, so WebKit is taken to center a
+single-line field's text differently in the two (inferred from the recording,
+not traced in WebKit's source). This assumes no ancestor is scaled at the moment
+of focus, which holds because no page, detail, or sheet scales while its fields
+can be tapped. Without that, a parked search box showed its grey unfocused
+border and only turned blue on release, which read as a flicker. 5.11.2 set the
+look with the transitions off, which snapped a parked field to blue while a
+field focused with the keyboard already up faded in. Fields and stand-ins are
+typed `HTMLInputElement | HTMLTextAreaElement` (`StillField`).
+
+Every text field, textarea, and money field in the app uses it, rolled out in
+phases in 5.11.1 through 5.13.0, each verified on a phone in the installed app.
+Plain fields are `StillInput` and `StillTextarea` (`fields.tsx`), thin wrappers
+over the hook (`StillTextarea` also takes `reveal={false}`, which skips the
+reveal for a field that stays in view by itself, such as the Better Buddy
+composer stuck to the bottom of its body), and `CurrencyInput` turns it on by
+default (`stillFocus={false}` opts out; nothing does). Date inputs, selects,
+checkboxes, and file inputs stay native: they open pickers rather than a
+keyboard, so parking one would hide it for the full 1.2 s limit waiting for a
+keyboard that never comes. The Better Buddy chat composer and the sign-in form
+are left native too. Sheet bodies are `data-still-scroller` containers, and
+sheets pad their bottom by the keyboard's cover so their bodies end above it
+(`sheets-and-menus.md`, Keyboard fit).
+
+`reveal.ts` waits for any CSS transition running on the scroll container or an
+ancestor before it measures, such as a pushed detail sliding in, because a field
+measured mid-transition would be scrolled for where it was rather than where it
+ends. Only one wait is pending at a time. A sheet's keyboard inset is the
+exception (`isKeyboardFitMotion`): the reveal asks `pendingSheetRise` in
+`keyboard-fit/pending.ts` how much further the sheet's top will still rise, the
+sheet's header, footer, full body content, and target inset up to its
+`max-height`, and clears the keyboard from where the field will end up, so it
+scrolls alongside the keyboard as the Budget page does. The line a field clears
+is the keyboard's (or the calculator bar's) top or the end of the scroll
+container, whichever comes first once the sheet has fitted
+(`settledClientHeight`), because a sheet's footer, such as the allocation
+picker's **Done**, stays above the keyboard and ends the body there: in 6.0.0
+the Move money Amount field, then above a footer, was revealed to just above the
+calculator bar, behind its **Move** button. A body whose content exactly fills a
+`full-screen-mobile` sheet (`inSetHeightSheet`) is not treated as sizing to its
+content, so its loan is plain scroll room applied at once: easing it in, as a
+content-sized body's is, left the smooth scroll clamped to no room when it
+started, and in 6.0.0 the then fixed-height Move money body never scrolled to
+the Amount field at all. Waiting for the inset, as the first 5.13.0 builds did,
+held the Add transaction reveal back until the keyboard had finished opening. It
+also measures on the animation frame after each viewport resize rather than in
+the event: iOS reports the keyboard's full size the moment a field takes focus,
+and a sheet makes room only in that next frame (the keyboard fit's listener is
+registered first, so its frame callback runs first). A 60 fps recording in
+September 2026 showed the in-event reveal finding the Add line item name field
+deep behind the keyboard and padding the sheet body at once, which grew the
+sheet about 212 pt in one frame before its own eased inset added to it and
+carried it to its height cap. While a stand-in is up, a statically positioned
+parent of the field is made `position: relative`, so the stand-in is positioned
+against the field's own parent and scrolls with it. `.sheet-body` is not
+positioned (the organizer's delete confirmation is anchored to the whole sheet
+through it), so a stand-in there was otherwise anchored to the sheet and stayed
+put while the body scrolled.
+
+#### Caret in sheets
+
+Until 5.13.0, a `CurrencyInput` inside a sheet (`.sheet-content`) put its caret
+back at the end of its text on the frame after every `visualViewport` scroll or
+resize while it had focus. It was removed when sheet fields moved onto still
+focus, whose parking avoids the page scroll that left the caret behind, and
+whose release already sets the selection to the end so iOS redraws the caret. If
+a sheet field's caret is ever left behind again, restore the re-selection in
+`still-focus/`, not per input. The history: When the field sits under where the
+keyboard lands, iOS first scrolls the page to reveal it and only then moves the
+layout viewport, which in standalone is 62 pt shorter than the screen
+(`clientHeight` 812 of 874, WebKit bug 301108), down to meet the keyboard. A
+keyboard probe on iOS 26.6.1 caught the Add line item planned amount moving 62
+pt one frame after the scroll (visual viewport `offsetTop` 376, then 314), and
+the native caret drawn before that move stayed behind, so the field looked as if
+it had lost its cursor. Setting the selection again makes iOS redraw the caret
+at the field. Budget-row planned amounts were left out, because their focus path
+parked the field and WebKit scrolls the page whenever a focused field's caret is
+revealed (Long expressions, below).
+
+#### Operator bar
+
+iOS offers web inputs no calculator keyboard, so `CalculatorBar` in
+`operator-bar.tsx` portals a toolbar (result preview, ÷ × − + . =, all 44 px
+keys) onto the top of the native number pad: it shows only for a coarse pointer
+while `visualViewport` is at least 100 px shorter than the full height and
+unzoomed. The full height is the running maximum of the viewport height and
+`document.documentElement.clientHeight` at the current width
+(`fullViewportHeight`), never `window.innerHeight`, because iOS shrinks it along
+with the keyboard. The bar sits at `offsetTop + height`. It follows the
+viewport's `resize` and `scroll` events, but reads the viewport in the animation
+frame after them, not in the event itself. `pinPageWhileFocused` undoes page
+scrolls from the window's `scroll` handler, and reading in the viewport's own
+handler could catch the page before that undo. The bar then sat one frame out of
+place when something moved the page. Animation-frame callbacks run after every
+scroll handler in the same rendering update, so this adds no frame of lag. The
+input must never blur mid-expression, since blur commits a half-typed plan: keys
+prevent `pointerdown` and act on `touchend` with its default prevented, which
+stops iOS synthesizing the focus-moving click, while `onClick` covers VoiceOver
+and mouse activation; keys carry `tabIndex={-1}`. The bar lives outside any
+Radix dialog, so `sheet.tsx` and `navigation-detail/index.tsx` exempt
+`isCalculatorBarTarget` from outside-pointer dismissal, and it sets
+`pointer-events: auto` for the same reason as the toast (`sheets-and-menus.md`).
+Desktop has no bar; hardware keys `+ - * / x =` drive the same expression.
+
+There is one bar for the whole app, mounted once in `providers.tsx`, never one
+per input. The focused `CurrencyInput` publishes its display state and handlers
+to `calculator-store.ts` on every render (`publishCalculator`), and the bar
+reads them with `useSyncExternalStore`. Blur releases the bar only after the
+current task (`releaseCalculator`), and the next input's focus arrives in that
+same task, so moving between money inputs swaps the bar's contents without
+unmounting it. A bar per input remounted on every switch and replayed its
+entrance, which read on device as a flash between planned amounts.
+
+Once the keyboard is up, the bar slides in from the right (`calculator-bar-in`,
+0.42 s on `cubic-bezier(0.25, 0.8, 0.3, 1)` after a 0.25 s delay, waiting just
+off the right edge meanwhile). The entrance used the sheets' 0.34 s
+`cubic-bezier(0.32, 0.72, 0, 1)` until 5.10.0, which read as abrupt; 0.5 s on
+the softer curve then felt slow, so the duration was set between the two. The
+first `visualViewport` resize already reports the keyboard's final size while
+iOS is still raising it, so without the delay the bar would slide in above a
+keyboard that had not arrived yet; the delay is tuned by eye. When the input
+lets go or the keyboard closes, it slides down with the keyboard
+(`calculator-bar-out`, 0.22 s on `cubic-bezier(0.15, 0.15, 0.3, 0.9)`),
+travelling exactly the keyboard's height (`--calculator-keyboard-height`, the
+full height less the visual viewport's), so it stays attached to the top of the
+keyboard's arrows-and-Done row, and fading out over the last 40 %, since at the
+end it would sit just above the screen's bottom edge. That duration and curve
+are fitted to a 60 fps recording of the number pad closing on an iPhone in
+September 2026. Measured from the moment it starts moving, the keyboard covered
+about 12 % of its travel by 17 ms, 41 % by 50 ms, and 72 % by 100 ms. The bar
+used to share the entrance's 0.34 s curve and travel the keyboard's height plus
+its own. That curve ran ahead of the keyboard from about the third frame, and
+anything below the keyboard's top edge is hidden, since iOS draws the keyboard
+over the page. So the bar slipped behind the arrows-and-Done row almost at once
+and read as vanishing instantly, though it was sliding. If a future iOS changes
+the keyboard's close motion, re-measure it. Both move through the individual
+`translate` property, so its `translateY(-100%)` docking is untouched. Closing
+keeps the last contents under `data-state='closing'` and unmounts on that
+animation's `animationend`; the global reduced-motion rule shortens it to 0.01
+ms, so it still ends. While the keyboard is up iOS scrolls the page so the
+visual viewport sits at the bottom of the layout viewport, and it drops that
+scroll in a single step as the keyboard closes. The bar is positioned in
+layout-viewport pixels, so a closing bar that kept its layout position was
+carried to the bottom of the screen by that step and read as vanishing rather
+than sliding. A closing bar therefore holds the keyboard's last on-screen top
+edge (the visual viewport's height) and adds the live `offsetTop`, which
+`useViewportFrame` keeps tracking until the bar unmounts, so it stays put on
+screen through the reset and slides down from there. The bar sits in
+`.calculator-dock`, a fixed full-screen layer with `overflow: hidden` and no
+pointer events, so while it waits off the right edge to slide in, or slides
+below the bottom edge on the way out, nothing overflows the page; a fixed
+element hanging past the viewport's edge can make iOS readjust the page, which
+is suspected, not confirmed, as the cause of sheets shifting up abruptly as the
+keyboard opened. Once docked, the bar ignores keyboard moves under 8 px
+(`KEYBOARD_JITTER_PX` in `operator-bar.tsx`), because iOS nudges the keyboard or
+page by a few pixels as focus moves between inputs and following those shifted
+the bar up and down on each switch; the value was chosen without a device
+measurement, so adjust it if a switch still shifts it or a real keyboard change
+is missed.
+
+#### Fill with what is left to budget
+
+While a planned amount is focused, on a Budget row or in the line-item detail,
+the operator bar's preview slot offers a fill chip (`fill` on `CurrencyInput`,
+rendered by `CalculatorBar`, built by `leftToBudgetFill` in
+`src/components/budget/left-to-budget-fill.ts`) captioned Left to budget with
+the amount still unbudgeted, such as `+$425`. When the month is over budget
+after the draft, the chip is captioned Over budget and shows the overage as
+`−$75`, and the fill carries `tone: 'over'`, which `CalculatorBar` renders as
+`data-tone='over'` and `currency-calculator.css` draws in the same red as the
+split summary's negative Remaining (`#e3474d` on `#fdecec`). That amount
+accounts for the draft: `leftToBudgetWithPlanDraft` in
+`src/domain/budget-calculations.ts` is the month's left-to-budget less how far
+the draft has moved from the item's saved plan, so typing part of an amount
+first shrinks the chip. Tapping it sets the field to `planFillingLeftToBudget`
+(the saved plan plus the month's left-to-budget), which leaves Left to budget at
+exactly $0 whatever the field held, and ends any expression. It presses like the
+operator keys, without taking focus, so the plan still commits on blur through
+the ordinary `updatePlan` mutation. `fillValue` in `currency-input/index.tsx`
+sets the value by script through `onValueChange`, as the operator keys do.
+
+##### Why the chip used to jump the page
+
+A 60 fps recording of 5.8.13 on device showed the whole page, fixed header and
+calculator bar included, jump up about 28 px for one frame when the chip was
+tapped. The cause was reproduced and confirmed in the iOS Simulator (iPhone 17
+Pro, iOS 26.2, the app added to the Home Screen and opened as a web app) in
+September 2026. Safari in a normal tab did not reproduce it. The fill itself
+scrolls nothing. WebKit's `RenderTextControlSingleLine::layout` forces a reveal
+of the selection whenever a focused single-line text field's inner text box
+changes size (`setNeedsSelectionUpdate(RevealSelectionAfterUpdate::Forced)`,
+written for the caps-lock indicator). Budget-row planned amounts used to size
+themselves with `size={Math.max(8, length)}`, so any edit that changed the
+displayed length past eight characters resized the focused field, and the forced
+reveal scrolled the page. It runs after the edit, in a later task, so
+`pinPageWhileFocused` could only undo it after it had been painted: for one
+frame on device, and in the Simulator a scripted fill and a backspace left the
+page moved for two to four frames. What was confirmed, with a temporary in-page
+probe logging scroll, `visualViewport`, and animation-frame timings and wrapping
+every script scroll and focus call:
+
+- The chip tap scrolled the window to `scrollY` 28 with no script scroll call;
+  `scrollY` was still 0 after the `touchend` handlers, a microtask, and
+  `setTimeout(0)`, and read 28 in the next task.
+- Triggering the fill from script with no touch at all scrolled the page by the
+  same 28 px, so touch handling was never involved.
+- Changing the focused field's value directly (same length, longer, or shorter)
+  never scrolled. Changing only its width (the `size` attribute or
+  `style.width`) scrolled 28 px every time, growing or shrinking. Moving the
+  field (`translate`, a taller box, padding above its row) never scrolled, and a
+  transparent field (`opacity: 0`) still did.
+- On the iPhone 17 Pro Simulator the reveal left a 34 px field whose top was at
+  364 px or higher alone, and otherwise moved the page until its top reached 364
+  px, which leaves its bottom 100 px above the visual viewport's bottom edge
+  (498 px with the keyboard up). `revealAboveKeyboard` leaves the field's bottom
+  72 px above that edge (16 px clearance plus the 56 px bar), 28 px short, which
+  is the 28 px seen.
+- On the old sizing, the bar's `+` jumped the same way when the expression
+  widened the field, and so did a backspace that took the amount from nine
+  characters to eight. A typed digit that crosses eight characters should too,
+  by the width result above, though that was not recorded; the typing in the
+  device recording presumably never changed the width (inferred).
+
+So on phones (the phone media block in `responsive-motion.css`), the planned
+`<input>` keeps one width, 180 px, positioned at the right of
+`.amount-column--planned`, which clips it (`overflow: clip`, which also clips
+its hit area so the item name still takes its own taps). The column's width
+comes from `.currency-input-fit`, an invisible copy of the displayed text that
+`CurrencyInput` renders when given `fitText`, with the field's font, tabular
+digits, and padding, between the 92 px minimum and the input's 180 px. The input
+must stay at most twice the column's minimum width, so its center always falls
+inside the column: the keyboard's previous and next arrows skip any field whose
+bounding-box center hit-tests to another element (`isObscuredElement` in
+WebKit's `WebPageIOS.mm`). A first version sized the input `calc(100vw - 122px)`
+(280 px on a 402 px phone), whose center landed over the item name outside the
+clip, and in the Simulator the arrows then moved to no planned amount at all; at
+180 px they move between planned amounts again. iOS decides whether the arrows
+are enabled when the field takes focus, so a next field that sits below the
+layout viewport or behind the bottom navigation at that moment is skipped; the
+Simulator showed this from Charity to Mortgage on the 5.8.13 layout as well, so
+it predates this change. Expressions wider than the 180 px input shrink their
+font to fit, as `fitExpression` already did for the field's own width. The
+column therefore still fits the amount or expression, but the input's text box
+never changes size while it has focus, and WebKit never forces the reveal. In
+the Simulator after the change, the chip filling $2.11 to $2,632.51 and
+$2.92 to $2,924.98 from the same 392 px position, and `+ 5 =`, fired no scroll
+events at all, and recordings showed no moved frames. A typed digit still moves
+the page 28 px through the edit's own caret reveal
+(`revealSelectionAfterEditingOperation`), and `pinPageWhileFocused` puts it back
+from the next `scroll` event; Simulator recordings of typed digits showed no
+moved frame. Above the phone breakpoint `.currency-input-fit` is `display: none`
+and the field still sizes with `size`, so a tablet with an on-screen keyboard
+can still see the reveal. Earlier attempts, all shown by the evidence above not
+to matter and removed: 5.8.14 kept the chip mounted while it faded out, 5.8.15
+filled through `document.execCommand('insertText')` so the fill arrived as a
+native edit, and 5.8.16 cancelled `touchstart` on the bar.
+
+The chip shows only while the draft leaves the month unbalanced either way and
+the filled plan is between
+$0 and `MAX_ENTRY_CENTS`, so an overage larger than the item's saved plan offers no chip there; an expression in progress takes the slot back for its result preview. The chip is a size container and its amount shrinks from 16 px to fit its width (`--amount-chars` times 0.56 em per character, the same fit the Budget amounts use), with an 11 px floor: on a 402 px iPhone 17 Pro a cents amount such as `+$2,834.56`
+shows in full at about 14 px, while on a 375 px phone amounts past about seven
+characters still end in an ellipsis at the floor, since the 44 px keys leave the
+chip about 62 px there. Only planned amounts (Budget rows and the line-item
+detail) and transaction split amounts pass a fill, and like the rest of the bar
+it exists only with a coarse pointer and an on-screen keyboard, so desktop has
+no fill.
+
+#### Fill a split with what's left
+
+Nothing in a split transaction fills itself; the two ways to finish a split are
+both explicit taps. While a split amount in the transaction sheet is focused on
+a phone, the operator bar offers a fill chip captioned Remaining
+(`splitRemainderFill` in
+`src/components/transactions/transaction-split-fill.tsx`). It sets that split to
+`splitFillingRemainder` (`src/domain/budget-calculations.ts`): its draft plus
+whatever of the total is unassigned. The chip reads `+$30` when something is
+unassigned and `−$20` when the splits exceed the total, in which case filling
+shrinks the split. It hides when nothing is unassigned, and when the filled
+split would be
+$0 or less, or above `MAX_ENTRY_CENTS`. A fill is offered only once the transaction's total is above $0
+and every other split has an amount, so it completes the last split instead of
+dropping the whole total onto the first: with two splits still at
+$0, neither gets one. On every device, including desktop where the bar never appears, the summary's Remaining cell becomes a button (`SplitSummary`, `.split-summary-fill`) under the same rule, reading `Fill {item}` under the red amount. That is the one split still at $0,
+or, when every split has an amount, the last split the difference can go to
+without reaching $0; with no such split, the cell stays plain text. Neither path
+touches the transaction's total Amount field.
+
+The add-transaction sheets stay mounted, so `TransactionSheet` rebuilds its
+whole draft (kind, merchant, amount, date, note, and splits) each time `open`
+turns true, during render rather than in an effect, so the first open frame
+already shows it. A sheet dismissed without saving therefore never reopens with
+the old entry, and the date follows the viewed month. The draft is not cleared
+on close, so the sheet keeps its contents while it animates away. Every other
+draft-holding sheet follows the same rule (`sheets-and-menus.md`).
+
+#### Long expressions
+
+A long expression must stay readable from its start: a caller's `size` grows to
+the displayed text's length, a focused Budget-row planned amount may widen into
+the item-name column on phones (`max-width: calc(100vw - 122px)` instead of the
+200 px cap) and on desktop grows leftward past its 104 px column over the name
+(the planned column is a flex-end container and the focused input `flex: none`
+on a white background), and `fitExpression` in `currency-input/index.tsx` steps
+the expression's font down to 11 px until it fits, clearing the inline size when
+the field leaves expression mode.
+
+#### Floating chrome while editing
+
+While a Budget-row planned amount (`.budget-row-grid .inline-money-input`) has
+focus, `PlanInput` marks the document with `data-editing-plan` and
+`:root[data-editing-plan]` rules in `budget.css` slide the mobile bottom
+navigation down off the screen by `--bottom-nav-hidden-offset` (0.34 s on
+`cubic-bezier(0.32, 0.72, 0, 1)` after a 0.15 s delay) and then hide it with
+`visibility: hidden`, and blur puts it back instantly: the transition lives only
+on the hiding rule, so leaving it has none. `display: none` is avoided because
+showing the nav again would replay its `bottom-nav-enter` entrance. Earlier
+versions hid it instantly, then after a 0.15 s delay, and one slid it both ways
+in step with the calculator bar. This was a
+`:root:has(.budget-row-grid .inline-money-input:focus)` selector; WebKit
+re-checks such a selector on every focus change anywhere in the document,
+including a sheet field's as the keyboard opens, and half sheets began jumping
+up abruptly as the keyboard opened once several of those rules existed, so the
+mark replaced them (whether they were the cause is unconfirmed on device). Blur
+clears the mark only after the current task, and not at all when focus has
+landed on another planned amount, because layout reads between the blur and the
+next focus would otherwise restyle the page without it and restart the
+navigation's hide delay on every switch. The same mark clears the rest of the
+chrome floating over the rows, smoothly rather than instantly. The docked Left
+to budget strip slides back up under the header by its height plus its shadow
+reach, through the individual `translate` property so it composes with the
+scroll-driven `transform`, over 0.35 s on `cubic-bezier(0.45, 0, 0.2, 1)` both
+ways; its header shadow (`.budget-balance-clip::after`) moves up out of the clip
+with it, because transitioning its scroll-derived `opacity` instead would lag
+the scroll. The title bar stays in place: sliding it away with the strip was
+tried and dropped. On touch screens (`pointer: coarse`) Better Buddy runs off
+his edge with the same `buddy-leave` animation the chat uses and ignores
+pointers, and when the field blurs the rule stops matching, so the launcher's
+`buddy-arrive` restarts and he flies back in as after closing the chat. A mouse
+edit leaves him in place. A tap on an unfocused planned amount focuses it
+through `stillFocusHandlers` (`src/components/ui/still-focus.ts`), so iOS never
+slides the page toward it. Screen recordings of 5.8.7 and 5.8.8 showed why that
+slide has to go. Throughout the slide, everything about to leave the top of the
+screen (header, Left to budget strip, first rows) went blank white. The Better
+Buddy composer showed the same blank header behind the dim, so it is not tied to
+any Budget animation. The likely reason is that Safari paints this page only
+around where the slide ends, because the root does not scroll (`html` and `body`
+are `overflow: hidden`). That explanation is inferred, not confirmed. Giving the
+Left to budget strip's header shadow `will-change: translate` in 5.8.8 did not
+help. WebKit reveals a focused field in two places
+(`WKContentViewInteraction.mm` and `WKWebViewIOS.mm` on WebKit's main branch,
+read in September 2026): (1) `_zoomToRevealFocusedElement`, deferred until the
+keyboard starts to show. It returns early for `focus({ preventScroll: true })`,
+and also while the selection is transparent (opacity under 0.01 including
+ancestors) or clipped to nothing. (2) `_scrollToAndRevealSelectionIfNeeded`,
+which `_keyboardChangedWithInfo` calls whenever the keyboard's frame changes
+while it is already up and the caret was fully visible before the change. It
+scrolls the caret to 4 px above the keyboard and ignores `preventScroll`. The
+iOS keyboard reports its frame twice as it opens (a partial height, then the
+full one), so this second path runs on every open. 5.8.9 used `preventScroll`
+alone, and on device the page still slid. That was for two reasons. First,
+`preventScroll` covers only the first path. Second, the row's `SwipeReveal`
+focused the field itself on `pointerup`, before the `touchend` handler ran, with
+a plain `focus()` that asked for the scroll. `focusStill` is now the one
+no-scroll focus: `SwipeReveal` uses it for an editable target (touch taps park,
+mouse clicks only skip the scroll), and so does the touch handler when the field
+is not yet focused. So the tap handler cancels the `touchend`, which stops iOS's
+own tap-to-focus, and `focusStill` calls `parkWhileKeyboardOpens` before
+focusing with `preventScroll`. That function moves the field 10,000 px up with
+the `translate` property and lays an inert copy (`createStandIn`: a clone with
+the same classes and value, absolutely positioned over the field's
+`offsetLeft`/`offsetTop` box, `aria-hidden`, `inert`, and ignoring pointers) in
+its place, so the row looks unchanged. The caret is then off-screen for both
+reveal paths. This is the approach Uno Platform documented for the same two
+paths (unoplatform/uno#24526 and #24527). The field comes back when the keyboard
+has held its size for 150 ms (`KEYBOARD_SETTLE_MS`), when it blurs, or after 1.2
+s (`PARK_LIMIT_MS`), and the caret is set to the end again so iOS shows it.
+Nothing is parked while the keyboard is already up, because no frame change
+follows then. `revealAboveKeyboard` then waits for the keyboard's
+`visualViewport` resize and, if the field (or its stand-in while parked) would
+sit behind the keyboard and the 56 px calculator bar, smoothly scrolls
+`.app-content` just far enough to clear them (16 px clearance), so only the list
+moves. It also scrolls far enough that the next field's center does not sit
+under the bar (it stops 16 px above it): the keyboard's next arrow skips any
+field whose center another element covers (see Fill with what is left to
+budget), and within a category the next row, 79 px down, otherwise lands right
+under the bar, so the down arrow skipped every other row. A field behind the
+keyboard is still reachable, because the keyboard is not page content. Confirmed
+in the Simulator: the down arrow then visited every planned amount in order. The
+up arrow can still stop at the first item of a category, because iOS decides
+whether an arrow works when a field takes focus, before the smooth scroll moves
+the list, and the item above is then off-screen; snapping the list instead of
+gliding would fix it, and was declined. It also checks once on the next frame,
+for a field focused while the keyboard is already up. Rows near the end of the
+list could never scroll that far, so `lendScrollRoom` gives `.app-content` an
+inline bottom padding for the shortfall and grows it for later fields. Once the
+keyboard has closed, a list scrolled into that padding first glides back to its
+real end, and the padding is dropped 450 ms later (`RECLAIM_MS`). Dropping it at
+once made the whole list jump as Done closed the keyboard. A touch that moves
+more than 10 px is a scroll or swipe and keeps the native behavior. The up and
+down arrows above the keyboard move focus natively, where no `preventScroll` can
+be passed. For those, `PlanInput`'s focus handler calls `veilNativeFocus`: any
+focus while the keyboard is up that `focusStill` did not make turns the field
+transparent (`opacity: 0`) behind the same stand-in for 300 ms (`VEIL_MS`).
+WebKit computes the post-focus editor state before it runs the deferred reveal,
+and a transparent field suppresses that reveal, as in (1) above. The veil keeps
+the field in place, not parked, because a native focus also runs the browser's
+own reveal, which scrolls the list to the field's box and would throw the list
+to the top if the box were parked. The 300 ms window has not been measured on
+device. Lengthen it if the arrows still slide the page. While the keyboard is
+up, WebKit makes the page itself scrollable by the keyboard's height
+(`hasDockedInputView` in `WKWebViewIOS.mm`). A drag that ran past the end of the
+list, or started on the header, then slid the page. The calculator bar is
+positioned by script from the visual viewport's `scroll` events, which arrive a
+frame or more behind that native scroll, so the bar flashed out of place and
+settled back. iOS then dropped that page scroll in one step as the keyboard
+closed, which knocked the closing bar about instead of letting it slide down
+with the keyboard. So while the mark is set, `.app-content` takes
+`overscroll-behavior-y: contain` (WebKit stops handing the list's vertical
+scroll to the page, and the list still bounces for pull to refresh), and
+`.mobile-header` takes `touch-action: none`, so the page stays at the top and
+the bar has nothing to chase. A screen recording of 5.8.10 showed a third page
+move. The first digit typed into a planned amount that sat just above the
+calculator bar moved the page up about 25 px in a single frame. That is the
+browser's own caret reveal after an edit (`revealSelectionAfterEditingOperation`
+in WebKit's `Editor.cpp`), which scrolls the page itself as well as the list and
+takes no option to stop it. `pinPageWhileFocused` therefore listens for the
+window's `scroll` event while the field has focus and scrolls the page straight
+back to the top. Scroll events run in the rendering update before the frame is
+committed, so the move is not painted: in the iOS Simulator every typed digit
+scrolled the page, the pin put it back from the next `scroll` event, and
+recordings showed no moved frame (unconfirmed on a physical device). A reveal
+that runs later than the edit does get painted, which is how the Left to budget
+chip jumped until the planned field stopped changing width (see Fill with what
+is left to budget); the 5.8.10 recording may have caught that forced reveal
+rather than this one. It also catches any page scroll iOS makes anyway. Moving
+focus from one planned amount to another keeps the selector matching, so nothing
+returns between them.

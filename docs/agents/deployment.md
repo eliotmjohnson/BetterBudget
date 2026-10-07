@@ -1,7 +1,7 @@
 # Version 4 deployment release
 
-Read this before changing deployment, infrastructure, or the production
-runtime. The standing guardrails live in `AGENTS.md`;
+Read this before changing deployment, infrastructure, or the production runtime.
+The standing guardrails live in `AGENTS.md`;
 `docs/aws/ec2-cloudfront-migration.md` is the authoritative live-resource,
 operations, rollback, and replacement-host runbook.
 
@@ -94,11 +94,12 @@ excludes owner bootstrap from development seeding.
   transactionally clean, so they restore the whole host but give a weaker
   guarantee than a logical dump. The runbook carries the manual `pg_dump`
   command; run it before any risky host change.
-- Co-location is a deliberate cost trade: it removed roughly $20/month from a
-  $26.78 bill, at the cost of making the host a single point of failure and
-  leaving roughly 400 MiB of RAM available on a 917 MiB instance. If the
-  application starts restarting under memory pressure, lower `shared_buffers`
-  before reaching for a larger instance type.
+- Co-location is a deliberate cost trade: it removed roughly
+  $20/month from a
+  $26.78 bill, at the cost of making the host a single point
+  of failure and leaving roughly 400 MiB of RAM available on a 917 MiB instance.
+  If the application starts restarting under memory pressure, lower
+  `shared_buffers` before reaching for a larger instance type.
 
 Version 3 retains all Version 1 and Version 2 boundaries.
 
@@ -126,28 +127,27 @@ database schema, and provider-neutral runtime image.
 - RDS public access was intentionally retained with restricted ingress. This was
   superseded by the Version 3 decommission.
 - Use `docs/aws/ec2-cloudfront-migration.md` as the authoritative live-resource,
-  operations, rollback, and replacement-host runbook. Do not reintroduce ECS,
-  an ALB, NAT, SSH, RDS, or a public IPv4 address without explicit user
-  direction.
+  operations, rollback, and replacement-host runbook. Do not reintroduce ECS, an
+  ALB, NAT, SSH, RDS, or a public IPv4 address without explicit user direction.
 
 Version 2 retains all Version 1 non-goals. Do not treat the infrastructure
 change as authorization to add households, invitations, roles, bank syncing,
-recurring automation, imports/exports, currencies, notifications, realtime
-push, or offline financial writes.
+recurring automation, imports/exports, currencies, notifications, realtime push,
+or offline financial writes.
 
 ## The deployment pipeline
 
 Pushes to `main` deploy the regular runtime target through GitHub Actions. The
 workflow assumes the account-scoped `better-budget-github-deploy` IAM role
-through GitHub OIDC, tags the ECR image with the immutable commit SHA,
-discovers exactly one running instance with the `Application=better-budget` and
+through GitHub OIDC, tags the ECR image with the immutable commit SHA, discovers
+exactly one running instance with the `Application=better-budget` and
 `Environment=production` tags, and invokes `better-budget-deploy` through
-Systems Manager. The host pulls the candidate before restarting, checks
-liveness and readiness, and restores the preceding tag on failure. Keep the
-OIDC trust restricted to the immutable BetterBudget repository identity and
-`main`; keep its permissions limited to the production ECR repository and SSM
-commands on the tagged production instance. Do not add long-lived AWS
-credentials or production application secrets to GitHub.
+Systems Manager. The host pulls the candidate before restarting, checks liveness
+and readiness, and restores the preceding tag on failure. Keep the OIDC trust
+restricted to the immutable BetterBudget repository identity and `main`; keep
+its permissions limited to the production ECR repository and SSM commands on the
+tagged production instance. Do not add long-lived AWS credentials or production
+application secrets to GitHub.
 
 The workflow verifies that the production ECR repository uses immutable tags,
 and its external actions plus the Docker base image are pinned to immutable
@@ -173,10 +173,10 @@ bootstrap runs at most once per database and building it on every push would be
 waste. That same input also makes the workflow invoke the host command through
 Systems Manager as its final step, after the deployment has been health-checked,
 because the bootstrap depends on the schema that migration prestart creates.
-Keep it last for that reason. The host command reuses the application's own secret files, so it cannot
-be pointed at a different database, and no production secret reaches a
-workstation. Seeding is additionally blocked during bootstrap by `shouldSeed()`
-in `src/db/index.ts`, independently of `NODE_ENV`.
+Keep it last for that reason. The host command reuses the application's own
+secret files, so it cannot be pointed at a different database, and no production
+secret reaches a workstation. Seeding is additionally blocked during bootstrap
+by `shouldSeed()` in `src/db/index.ts`, independently of `NODE_ENV`.
 
 The database container is pinned by digest, runs as uid 70, and is published on
 the host's IPv6 address and on loopback but never on `0.0.0.0`. The loopback
@@ -228,12 +228,12 @@ done, the host script is installed over Systems Manager, and the key is added.
     Adding NAT or a public IPv4 address instead is outside the standing
     deployment rules and needs explicit user direction.
 
-- **Origin read timeout.** The CloudFront origin read timeout is 30 seconds
-  (the default, verified on distribution `E13RII40P7L8EE` in September 2026).
+- **Origin read timeout.** The CloudFront origin read timeout is 30 seconds (the
+  default, verified on distribution `E13RII40P7L8EE` in September 2026).
   `TURN_DEADLINE_MS` in `src/server/assistant/run.ts` is 25 seconds so a Better
   Buddy turn always answers before CloudFront gives up; lowering the CloudFront
-  timeout, or raising the deadline past it, lets CloudFront return 504 while
-  the turn keeps running and committing changes the chat never reports.
+  timeout, or raising the deadline past it, lets CloudFront return 504 while the
+  turn keeps running and committing changes the chat never reports.
 
 ## Image constraints
 

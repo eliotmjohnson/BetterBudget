@@ -26,7 +26,15 @@ lives alongside it and should be read when the work touches it:
 | Changing deployment, infrastructure, or the production runtime  | `docs/agents/deployment.md`                  |
 | Formatter/linter config, size budgets, comments, or releasing   | `docs/agents/conventions.md`                 |
 | Operating, rolling back, or replacing the production host       | `docs/aws/ec2-cloudfront-migration.md`       |
+| Working in an unfamiliar file or directory                      | `docs/agents/paths.md`                       |
 | Setup, environment variables, and troubleshooting               | `README.md`                                  |
+
+The generated block above asks for the Next.js guide in
+`node_modules/next/dist/docs/` before writing code. That guide is about 4 MB,
+and most changes here live inside Client Components and never touch a Next.js
+API, so read the relevant page of it only when a change touches routing, route
+handlers, `next.config.ts`, metadata, caching, data fetching, or the Server and
+Client Component boundary.
 
 `README.md` is the human-facing setup and operations manual. This file is the
 engineering contract. When behavior changes, update whichever of the two
@@ -40,78 +48,39 @@ Each calendar month holds its own budget built from household-scoped category an
 
 Read `docs/agents/product.md` for the complete implemented-capability inventory before adding, removing, or reshaping a user-facing capability.
 
-## Version 6 interface release
+## Release guardrails
 
-Version `6.0.0` is a user-directed major release that rolls up the 5.1–5.13
-interface work (Move money, fill from Left to budget, calculator math, the
-transaction hold menu, docked strips and floating add buttons, the desktop
-layout rework, still focus and keyboard-fit sheets, and Better Buddy's throws
-and failure recovery) with the transaction sheet's header-anchored kind
-selector. `README.md` holds the full list. The Version 1 financial model,
-database schema, authentication model, and every Version 2–5 deployment and
-assistant rule are unchanged, and there is no migration.
+Versions 2–6 each changed one area and left the Version 1 financial model,
+database schema, and authentication model unchanged. Their full release notes
+are in `docs/agents/releases.md`; these are the rules from them that are easy
+to violate.
 
-These rules are load-bearing:
+**Interface (6.0.0).**
 
 - **A control that must not scroll goes in `headerAccessory`.** `Sheet` renders it inside the fixed drag region under the title row. Buttons there stay tappable because a drag never starts on a `button`.
 - **Every date field sits in `.date-input-shell`** with the `CalendarDays` icon. iOS sizes a bare `<input type='date'>` to its content, which overflowed the Record income sheet.
 - **Income's green is `--green` (`#1eb574`) in `tokens.css`.** It is brighter than the `#199d67` Remaining text color at the user's request, and white text on it is below the AA contrast bar; do not darken it back without direction.
 
-`docs/agents/design/sheets-and-menus.md` holds the selector and date-field
-detail, and `docs/agents/design/navigation-detail.md` the strip shadow.
-
-## Version 5 assistant release
-
-Version `5.0.0` adds Better Buddy, an optional budget assistant: a draggable floating robot button on every authenticated page that opens a chat driven by Claude Haiku 4.5. It answers questions about the household's budget and commits basic changes. The Version 1 financial model, database schema, authentication model, and every Version 2–4 deployment rule are unchanged.
-
-These rules are load-bearing:
+**Better Buddy (5.0.0).** An optional assistant on Claude Haiku 4.5, a floating robot button on every authenticated page that opens a chat.
 
 - **Assistant writes go through `applyBudgetMutation`.** Every tool builds a `BudgetMutation`, parses it with `mutationSchema`, and commits it with a fresh `clientMutationId` and the `expectedVersion` from a snapshot read immediately before. Never give the assistant a write path around the mutation service, and never add a tool for archiving, deleting definitions, copying, clearing, resetting, reordering, or deleting income without explicit user direction.
 - **Assistant writes are server-confirmed.** The client applies no optimistic patch; it invalidates every cached `budget-snapshot` query after a turn that reports changed months, because carryover can move later months.
 - **The cached prefix is frozen.** `SYSTEM_PROMPT` and `ASSISTANT_TOOLS` must contain no per-request value and must keep a deterministic order, and together they must stay above Haiku 4.5's 4,096-token minimum cacheable prefix, or every request pays full input price. Today's date and the viewed month travel in a text block at the start of each person turn instead. The server warns `prompt cache unused` when a response reads and writes no cache.
 - **The conversation is client-held and stateless on the server.** The browser sends the whole message history each turn; the route validates its shape and size, and the household always comes from the session. Tool results the client sends back only affect the model's context, never authorization.
-- **The assistant is off without `ANTHROPIC_API_KEY`.** The button is not rendered and the route answers `unavailable`. Production validation rejects a placeholder key and accepts an absent one. With a key, the Settings **Better Buddy** switch hides or shows it per device through the `better-budget-assistant-v1` cookie (`parseAssistantPreference` in `src/domain/budget-preferences.ts`); that switch is a display preference, not an access control. Beaming Better Buddy up to his spaceship writes the same preference through the same `changeAssistantEnabled` handler in `app-client.tsx`, so the two can never disagree.
-- **Replies are plain text.** The chat renders no Markdown, so the prompt forbids it and `run.ts` strips `**`/`__` emphasis from model text before it is shown or stored in the history.
-- **Production egress is IPv6 NAT on the Docker network.** The host has no IPv4 egress, so `bootstrap-ec2.sh` gives the `better-budget` network IPv6 with Docker's `ip6tables` NAT. Enabling IPv6 forwarding stops `systemd-networkd` accepting the router advertisements that keep the host's own IPv6 address and route alive, so the `IPv6AcceptRA=yes` drop-in must be installed first; without it the host loses IPv6, and with it Systems Manager and ECR, within minutes. `docs/agents/deployment.md` records the order.
+- **The assistant is off without `ANTHROPIC_API_KEY`.** The button is not rendered and the route answers `unavailable`. Production validation rejects a placeholder key and accepts an absent one. With a key, the Settings **Better Buddy** switch and beaming him up to his spaceship both write the per-device `better-budget-assistant-v1` cookie through `changeAssistantEnabled` in `app-client.tsx`; it is a display preference, not an access control.
+- **Replies are plain text.** The chat renders no Markdown, so the prompt forbids it and `run.ts` strips `**`/`__` emphasis from model text.
+- Keep the model on the cheapest current Claude model with thinking omitted unless the user directs otherwise, and keep the per-turn call cap, the conversation cap, and the per-household rate limit.
 
-Keep the model on the cheapest current Claude model with thinking omitted unless the user directs otherwise, and keep the per-turn call cap, the conversation cap, and the per-household rate limit.
+**Production host (2.0.0–5.0.0).** A private arm64 `t4g.nano` EC2 host behind a CloudFront VPC origin, running the application and a PostgreSQL 17 container. Read `docs/agents/deployment.md` before changing any of it; `docs/aws/ec2-cloudfront-migration.md` is the live-resource, rollback, and replacement-host runbook.
 
-## Version 4 deployment release
-
-Version `4.0.0` moved the production host from an x86_64 `t3a.micro` to an arm64 `t4g.nano`. There is no application-source change. The Version 1 product, financial model, authentication model, database schema, and provider-neutral runtime image are unchanged, as is every Version 3 database, TLS, IPv6, and backup rule.
-
-GitHub Actions builds `linux/arm64` only, natively on a GitHub-hosted `ubuntu-24.04-arm` runner. Do not reintroduce `linux/amd64` or QEMU emulation: nothing in the fleet can run an amd64 image, and the emulated build was slow enough to be abandoned during the migration. If an x86 host ever becomes a real rollback target again, add a second native job rather than emulating.
-
-`scripts/aws/bootstrap-ec2.sh` is sized for 512 MiB. PostgreSQL runs with `shared_buffers=32MB`, `max_connections=10`, and a 192 MiB container limit; the application container has a 320 MiB limit and a 256 MiB V8 old-space limit. If the application restarts under memory pressure, lower `shared_buffers` further or resize the instance to `t4g.micro` — a stop, change-type, and start, since the architecture is unchanged. Do not remove the container limits.
-
-Four host facts are load-bearing and easy to violate:
-
-- A fresh host pulls the seed image tag in `bootstrap_host()` before any deployment runs. That tag must name a commit whose ECR image includes an arm64 manifest, or the host fails its first pull with no matching manifest.
-- Deployment requires exactly one _running_ instance carrying both production tags. Two running hosts fail every deployment; a stopped host is invisible and is the rollback.
-- Data Lifecycle Manager selects volumes by the `Backup=daily` tag. A replacement root volume without that tag is never snapshotted and nothing reports it.
-- The deployment helper refuses an image whose architecture does not match the host. A wrong-architecture image pulls successfully and only fails at exec time, so without that check it overwrites the working tag and crashloops with no usable rollback target. This took production down once during the Version 4 migration.
-
-The instance uses Unlimited CPU credits. Standard credits throttle a `t4g.nano` partway through a deployment and roll back a working image; the surplus charge is cents a month at this traffic. Do not switch it back to Standard as a cost measure.
-
-Read `docs/agents/deployment.md` before changing deployment, infrastructure, or the production runtime. `docs/aws/ec2-cloudfront-migration.md` remains the authoritative live-resource, operations, rollback, and replacement-host runbook.
-
-## Version 3 deployment release
-
-Version `3.0.0` replaced the managed RDS database with a PostgreSQL 17 container on the existing EC2 host. The Version 1 product, financial model, authentication model, database schema, and provider-neutral runtime image are unchanged. The only application-source change is a guard in `src/db/index.ts` that skips development seeding during owner bootstrap.
-
-The verified-TLS contract is unchanged and must stay that way: production still requires `DATABASE_SSL=verify-full` and a trusted CA bundle. The CA is now a private authority generated for this deployment instead of an Amazon bundle, which is precisely why `runtime-environment.mjs` needed no change. Do not weaken it to `require` or `disable` for a host-local database.
-
-The database is reachable from outside AWS over IPv6 only, gated by a security-group rule scoped to one personal `/64`. This one inbound port is deliberate and user-directed — it replaced a billed public IPv4 endpoint with an unbilled one — and is not drift to be corrected. No Better Budget resource has a public IPv4 address.
-
-Backups are daily crash-consistent EBS snapshots of the root volume, retained seven days. There is no logical dump on a schedule and no point-in-time recovery, so take a manual `pg_dump` before anything destructive.
-
-Do not reintroduce ECS, an ALB, NAT, SSH, RDS, or a public IPv4 address without explicit user direction, and do not treat the infrastructure change as authorization to relax any Version 1 boundary below.
-
-Read `docs/agents/deployment.md` before changing deployment, infrastructure, or the production runtime. `docs/aws/ec2-cloudfront-migration.md` remains the authoritative live-resource, operations, rollback, and replacement-host runbook.
-
-## Version 2 deployment release
-
-Version `2.0.0` changed the AWS production deployment only, moving from ECS Express to a private EC2 host behind a CloudFront VPC origin. The Version 1 product, financial model, authentication model, database schema, and provider-neutral runtime image were unchanged. Version 3 superseded its RDS database.
+- Do not reintroduce ECS, an ALB, NAT, SSH, RDS, or a public IPv4 address without explicit user direction. The database's one inbound IPv6 port, scoped to one personal `/64`, is deliberate and user-directed, not drift.
+- Production still requires `DATABASE_SSL=verify-full` with the deployment's private CA bundle. Do not weaken it to `require` or `disable` for the host-local database.
+- Build `linux/arm64` only, natively on `ubuntu-24.04-arm`. Never reintroduce `linux/amd64` or QEMU emulation; if an x86 host becomes a real rollback target, add a second native job.
+- Keep the 512 MiB sizing in `bootstrap-ec2.sh` and never remove the container limits. Under memory pressure, lower `shared_buffers` or resize to `t4g.micro`.
+- The seed image tag in `bootstrap_host()` must name a commit whose ECR image has an arm64 manifest. Deployment requires exactly one _running_ instance with both production tags; a stopped host is the rollback. A replacement root volume needs the `Backup=daily` tag or it is never snapshotted. Keep the helper's image-architecture check, whose absence once took production down.
+- Keep Unlimited CPU credits; Standard credits throttle a deployment into rolling back a working image.
+- Backups are daily EBS snapshots kept seven days, with no scheduled dump or point-in-time recovery: take a manual `pg_dump` before anything destructive.
+- Production egress is IPv6 NAT on the Docker network, and the `IPv6AcceptRA=yes` drop-in must be installed before IPv6 forwarding is enabled, or the host loses IPv6, Systems Manager, and ECR within minutes.
 
 ## Version 1 boundaries
 
@@ -163,49 +132,13 @@ Dependency versions are pinned by `package-lock.json`. Use npm consistently and 
 
 Source lives under `src/`: `app/` routes and route handlers, `domain/` exact money and calculations, `db/` Drizzle schema and seeding, `lib/` Better Auth wiring, `server/` authoritative services. Components are grouped by view — `components/budget/`, `income/`, `organize/`, `transactions/`, `settings/`, `assistant/` — alongside `components/shell/` (the authenticated shell, query lifecycle, and optimistic patches), `components/shared/` (primitives more than one view needs), and `components/ui/` (view-agnostic primitives). Supporting directories are `scripts/`, `drizzle/`, `public/`, `docs/agents/`, `docs/design/`, `docs/aws/`, and `.github/workflows/`, plus `Dockerfile`, `compose.yaml`, and `runtime-environment.mjs`.
 
-High-impact files:
+`docs/agents/paths.md` lists what each high-impact file and directory owns. Read
+the entries for the area you are changing before editing it.
 
-- `src/domain/money.ts` — parsing, formatting, exact cent operations.
-- `src/domain/money-expression.ts` — exact bigint evaluation of the calculator expressions money inputs accept.
-- `src/domain/uuid.ts` — `createUuid()` for secure production and plain-HTTP LAN development.
-- `src/domain/calendar.ts` — `APP_TIME_ZONE`, the default current-month key, month-date helpers.
-- `src/domain/budget-calculations.ts` — authoritative and optimistic totals/carryover.
-- `src/domain/types.ts` — snapshot and domain contracts.
-- `src/db/schema.ts` — relational structure and database constraints.
-- `src/db/index.ts` — PGlite/PostgreSQL selection and initialization.
-- `src/db/household.ts` — single-household identity, owner bootstrap membership.
-- `src/db/seed.ts` — development data for the current and previous month. Merchants, amounts, and structure are fixed; only the calendar months follow today's date.
-- `src/server/mutation-schema.ts` — validated mutation contracts.
-- `src/server/budget-service.ts` — the mutation entry point: idempotency receipts, the database transaction, cross-cutting month validation, the typed dispatcher, and error mapping.
-- `src/server/budget-mutations/` — one module per mutation family, each handler taking a `MutationContext`: `plans.ts` (plan amount, carryover), `transactions.ts` (add/update/delete/undo, splits, cross-month moves), `income.ts` (plans and receipts), `structure.ts` (categories, items, archive/delete, reordering), `reassignment.ts` (moving an archived definition's activity and plan), `active-items.ts` (the shared archived-as-of-month condition), `month-operations.ts` (note, copy, clear, reset), `context.ts` (shared `MutationContext`/`ensureMonth`). Read only the family you are changing.
-- `src/server/backup/` — the Settings JSON backup behind `/api/backup`. `schema.ts` validates the file (exact split sums, in-month dates, internal references), `export.ts` builds it, `import-replace.ts` clears the household's budget rows, and `import-merge.ts` plus `import-activity.ts` add whatever the household lacks. Replace is clear-then-merge inside one transaction.
-- `src/server/month-snapshot/` — canonical month snapshot read path. `index.ts` is orchestration only; `queries.ts` holds every database read, `carryover.ts` the chronological carryover chains and balance derivation, `assemble.ts` the category, activity, and receipt view assembly.
-- `src/server/mutation-failures.ts` — mutation-failure class, not-found/conflict helpers.
-- `src/server/assistant/` — the budget assistant. `run.ts` is the Claude tool loop and model settings, `prompt.ts` the frozen system prompt, `tools.ts` the frozen tool definitions, `execute.ts` the tool dispatcher and read tools, `history.ts` the multi-month history read tool, `budget-tools.ts` and `transaction-tools.ts` the write tools, `commit.ts` the shared mutation, money, and month helpers, `resolve.ts` name and transaction-ref resolution, `render.ts` the compact text the model reads, `conversation-schema.ts` the request contract, `config.ts` the key-presence switch, and `rate-limit.ts` the per-household turn guard. `src/app/api/assistant/route.ts` is the endpoint.
-- `src/server/definition-usage.ts` — later-month activity and never-used (permanently deletable) status per definition, shared by the snapshot and the hard-delete handlers.
-- `src/components/shell/use-budget-data.ts` — hydration, retry, reconciliation, sync state.
-- `src/components/shell/optimistic.ts` — optimistic cache patches: clones the snapshot and delegates to `optimistic-patches/`, which mirrors `budget-mutations/` one file per mutation family.
-- `src/components/shell/pull-to-refresh.tsx` — the per-tab pull-to-refresh indicator, refresh lifecycle, and status announcement; `pull-gesture.ts` observes the native elastic overscroll and holds the pull state machine.
-- `src/components/shell/app-client.tsx` — authenticated interactive shell; `app-shell.tsx`, `budget-route.tsx`, `month-picker.tsx`, and `month-actions-sheet.tsx` are the surrounding chrome.
-- `src/components/budget/budget-view.tsx` — Budget page layout, URL-backed line-item details, item-scoped add-transaction flow. `budget-category-section.tsx` renders a category and its items, `budget-summary-card.tsx` the arc and balance, `budget-rail.tsx` the desktop summary rail (Add transaction, month totals, and recent transactions that open the edit sheet), `budget-structure-editor.ts` owns the category/item sheet state that `budget-structure-sheets.tsx` renders, and `budget-balance-strip.tsx` the mobile Left-to-budget strip that docks under the header once the card's amount scrolls away and, once the toolbar toggle scrolls away too, a P/R Planned/Available switch, and `carryover-coin.tsx` draws the logo's dollar coin (paths exported from `src/components/brand-mark.tsx`) that caps the progress bar of an item whose carryover is on.
-- `src/components/budget/move-money-sheet.tsx` — the Move money sheet the Budget row's swipe Move action opens: a planned-amount move (`movePlannedAmount`, in `budget-mutations/plans.ts`) or a paired expense/income transfer (`transferBetweenItems`, in `budget-mutations/transactions.ts`). Both resolve their two items through `activeMovePair` in `active-items.ts`.
-- `src/components/budget/budget-item-editors.tsx` — plan input, item edit/detail components; `left-to-budget-fill.ts` the planned amount's Left to budget and Over budget fill chip; `item-remaining-summary.tsx` the remaining-this-month card and the compact strip that docks under the detail header.
-- `src/components/income/income-view.tsx` — Income page: expected-income plans and received-income receipts. `income-source-details.tsx` is the pushed detail, `income-forms.tsx` the add-source and record-income sheets, `income-fields.tsx` the shared title, plan-amount, and appearance inputs.
-- `src/components/organize/organizer-view.tsx` — category and item structure editing, drag reordering, archive/delete; `organizer-category-section.tsx` renders one category and its items.
-- `src/components/transactions/transactions-view.tsx` — activity scoping, search, inline filters, filter-sheet drafts, applied-filter clearing; `transaction-sheet.tsx` and `transaction-allocation-picker.tsx` are the add/edit flow.
-- `src/components/shared/detail-history.ts` — the shared URL-plus-history-state contract behind every pushed detail view; Budget and Income both build one with `createDetailHistory`. `delete-definition-sheet.tsx` is the Budget-page and organizer delete flow that moves a definition's activity and plan to another item. `floating-add-button.tsx` is the mobile floating plus the Budget and Transactions pages spring in once their own add button scrolls away. `use-versioned-draft.ts` keeps inline amount edits and their `expectedVersion` stable across background refetches. `category-icon.tsx`, `category-details-fields.tsx`, `transaction-icon.tsx`, and `budget-view-helpers.ts` are the other cross-view primitives.
-- `src/components/assistant/` — `assistant-launcher.tsx` is the draggable floating button, rendered through `AppShell`'s `floating` slot so it sits outside the animated page content, `launcher-throw.ts` its release-velocity projection and settle spring, `buddy-protest.tsx` the fall and speech bubble after a hard throw, `buddy-ship.tsx` the spaceship that beams him away (art in `better-buddy-ship.png` and `better-buddy-ship-beam.png`, styles in `src/app/styles/assistant-ship.css`), `better-buddy.png` the transparent 256 px robot icon cut from the approved artwork, `better-buddy-figure.tsx` the floating robot with its gradient halo and floor shadow, `assistant-sheet.tsx` the chat sheet, `stick-to-end.ts` the thread's hold on its latest message as the keyboard shortens the body (the chat otherwise makes room for the keyboard through the shared `useKeyboardFit`, and its composer is a `StillTextarea` with `reveal={false}` stuck to the bottom of the sheet body, never in the footer), and `use-assistant.ts` the in-memory conversation and snapshot invalidation. Styles live in `src/app/styles/assistant.css`. `src/components/settings/settings-assistant-section.tsx` is the Settings switch.
-- `src/components/ui/navigation-detail/` — mobile push navigation, fixed detail chrome, modal fallback. `index.tsx` is the component, `edge-drag.ts` the edge-swipe dismissal gesture, `title-motion.ts` the collapsing-title machinery, `title-edit.ts` the rename tween that eases the header open and shut around a title edit, `summary-motion.ts` the scroll-scrubbed summary strip docked under the collapsed header, `header-cover.ts` the scrolled flag that lets the drawn header bar take pointers. `src/components/ui/docked-summary.ts` is the scroll tracking both docked strips share.
-- `src/components/ui/left-edge-gesture-guard.tsx` — global Safari left-edge history-gesture suppression.
-- `src/components/ui/still-focus/` — focus without the iOS page slide, for every text field, textarea, and money field. `fields.tsx` holds `StillInput` and `StillTextarea`, and `CurrencyInput` turns it on by default; both use `use-still-field.ts` (`useStillField`), which composes `tap.ts` (a tap becomes a no-scroll focus), `park.ts` (`focusStill`, parking the field off-screen behind a stand-in while the keyboard opens), `veil.ts` (a transparent field for focus iOS moves itself, such as the keyboard arrows), `pin.ts` (undoes the page scroll the browser makes to reveal the caret after an edit), `hold-viewport.ts` (stops a drag outside any scroll container from panning the screen while the keyboard is up), `keyboard-swap.ts` (holds the border fade until iOS has swapped to another keyboard), and `reveal.ts` with `scroll-room.ts` (the smooth scroll of the field's `data-still-scroller` container that clears the keyboard, after any transition moving it has finished). `stand-in.ts` holds the shared stand-in state. `src/components/ui/on-screen-keyboard.ts` is the keyboard-up test it shares with `keyboard-fit/`. `docs/agents/design/budget-and-inputs.md` holds the contract.
-- `src/components/ui/currency-input/` — the shared money field: `index.tsx` holds ATM-style cents entry and the calculator expression state, `expression-edit.ts` the end-of-text expression edits, `operator-bar.tsx` the one shared `CalculatorBar` docked above the on-screen number pad (mounted in `providers.tsx`), and `calculator-store.ts` the store through which the focused input hands it its state. `docs/agents/design/budget-and-inputs.md` holds its contract.
-- `src/components/ui/sheet.tsx` — animated, scroll-contained sheets dismissed by drag, tapping outside, or Escape, with no visible close control. `src/components/ui/keyboard-fit/` (`useKeyboardFit`) pads a mobile sheet's bottom by however far the on-screen keyboard covers it while one of its fields has focus, measured as the keyboard comes up and held until it goes down, so the sheet stays put, grows if it is short, and its body ends above the keyboard; `motion.ts` holds the keyboard's fitted motions (`keyboardTransition`) and `keyboardCover`, `shield.ts` moves a white strip, a fixed layer at the bottom of the screen in front of the sheet, with the keyboard, so nothing shows through its translucent glass, and `pending.ts` tells still focus how much further a growing sheet will rise and how tall its body will settle, so a field is revealed alongside the keyboard and lent scroll room glides back to the right end. `docs/agents/design/sheets-and-menus.md` holds both contracts.
-- `src/components/ui/hold-menu/` — the iOS-style touch-and-hold context menu. `index.tsx` is the `useHoldMenu` hook (open state, trigger props, held-finger selection, focus restore), `surface.tsx` the Radix Dialog layer with the lifted row clone and action panel, `press.ts` the hold timer and held-pointer tracking, and `layout.ts` the placement math. `src/components/shared/transaction-hold-menu.tsx` builds the Edit, Duplicate, and Delete actions shared by the Transactions page and the line-item detail, whose rows both render `transaction-row.tsx`.
-- `src/components/ui/continuous-corners/` — iOS-style continuous corners: `attach.ts` is the shared per-element core, `index.tsx` exports the `useContinuousCorners` hook and `ContinuousControls` (mounted once in `providers.tsx`, owns the button selector list), and `geometry.ts` holds the superellipse corner, capsule-end, and sliver-clip math. The global `corner-shape` rule and its circle/pill opt-out list live in `src/app/styles/tokens.css`.
-- `src/components/ui/sortable-list/` — `index.tsx` holds long-press activation, keyboard reordering, and the hook surface; `drag.ts` the pointer drag, list reflow, and edge auto-scroll; `preview.ts` the lifted drag copy.
-- `src/app/safe-area-launch.ts` — the inline head scripts in `layout.tsx`: the launch backup for a late `env(safe-area-inset-top)` (saved height, or a first-launch hold) and the landscape Dynamic Island side (`data-island`). `docs/agents/design/shell-and-platform.md` holds the contract.
-- `src/app/globals.css` — the Tailwind import and the ordered `@import` list only.
-- `src/app/styles/` — the rules, split by area (`tokens`, `app-shell`, `budget`, `navigation-detail`, `sheets-and-forms`, `transactions`, `income`, `organize`, `settings`, `sign-in`, `assistant`, `assistant-ship`, `hold-menu`, `currency-calculator`, `responsive-motion`). **The import order in `globals.css` is the cascade order.** Later files intentionally override earlier ones, so never reorder the imports, and add a new area file at the position its specificity requires — `responsive-motion.css` must stay last.
+**The import order in `src/app/globals.css` is the cascade order.** Later files
+in `src/app/styles/` intentionally override earlier ones, so never reorder the
+imports, and add a new area file at the position its specificity requires —
+`responsive-motion.css` must stay last.
 
 ### Navigating without reading whole files
 
@@ -353,8 +286,9 @@ bump once. Do not bump for read-only investigation or changes limited to
 documentation, comments, formatting, or generated development state. The
 Settings page receives the version from `package.json` at build time.
 
-A major release must also add a new version section to both `README.md` and this
-guide, preserving earlier sections as a historical record.
+A major release must also add a new version section to both `README.md` and
+`docs/agents/releases.md`, preserving earlier sections as a historical record,
+and add its load-bearing rules to **Release guardrails** in this guide.
 `docs/agents/conventions.md` lists what that section must document.
 
 ## Traps that produce wrong conclusions

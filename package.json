@@ -13,7 +13,7 @@
         "dev:postgres": "DATABASE_KIND=postgres next dev",
         "build": "next build --webpack",
         "start": "node scripts/validate-production-environment.mjs && next start",
-        "format": "prettier --write --ignore-unknown .",
+        "format": "prettier --write --ignore-unknown --log-level warn .",
         "format:check": "prettier --check --ignore-unknown .",
         "lint": "eslint .",
         "lint:fix": "eslint . --fix",

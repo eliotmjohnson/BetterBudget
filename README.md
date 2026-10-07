@@ -808,8 +808,9 @@ versions in `package-lock.json` must stay synchronized. Changes limited to
 documentation, comments, formatting, or read-only investigation do not bump.
 
 `AGENTS.md` holds the full classification guide and the requirement that every
-major release adds a version section to both files. The Version 2 sections are
-the worked example.
+major release adds a version section here and to `docs/agents/releases.md`, with
+its load-bearing rules summarized under **Release guardrails** in `AGENTS.md`.
+The Version 2 sections are the worked example.
 
 ## Eager persistence model
 
@@ -948,7 +949,7 @@ done** in `AGENTS.md`. Coding agents can run it with the `/handoff` command in
 | `npm run dev:postgres` | Start development while forcing `DATABASE_KIND=postgres`.                                       |
 | `npm run build`        | Create a production webpack/standalone build.                                                   |
 | `npm run start`        | Validate production configuration and serve the previously built application.                   |
-| `npm run format`       | Format all supported repository files with the pinned Prettier version.                         |
+| `npm run format`       | Format all supported repository files with the pinned Prettier version, printing only problems. |
 | `npm run format:check` | Check repository formatting without writing files.                                              |
 | `npm run lint`         | Run ESLint over the repository.                                                                 |
 | `npm run lint:fix`     | Apply ESLint autofixes, including structural blank-line rules.                                  |

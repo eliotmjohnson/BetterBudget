@@ -1,83 +1,376 @@
 # Navigation detail and docked strips
 
-Read this before changing the pushed detail view (line items, income sources, organizer details), its header, or either docked summary strip.
+Read this before changing the pushed detail view (line items, income sources,
+organizer details), its header, or either docked summary strip.
 
 ## Push navigation
 
 ### Route and structure
 
-Budget-item details are URL-backed and use an iOS-style navigation push below 760 px. The detail page slides in from the right while the mobile header, Budget content, and bottom navigation parallax left; Back, browser history, refresh, and an app-controlled left-edge swipe all preserve navigation-stack semantics. The global left-edge guard must leave this custom swipe available from x=0 while suppressing Safari's cancelable native history gesture. Disable the underlying detail swipe while any child sheet is visible or exiting so add/edit transaction interactions cannot pop the line-item route. Keep the Budget back control and editable item title in a fixed detail header while only the detail body scrolls, led by a prominent remaining-this-month summary that docks as a compact strip under the collapsed header once scrolled past (below). A floating blue plus action remains at the bottom right and opens the add-transaction sheet with the current item preselected. Item-scoped add and edit transaction sheets are full-screen below 760 px, omit the mobile close control and grabber, and retain the header Add/Save action; at 760 px and above, they use the shared centered modal treatment. Global transaction sheets retain their established standard presentation.
+Budget-item details are URL-backed and use an iOS-style navigation push below
+760 px. The detail page slides in from the right while the mobile header, Budget
+content, and bottom navigation parallax left; Back, browser history, refresh,
+and an app-controlled left-edge swipe all preserve navigation-stack semantics.
+The global left-edge guard must leave this custom swipe available from x=0 while
+suppressing Safari's cancelable native history gesture. Disable the underlying
+detail swipe while any child sheet is visible or exiting so add/edit transaction
+interactions cannot pop the line-item route. Keep the Budget back control and
+editable item title in a fixed detail header while only the detail body scrolls,
+led by a prominent remaining-this-month summary that docks as a compact strip
+under the collapsed header once scrolled past (below). A floating blue plus
+action remains at the bottom right and opens the add-transaction sheet with the
+current item preselected. Item-scoped add and edit transaction sheets are
+full-screen below 760 px, omit the mobile close control and grabber, and retain
+the header Add/Save action; at 760 px and above, they use the shared centered
+modal treatment. Global transaction sheets retain their established standard
+presentation.
 
 ### Push and pop motion
 
-The push, pop, and edge-swipe motion is ported from the Cinalysis push stack and reads from the `--navigation-detail-*` tokens in `tokens.css`: a push moves the detail and the Budget layer together over 0.5 s on the push curve `cubic-bezier(0.3, 0.84, 0.21, 1)`, the Budget layer parallaxing 25% of the screen width left (`--navigation-detail-parallax` and `restingParallaxRatio` in `edge-drag.ts`, which must agree), tuned by eye on device slightly below UIKit's commonly cited 30% and well below the fixed 128 px ported from Cinalysis, which moved it about a third of a phone's width; Back reverses both layers together on that same duration and curve; Cinalysis returned the underlying layer over 0.65 s on its softer return curve, which left the Budget layer visibly trailing the detail and was dropped. Neither direction delays either layer: Cinalysis's 0.1 s start delay made the two layers start out of step and read as a stutter on device, so it was removed. Its job — giving the freshly mounted detail time to render before it moves — is done instead by holding the entrance: the detail mounts with its entrance animation paused off-screen, and `NavigationDetail` sets `data-navigation-detail-state='open'` on the body only after two animation frames, which starts the detail's animation and the Budget layer's parallax on the same frame. Without that hold, the slide began on the frame the detail first rendered and showed it half-painted.
+The push, pop, and edge-swipe motion is ported from the Cinalysis push stack and
+reads from the `--navigation-detail-*` tokens in `tokens.css`: a push moves the
+detail and the Budget layer together over 0.5 s on the push curve
+`cubic-bezier(0.3, 0.84, 0.21, 1)`, the Budget layer parallaxing 25% of the
+screen width left (`--navigation-detail-parallax` and `restingParallaxRatio` in
+`edge-drag.ts`, which must agree), tuned by eye on device; Back reverses both
+layers together on that same duration and curve. Neither direction delays either
+layer, since a start delay puts the two layers out of step. The freshly mounted
+detail gets time to render before it moves by holding the entrance instead: the
+detail mounts with its entrance animation paused off-screen, and
+`NavigationDetail` sets `data-navigation-detail-state='open'` on the body only
+after two animation frames, which starts the detail's animation and the Budget
+layer's parallax on the same frame. Without that hold, the slide began on the
+frame the detail first rendered and showed it half-painted.
 
 ### Edge swipe
 
-The edge swipe writes each pointer event's position straight to inline `transform`s on the detail and on `.app-frame`, with transitions off while the finger is down, so the detail tracks the finger 1:1 at the touch-event rate (60 Hz on iOS Safari, which also caps `requestAnimationFrame` at 60 Hz). That cap is Safari's, not the code's: turning off the Safari feature flag "Prefer Page Rendering Updates near 60fps" (Settings → Apps → Safari → Advanced → Feature Flags) makes the same drag track at 120 Hz on a ProMotion iPhone, confirmed on device. Only a native scroll could get past the cap without the flag, and that rebuild has not been pursued. This replaced Cinalysis's two script smoothing stages (an input filter plus a rAF frame driver), which trailed the finger by about 45 ms. Do not interpolate the drag with a short CSS transition retargeted on every event: on device it made the drag stutter, and when a flick ended the last follow transition's `transitionend` fired during the exit and completed the dismissal early, closing the detail twice. Drag frames must never write custom properties on `body`: custom properties inherit, so a per-frame write there restyled the whole document every frame; writing `transform` on the two composited layers touches only those elements. Settling and dismissing switch the state attributes, force a reflow, and only then write the target transforms, so the transitions start from the dragged position. The drag measures from the point where it claims the direction, so activation never jumps, and a re-grab reads the rendered position from the detail's bounding box, which includes an in-flight settle.
+The edge swipe writes each pointer event's position straight to inline
+`transform`s on the detail and on `.app-frame`, with transitions off while the
+finger is down, so the detail tracks the finger 1:1 at the touch-event rate (60
+Hz on iOS Safari, which also caps `requestAnimationFrame` at 60 Hz). That cap is
+Safari's, not the code's: turning off the Safari feature flag "Prefer Page
+Rendering Updates near 60fps" (Settings → Apps → Safari → Advanced → Feature
+Flags) makes the same drag track at 120 Hz on a ProMotion iPhone, confirmed on
+device. Only a native scroll could get past the cap without the flag, and that
+rebuild has not been pursued. Do not add script smoothing stages, which trail
+the finger. Do not interpolate the drag with a short CSS transition retargeted
+on every event: on device it made the drag stutter, and when a flick ended the
+last follow transition's `transitionend` fired during the exit and completed the
+dismissal early, closing the detail twice. Drag frames must never write custom
+properties on `body`: custom properties inherit, so a per-frame write there
+restyled the whole document every frame; writing `transform` on the two
+composited layers touches only those elements. Settling and dismissing switch
+the state attributes, force a reflow, and only then write the target transforms,
+so the transitions start from the dragged position. The drag measures from the
+point where it claims the direction, so activation never jumps, and a re-grab
+reads the rendered position from the detail's bounding box, which includes an
+in-flight settle.
 
 ### Release and settle
 
-Release velocity (`releaseVelocity` in `src/components/ui/gesture-release.ts`, shared with sheets, which also owns the exit timing constants) is a least-squares slope over the coalesced samples from the last 80 ms, and is zero when the finger rested more than 60 ms before lifting. A lift-off sample at the last position is not recorded: it would read as a pause and cut a flick's speed. An exponential filter was dropped for the same reason: on a flick of about 80 ms it never reached the finger's speed, so the exit started slower than the finger and looked like a hitch. Release dismisses past 150 px, or on a flick of at least 24 px at 0.55 px/ms. The exit is matched to the finger: its duration is 1.6 times the time the remaining distance takes at the release speed (floored at 0.5 px/ms), clamped to 160–400 ms, and to at most 300 ms for a release at flick speed (0.55 px/ms or faster), and its curve is `cubic-bezier(0.3, y1, 0.21, 1)` with `y1` chosen so the curve's starting slope equals the release speed, clamped to 0.3–1 so it never overshoots. The same `transition` is written inline on both the detail and `.app-frame`, so the Budget layer stays in step. It must not travel through custom properties on `body`: that restyled the whole document on the release frame, which read on device as a pause before the panel shot off. The body's `--navigation-detail-dismiss-duration` is written only once the exit has finished, for the 1 ms close animation. Otherwise the detail settles back over 0.4 s on the return curve `cubic-bezier(0.4, 1, 0.4, 1)` while the Budget layer returns to its parallax over 0.5 s on the push curve. `restingParallax` in `edge-drag.ts` must equal `--navigation-detail-parallax`, and `settleDuration` must equal the longer of the two settle transitions, since it clears the settling attributes.
+Release velocity (`releaseVelocity` in `src/components/ui/gesture-release.ts`,
+shared with sheets, which also owns the exit timing constants) is a
+least-squares slope over the coalesced samples from the last 80 ms, and is zero
+when the finger rested more than 60 ms before lifting. A lift-off sample at the
+last position is not recorded: it would read as a pause and cut a flick's speed.
+Do not smooth the velocity with an exponential filter, which never reaches a
+short flick's speed. Release dismisses past 150 px, or on a flick of at least 24
+px at 0.55 px/ms. The exit is matched to the finger: its duration is 1.6 times
+the time the remaining distance takes at the release speed (floored at 0.5
+px/ms), clamped to 160–400 ms, and to at most 300 ms for a release at flick
+speed (0.55 px/ms or faster), and its curve is `cubic-bezier(0.3, y1, 0.21, 1)`
+with `y1` chosen so the curve's starting slope equals the release speed, clamped
+to 0.3–1 so it never overshoots. The same `transition` is written inline on both
+the detail and `.app-frame`, so the Budget layer stays in step. It must not
+travel through custom properties on `body`: that restyled the whole document on
+the release frame, which read on device as a pause before the panel shot off.
+The body's `--navigation-detail-dismiss-duration` is written only once the exit
+has finished, for the 1 ms close animation. Otherwise the detail settles back
+over 0.4 s on the return curve `cubic-bezier(0.4, 1, 0.4, 1)` while the Budget
+layer returns to its parallax over 0.5 s on the push curve. `restingParallax` in
+`edge-drag.ts` must equal `--navigation-detail-parallax`, and `settleDuration`
+must equal the longer of the two settle transitions, since it clears the
+settling attributes.
 
 ## Collapsing title
 
 ### Collapse
 
-The detail header title collapses with the scroll, never on a timer. The expanded title wraps and is left aligned; as it scales toward the compact bar its wrapped remainder dissolves, the single-line layout takes over at 65 % of the collapse, and the text that line could not show reveals across the remaining scroll so the motion reverses when scrolling back up. Truncate the compact title against its drawn width rather than its laid-out width, keep it centered in the bar, and keep the visible text continuous across the layout swap. Register any custom property used for these fades with `@property`; unregistered custom properties and CSS gradients animate discretely and snap. Where scroll-driven animations are supported, the collapse finishes within `--navigation-detail-collapse-range` (the expanded-minus-compact header height, about 50–65 px) through `animation-range`. The title's `navigation-detail-title-collapse` keyframes animate only registered custom properties: `--navigation-detail-title-progress` from 0 to 1, plus the tail and head fades. The title's `transform` is computed from those properties in `navigation-detail.css` and is never a keyframe property. On iOS Safari a `transform` keyframe on the title ignored the length-based `animation-range`, so the title shrank across the whole list's scroll height while the header background, which animates the non-accelerated `clip-path`, collapsed on time. On a long Organize list the title then needed hundreds of pixels of scroll to collapse. The 65 % keyframe stop and the `0.65` in that transform are `titleRevealProgress` in `title-motion.ts`, and `20 / 46` is its `titleCompactScale`; change them together. Past the stop the head fade equals the reveal fraction, so the transform reuses it for the final horizontal glide.
+The detail header title collapses with the scroll, never on a timer. The
+expanded title wraps and is left aligned; as it scales toward the compact bar
+its wrapped remainder dissolves, the single-line layout takes over at 65 % of
+the collapse, and the text that line could not show reveals across the remaining
+scroll so the motion reverses when scrolling back up. Truncate the compact title
+against its drawn width rather than its laid-out width, keep it centered in the
+bar, and keep the visible text continuous across the layout swap. Register any
+custom property used for these fades with `@property`; unregistered custom
+properties and CSS gradients animate discretely and snap. Where scroll-driven
+animations are supported, the collapse finishes within
+`--navigation-detail-collapse-range` (the expanded-minus-compact header height,
+about 50–65 px) through `animation-range`. The title's
+`navigation-detail-title-collapse` keyframes animate only registered custom
+properties: `--navigation-detail-title-progress` from 0 to 1, plus the tail and
+head fades. The title's `transform` is computed from those properties in
+`navigation-detail.css` and is never a keyframe property. On iOS Safari a
+`transform` keyframe on the title ignored the length-based `animation-range`, so
+the title shrank across the whole list's scroll height while the header
+background, which animates the non-accelerated `clip-path`, collapsed on time.
+On a long Organize list the title then needed hundreds of pixels of scroll to
+collapse. The 65 % keyframe stop and the `0.65` in that transform are
+`titleRevealProgress` in `title-motion.ts`, and `20 / 46` is its
+`titleCompactScale`; change them together. Past the stop the head fade equals
+the reveal fraction, so the transform reuses it for the final horizontal glide.
 
 ### Header shadow
 
-A soft 10 px shadow (`.navigation-detail-header::after`) sits at the compact bar's bottom edge. It stays hidden for the whole collapse and fades in over the following 24 px of scroll once the bar has stopped, reversing on the way back up. The header's `clip-path` would cut off a shadow on the background itself, so it is a separate pseudo-element. For the same Safari reason as the title, its `opacity` is computed from the registered `--navigation-detail-header-shadow` rather than being keyframed. The scroll-driven path animates that number over `animation-range: var(--navigation-detail-collapse-range) calc(var(--navigation-detail-collapse-range) + 24px)`. The script fallback computes the same value in `headerShadow` from `headerShadowFadeDistance` in `title-motion.ts`; keep the two 24 px values in step. Its strength is the distance content has scrolled beneath the header's drawn bottom edge (`headerShadow`), which outside title editing reduces to the 24 px fade past the collapse. While a title edit re-expands the header, content still scrolled beneath keeps the shadow, and the shadow sits at the header's drawn bottom edge by adding `--navigation-detail-header-drop` to its `top`. The phone header box is `--navigation-detail-header-shadow-room` (10 px, the shadow's height) taller than the expanded header, with its white `::before` inset by the same amount, because the header's `overflow: hidden` would otherwise clip the shadow below a fully expanded header. At the top of the page it stays off. Reduced motion shows the shadow fully once collapsed, or while editing over scrolled content.
+A soft 10 px shadow (`.navigation-detail-header::after`) sits at the compact
+bar's bottom edge. It stays hidden for the whole collapse and fades in over the
+following 24 px of scroll once the bar has stopped, reversing on the way back
+up. The header's `clip-path` would cut off a shadow on the background itself, so
+it is a separate pseudo-element. For the same Safari reason as the title, its
+`opacity` is computed from the registered `--navigation-detail-header-shadow`
+rather than being keyframed. The scroll-driven path animates that number over
+`animation-range: var(--navigation-detail-collapse-range) calc(var(--navigation-detail-collapse-range) + 24px)`.
+The script fallback computes the same value in `headerShadow` from
+`headerShadowFadeDistance` in `title-motion.ts`; keep the two 24 px values in
+step. Its strength is the distance content has scrolled beneath the header's
+drawn bottom edge (`headerShadow`), which outside title editing reduces to the
+24 px fade past the collapse. While a title edit re-expands the header, content
+still scrolled beneath keeps the shadow, and the shadow sits at the header's
+drawn bottom edge by adding `--navigation-detail-header-drop` to its `top`. The
+phone header box is `--navigation-detail-header-shadow-room` (10 px, the
+shadow's height) taller than the expanded header, with its white `::before`
+inset by the same amount, because the header's `overflow: hidden` would
+otherwise clip the shadow below a fully expanded header. At the top of the page
+it stays off. Reduced motion shows the shadow fully once collapsed, or while
+editing over scrolled content.
 
 ### Rename motion
 
-Tapping a collapsed title to rename it eases the header back to fully expanded, and ending the rename eases it back to the scroll position, both over 360 ms with an ease-in-out cubic (`titleEditMotionDuration`, `startTitleEditTween` in `title-edit.ts`). The tween is driven frame by frame through the direct-motion properties, starting from the progress actually drawn and blending toward the live target, so scrolling during it never jumps. Its clock starts on the first animation frame, never the synchronous render at setup, so a frame timestamp earlier than setup cannot run it backwards. The edit state (`TitleEditState`) lives in a `NavigationDetail` ref rather than the `setupTitleMotion` runtime: accepting a rename changes the detail's `title`, which re-runs the setup effect, and its teardown disconnects the title observer before it sees the input leave. Every setup therefore calls `syncTitleEditing`, which notices an edit that ended across the re-run and eases the header back instead of snapping it shut. It is not a CSS transition: the title's `transform` and the header's `clip-path` change only through unregistered custom properties (`--navigation-detail-title-scale`/`-x`/`-y`, `--navigation-detail-header-collapse-y`), and iOS Safari does not transition a change that arrives that way, so the earlier transition-based handoff snapped the header open. `data-navigation-detail-title-edit-transition` now only marks the tween, hiding the input's caret and underline while it runs; iOS repaints a caret only when the selection changes, so `revealTitleCaret` briefly widens and restores the selection on the frame after the tween ends, or no caret appears. Direct motion also writes `--navigation-detail-title-progress` inline: when it hands back to the scroll-driven path, the restarted scroll-driven animations take a frame to resolve, and during that frame the title, header clip, and shadow fall back to their inline values. Without the inline progress the title fell back to 0, fully expanded, and flickered at the end of the collapse.
+Tapping a collapsed title to rename it eases the header back to fully expanded,
+and ending the rename eases it back to the scroll position, both over 360 ms
+with an ease-in-out cubic (`titleEditMotionDuration`, `startTitleEditTween` in
+`title-edit.ts`). The tween is driven frame by frame through the direct-motion
+properties, starting from the progress actually drawn and blending toward the
+live target, so scrolling during it never jumps. Its clock starts on the first
+animation frame, never the synchronous render at setup, so a frame timestamp
+earlier than setup cannot run it backwards. The edit state (`TitleEditState`)
+lives in a `NavigationDetail` ref rather than the `setupTitleMotion` runtime:
+accepting a rename changes the detail's `title`, which re-runs the setup effect,
+and its teardown disconnects the title observer before it sees the input leave.
+Every setup therefore calls `syncTitleEditing`, which notices an edit that ended
+across the re-run and eases the header back instead of snapping it shut. It is
+not a CSS transition: the title's `transform` and the header's `clip-path`
+change only through unregistered custom properties
+(`--navigation-detail-title-scale`/`-x`/`-y`,
+`--navigation-detail-header-collapse-y`), and iOS Safari does not transition a
+change that arrives that way, so the earlier transition-based handoff snapped
+the header open. `data-navigation-detail-title-edit-transition` now only marks
+the tween, hiding the input's caret and underline while it runs; iOS repaints a
+caret only when the selection changes, so `revealTitleCaret` briefly widens and
+restores the selection on the frame after the tween ends, or no caret appears.
+Direct motion also writes `--navigation-detail-title-progress` inline: when it
+hands back to the scroll-driven path, the restarted scroll-driven animations
+take a frame to resolve, and during that frame the title, header clip, and
+shadow fall back to their inline values. Without the inline progress the title
+fell back to 0, fully expanded, and flickered at the end of the collapse.
 
-The rename field takes focus through `useStillField({ autoFocus: true, conceal: false })` instead of React's `autoFocus`, so iOS does not scroll the page as it focuses; `budget-and-inputs.md` (Still focus) explains why a title is never hidden behind a stand-in.
+The rename field takes focus through
+`useStillField({ autoFocus: true, conceal: false })` instead of React's
+`autoFocus`, so iOS does not scroll the page as it focuses;
+`budget-and-inputs.md` (Still focus) explains why a title is never hidden behind
+a stand-in.
 
 ### Horizontal travel
 
-Horizontally, a wrapped expanded title is centered on its own box and the wider single-line box takes over only once the compact layout replaces it, so the title travels to `translateX` first and blends on to `restTranslateX` as the remainder reveals, keeping one center across the swap.
+Horizontally, a wrapped expanded title is centered on its own box and the wider
+single-line box takes over only once the compact layout replaces it, so the
+title travels to `translateX` first and blends on to `restTranslateX` as the
+remainder reveals, keeping one center across the swap.
 
 ## Remaining-this-month strip
 
 ### Layout and styling
 
-Below 760 px the budget-item detail keeps its remaining balance visible: `NavigationDetail` takes an optional `summary` and renders it in `.navigation-detail-summary`, a 44 px strip whose top is the compact header's bottom edge (`--navigation-detail-compact-header-height`). The strip carries the card's label (Remaining this month or Over budget this month, truncated before it can crowd the amount) and the amount, styled as a full-width docked version of the card, with its gradient, border, corner glow (a radial-gradient layer, since the strip has no room for the card's pseudo-element circle), and state colors, a square top edge against the bar, and rounded bottom corners.
+Below 760 px the budget-item detail keeps its remaining balance visible:
+`NavigationDetail` takes an optional `summary` and renders it in
+`.navigation-detail-summary`, a 44 px strip whose top is the compact header's
+bottom edge (`--navigation-detail-compact-header-height`). The strip carries the
+card's label (Remaining this month or Over budget this month, truncated before
+it can crowd the amount) and the amount, styled as a full-width docked version
+of the card, with its gradient, border, corner glow (a radial-gradient layer,
+since the strip has no room for the card's pseudo-element circle), and state
+colors, a square top edge against the bar, and rounded bottom corners.
 
 ### Scroll scrubbing
 
-It is scrubbed by the scroll, never on a timer: `summary-motion.ts` measures the element marked `data-navigation-detail-summary-anchor` (the card's amount) and sets `--navigation-detail-summary-start` and `--navigation-detail-summary-end` so the reveal ends where that amount's bottom passes the compact bar and starts `shadowReach` (40 px) earlier than where its top does, so the amount slips under the bar as the strip slides out from behind it.
+It is scrubbed by the scroll, never on a timer: `summary-motion.ts` measures the
+element marked `data-navigation-detail-summary-anchor` (the card's amount) and
+sets `--navigation-detail-summary-start` and `--navigation-detail-summary-end`
+so the reveal ends where that amount's bottom passes the compact bar and starts
+`shadowReach` (40 px) earlier than where its top does, so the amount slips under
+the bar as the strip slides out from behind it.
 
 ### Shadows and clipping
 
-The strip sits one `z-index` below the header, so the title bar's own charcoal shadow, unchanged, keeps its scroll trigger and falls over the strip. The strip also drops the card's 1 px inset white highlight, which belongs to the card's rounded top edge and on the strip drew a light line inside the bar's shadow. The strip carries the card's own `box-shadow`, unchanged and never tied to the scroll. The progress lives on the wrapper, `.navigation-detail-summary`, whose `clip-path` clips only its top edge, so the strip emerges from the bar's edge while the shadow keeps `--navigation-detail-summary-shadow-reach` (40 px, just past the shadow's 10 px offset plus 28 px blur) of room below it. At rest the strip is translated up by its height plus that reach, so its shadow is hidden behind the bar with it rather than glowing under the bar before the strip arrives, and the extra reach is why the reveal starts 40 px early: the strip then travels 1:1 with the scroll. Keep `shadowReach` in `summary-motion.ts` equal to the CSS reach. As with the title, the keyframes (`navigation-detail-summary-reveal`) animate only the registered `--navigation-detail-summary-progress`, and the strip's `transform` is computed from it; where scroll-driven animations are unsupported, or under reduced motion, the script writes that number instead (reduced motion snaps it to 1 at the range end and back to 0 at its start).
+The strip sits one `z-index` below the header, so the title bar's own charcoal
+shadow, unchanged, keeps its scroll trigger and falls over the strip. The strip
+also drops the card's 1 px inset white highlight, which belongs to the card's
+rounded top edge and on the strip drew a light line inside the bar's shadow. The
+strip carries the card's own `box-shadow`, unchanged and never tied to the
+scroll. The progress lives on the wrapper, `.navigation-detail-summary`, whose
+`clip-path` clips only its top edge, so the strip emerges from the bar's edge
+while the shadow keeps `--navigation-detail-summary-shadow-reach` (40 px, just
+past the shadow's 10 px offset plus 28 px blur) of room below it. At rest the
+strip is translated up by its height plus that reach, so its shadow is hidden
+behind the bar with it rather than glowing under the bar before the strip
+arrives, and the extra reach is why the reveal starts 40 px early: the strip
+then travels 1:1 with the scroll. Keep `shadowReach` in `summary-motion.ts`
+equal to the CSS reach. As with the title, the keyframes
+(`navigation-detail-summary-reveal`) animate only the registered
+`--navigation-detail-summary-progress`, and the strip's `transform` is computed
+from it; where scroll-driven animations are unsupported, or under reduced
+motion, the script writes that number instead (reduced motion snaps it to 1 at
+the range end and back to 0 at its start).
 
 ### Pointers
 
-The strip is `aria-hidden`, because the card already exposes the value, but it takes pointers once it shows: its wrapper ignores them and `.navigation-detail-summary-inner` accepts them, and the wrapper's `clip-path` also clips hit-testing, so the strip swallows a tap, hold, or swipe only where it is drawn. It once ignored pointers so that a drag starting on it would scroll the body, but taps then opened the transaction scrolled beneath it; like a UIKit bar, a drag that starts on the docked strip no longer scrolls. The header bar follows the same rule: `header-cover.ts` sets `data-navigation-detail-scrolled` on the content whenever the body is scrolled off the top, and only then does the header's white `::before` take pointers, clipped by its collapse `clip-path` to the bar actually drawn. At the top nothing sits beneath the header, so the expanded title stays transparent and a drag on it still scrolls. The scroll tracking itself is `trackDockedSummary` in `src/components/ui/docked-summary.ts`, shared with the Budget page's balance strip (below).
+The strip is `aria-hidden`, because the card already exposes the value, but it
+takes pointers once it shows: its wrapper ignores them and
+`.navigation-detail-summary-inner` accepts them, and the wrapper's `clip-path`
+also clips hit-testing, so the strip swallows a tap, hold, or swipe only where
+it is drawn. It once ignored pointers so that a drag starting on it would scroll
+the body, but taps then opened the transaction scrolled beneath it; like a UIKit
+bar, a drag that starts on the docked strip no longer scrolls. The header bar
+follows the same rule: `header-cover.ts` sets `data-navigation-detail-scrolled`
+on the content whenever the body is scrolled off the top, and only then does the
+header's white `::before` take pointers, clipped by its collapse `clip-path` to
+the bar actually drawn. At the top nothing sits beneath the header, so the
+expanded title stays transparent and a drag on it still scrolls. The scroll
+tracking itself is `trackDockedSummary` in
+`src/components/ui/docked-summary.ts`, shared with the Budget page's balance
+strip (below).
 
 ### Title editing and scroll padding
 
-Editing the title re-expands the header over its docked position, so instead of hiding, the strip drops with the header's bottom edge: direct title motion writes `--navigation-detail-header-drop` (the collapse range times one minus the drawn progress) on the content, and `.navigation-detail-summary` translates by it. The property is removed whenever the scroll-driven path is in control. The body's `scroll-padding-top` clears the bar plus the strip so a focused field is never scrolled in behind it. If the body cannot scroll far enough to hide the amount, the strip never appears. Desktop hides it; the centered modal keeps the card as is.
+Editing the title re-expands the header over its docked position, so instead of
+hiding, the strip drops with the header's bottom edge: direct title motion
+writes `--navigation-detail-header-drop` (the collapse range times one minus the
+drawn progress) on the content, and `.navigation-detail-summary` translates by
+it. The property is removed whenever the scroll-driven path is in control. The
+body's `scroll-padding-top` clears the bar plus the strip so a focused field is
+never scrolled in behind it. If the body cannot scroll far enough to hide the
+amount, the strip never appears. Desktop hides it; the centered modal keeps the
+card as is.
 
 ## Budget page balance strip
 
 ### Layout and styling
 
-Below 760 px the Budget page docks the same kind of strip for its balance: `BudgetBalanceStrip` (`src/components/budget/budget-balance-strip.tsx`) slides a 44 px strip out from under the mobile header once the summary card's Left to budget (or Over budget) amount, marked `data-budget-balance-anchor`, scrolls beneath it, scrubbed by the scroll exactly like the item strip: the reveal ends where the amount's bottom passes the header and starts 40 px (`shadowReach`, equal to `--budget-balance-shadow-reach`) before its top does. It is styled as the summary card rather than the item card: white, the card's `var(--line)` border, the item strip's faint `0 10px 28px` shadow in the card's neutral tint (7%), a square top against the header and rounded bottom corners, a small copy of the card's arc and its progress, the card's muted label, and the amount in the card's blue, or red when over budget.
+Below 760 px the Budget page docks the same kind of strip for its balance:
+`BudgetBalanceStrip` (`src/components/budget/budget-balance-strip.tsx`) slides a
+44 px strip out from under the mobile header once the summary card's Left to
+budget (or Over budget) amount, marked `data-budget-balance-anchor`, scrolls
+beneath it, scrubbed by the scroll exactly like the item strip: the reveal ends
+where the amount's bottom passes the header and starts 40 px (`shadowReach`,
+equal to `--budget-balance-shadow-reach`) before its top does. It is styled as
+the summary card rather than the item card: white, the card's `var(--line)`
+border, the item strip's faint `0 10px 28px` shadow in the card's neutral tint
+(7%), a square top against the header and rounded bottom corners, a small copy
+of the card's arc and its progress, the card's muted label, and the amount in
+the card's blue, or red when over budget.
 
 ### Placement and measurement
 
-It lives in the page, not the shell, as the first child of the Budget `section`: `.budget-balance-dock` is a zero-height `position: sticky` element at `top: 0`, which sticks at the bottom of the header because sticky offsets are measured inside `.app-content`'s padding, and that padding is the pull band; the measurement therefore adds the scroller's `padding-top` to the dock's `top`. Anchor offsets come from the `offsetTop` chain up to `.app-content`, not bounding rects, so the page's entrance transform cannot skew them. The progress runs on `animation-timeline: scroll(nearest block)`, and `trackDockedSummary` writes it under reduced motion or without scroll-driven animations. The strip sits 18 px outside the column on each side to reach the screen edges, matching `.screen`'s inline padding. The month slide's clone stops every animation, so `captureMonthSlide` copies the live value of each `data-scroll-progress` element's named property onto its clone, and a docked strip leaves with the old month instead of vanishing. `.app-content`'s `scroll-padding-top` grows by the strip's height on the Budget page so a focused planned amount never scrolls in behind it. The strip takes pointers where it is drawn, like the item strip. Its arc, label, and amount are `aria-hidden`, because the card already exposes them, but the strip itself is not: it ends with a Planned/Available group (`StripAmountSwitch`) of a small **P**, the `budget-view` `AppSwitch`, and a small **R** (labelled Planned and Remaining for assistive technology), coloured like the toolbar switch it mirrors: blue P for Planned, green R for Available. The group appears only once the toolbar switch itself has scrolled under the header and strip (`useScrolledPast` on `.budget-amount-switch` with `budgetBalanceStripHeight`, in `src/components/ui/use-scrolled-past.ts`), so the strip first docks with just the balance and the switch follows as the toolbar leaves. Its space is always reserved (`--budget-balance-switch-width`, two 22 px letters and the 58 px switch, overhanging the strip's right padding by `--budget-balance-switch-overhang`, 12 px, so the R letter sits about 13 px from the screen edge). While it is closed, `data-switch='hidden'` on the strip translates the amount right across that space, so the balance still ends at the padding. Opening slides the amount back while the group fades in and slides 28 px in from the right, both over 0.5 s on `cubic-bezier(0.22, 1, 0.36, 1)`. The motion is transform-only on purpose: an earlier version grew the group's width with a `grid-template-columns` transition and a spring on top, and it stuttered at the end, where the slowing layout animation snapped to whole pixels while the spring rebounded. The cost of reserving the space is that a very wide amount truncates the label a little sooner. While closed it is `inert`.
+It lives in the page, not the shell, as the first child of the Budget `section`:
+`.budget-balance-dock` is a zero-height `position: sticky` element at `top: 0`,
+which sticks at the bottom of the header because sticky offsets are measured
+inside `.app-content`'s padding, and that padding is the pull band; the
+measurement therefore adds the scroller's `padding-top` to the dock's `top`.
+Anchor offsets come from the `offsetTop` chain up to `.app-content`, not
+bounding rects, so the page's entrance transform cannot skew them. The progress
+runs on `animation-timeline: scroll(nearest block)`, and `trackDockedSummary`
+writes it under reduced motion or without scroll-driven animations. The strip
+sits 18 px outside the column on each side to reach the screen edges, matching
+`.screen`'s inline padding. The month slide's clone stops every animation, so
+`captureMonthSlide` copies the live value of each `data-scroll-progress`
+element's named property onto its clone, and a docked strip leaves with the old
+month instead of vanishing. `.app-content`'s `scroll-padding-top` grows by the
+strip's height on the Budget page so a focused planned amount never scrolls in
+behind it. The strip takes pointers where it is drawn, like the item strip. Its
+arc, label, and amount are `aria-hidden`, because the card already exposes them,
+but the strip itself is not: it ends with a Planned/Available group
+(`StripAmountSwitch`) of a small **P**, the `budget-view` `AppSwitch`, and a
+small **R** (labelled Planned and Remaining for assistive technology), coloured
+like the toolbar switch it mirrors: blue P for Planned, green R for Available.
+The group appears only once the toolbar switch itself has scrolled under the
+header and strip (`useScrolledPast` on `.budget-amount-switch` with
+`budgetBalanceStripHeight`, in `src/components/ui/use-scrolled-past.ts`), so the
+strip first docks with just the balance and the switch follows as the toolbar
+leaves. Its space is always reserved (`--budget-balance-switch-width`, two 22 px
+letters and the 58 px switch, overhanging the strip's right padding by
+`--budget-balance-switch-overhang`, 12 px, so the R letter sits about 13 px from
+the screen edge). While it is closed, `data-switch='hidden'` on the strip
+translates the amount right across that space, so the balance still ends at the
+padding. Opening slides the amount back while the group fades in and slides 28
+px in from the right, both over 0.5 s on `cubic-bezier(0.22, 1, 0.36, 1)`. The
+motion is transform-only on purpose: an earlier version grew the group's width
+with a `grid-template-columns` transition and a spring on top, and it stuttered
+at the end, where the slowing layout animation snapped to whole pixels while the
+spring rebounded. The cost of reserving the space is that a very wide amount
+truncates the label a little sooner. While closed it is `inert`.
 
 ### Floating add button
 
-Below 760 px, once a page's own add button scrolls fully out of view, `FloatingAddButton` (`src/components/shared/floating-add-button.tsx`) shows a 56 px blue plus button at the bottom right, above the bottom navigation, matching the budget-item detail's floating add button. The Budget page watches its Add transaction button past the header and the 44 px strip (`useScrolledPast` with `budgetBalanceStripHeight`); the Transactions page watches its heading's Add button past the header alone. Either way it opens the same Add transaction sheet as the inline button. It is portaled into `.app-frame`, not rendered in the page, because `position: fixed` inside the transformed `.app-content` would scroll with the page; inside the frame it stays pinned like the bottom navigation (the frame is exactly the viewport) and still shifts with the frame's parallax, both the push transition and the inline transforms the edge-swipe drag writes, so it slides left with the Budget page as a detail pushes in. It sits at `z-index: 35`, above the bottom navigation (30) and below Better Buddy (40) and sheets (70+). It mounts the first time it is needed and then stays mounted, toggling `data-visible` so it can animate out; while hidden it is `inert` and ignores pointers. On the Budget page it is hidden on an empty month. It stays shown while a budget-item detail is open: it parallaxes with the page, and the detail (`z-index: 71`) slides over it with its own item-scoped plus, and Radix's modal handling hides it from focus and assistive technology, so returning to Budget uncovers it in place instead of replaying the entrance. Both pages carry `.screen--floating-add`, which below 760 px raises the screen's bottom padding from the bottom navigation plus 28 px to the bottom navigation plus 86 px (the button's 14 px offset, its 56 px, and 16 px of clearance), so the last row can scroll clear of it.
+Below 760 px, once a page's own add button scrolls fully out of view,
+`FloatingAddButton` (`src/components/shared/floating-add-button.tsx`) shows a 56
+px blue plus button at the bottom right, above the bottom navigation, matching
+the budget-item detail's floating add button. The Budget page watches its Add
+transaction button past the header and the 44 px strip (`useScrolledPast` with
+`budgetBalanceStripHeight`); the Transactions page watches its heading's Add
+button past the header alone. Either way it opens the same Add transaction sheet
+as the inline button. It is portaled into `.app-frame`, not rendered in the
+page, because `position: fixed` inside the transformed `.app-content` would
+scroll with the page; inside the frame it stays pinned like the bottom
+navigation (the frame is exactly the viewport) and still shifts with the frame's
+parallax, both the push transition and the inline transforms the edge-swipe drag
+writes, so it slides left with the Budget page as a detail pushes in. It sits at
+`z-index: 35`, above the bottom navigation (30) and below Better Buddy (40) and
+sheets (70+). It mounts the first time it is needed and then stays mounted,
+toggling `data-visible` so it can animate out; while hidden it is `inert` and
+ignores pointers. On the Budget page it is hidden on an empty month. It stays
+shown while a budget-item detail is open: it parallaxes with the page, and the
+detail (`z-index: 71`) slides over it with its own item-scoped plus, and Radix's
+modal handling hides it from focus and assistive technology, so returning to
+Budget uncovers it in place instead of replaying the entrance. Both pages carry
+`.screen--floating-add`, which below 760 px raises the screen's bottom padding
+from the bottom navigation plus 28 px to the bottom navigation plus 86 px (the
+button's 14 px offset, its 56 px, and 16 px of clearance), so the last row can
+scroll clear of it.
 
-The entrance is a spring: `floating-add-button-enter` scales it from 0.2 and lifts it 36 px over 720 ms while the plus spins in from -135°, both on `--floating-add-spring` (declared on `:root` in `app-shell.css`, next to the button's rules), a `linear()` curve sampled from a damped spring (stiffness 260, damping 13, unit mass) that overshoots about 25% and settles with one small rebound. Browsers without `linear()` get `cubic-bezier(0.34, 1.56, 0.64, 1)` instead; the fallback is chosen by `@supports`, because a custom property holding an unsupported `linear()` would invalidate the whole `animation` rather than fall back. It leaves in 220 ms, shrinking to 0.4 and dropping 18 px. It follows the bottom navigation off screen while a planned amount is being edited and springs back afterwards. While a toast is showing, `:root:has([data-app-toast])` raises it by 66 px over 0.42 s so the undo toast after an add never covers it. Press feedback uses `transform: scale(0.94)`, which composes with the animated `scale` and `translate` properties instead of fighting them.
+The entrance is a spring: `floating-add-button-enter` scales it from 0.2 and
+lifts it 36 px over 720 ms while the plus spins in from -135°, both on
+`--floating-add-spring` (declared on `:root` in `app-shell.css`, next to the
+button's rules), a `linear()` curve sampled from a damped spring (stiffness 260,
+damping 13, unit mass) that overshoots about 25% and settles with one small
+rebound. Browsers without `linear()` get `cubic-bezier(0.34, 1.56, 0.64, 1)`
+instead; the fallback is chosen by `@supports`, because a custom property
+holding an unsupported `linear()` would invalidate the whole `animation` rather
+than fall back. It leaves in 220 ms, shrinking to 0.4 and dropping 18 px. It
+follows the bottom navigation off screen while a planned amount is being edited
+and springs back afterwards. While a toast is showing,
+`:root:has([data-app-toast])` raises it by 66 px over 0.42 s so the undo toast
+after an add never covers it. Press feedback uses `transform: scale(0.94)`,
+which composes with the animated `scale` and `translate` properties instead of
+fighting them.
 
 ### Header shadow
 
-The mobile header draws no shadow of its own, so `.budget-balance-clip::after` paints a compact, lighter version of the detail header's charcoal shadow along the top of the strip (4 px, from 7% easing to 2% by 1.5 px, against the header's 10 px from 10% to 3% by 4 px; it matched the header's 10% until 6.0.0, which read as slightly too dark) so the strip reads as tucked tight under the bar, with its opacity at three times the reveal progress: it appears only as the strip comes out, is full by a third of the way, and never shows over plain content scrolling under the header. Desktop and the landscape phone layout hide it; the rail and desktop card already show the balance.
+The mobile header draws no shadow of its own, so `.budget-balance-clip::after`
+paints a compact, lighter version of the detail header's charcoal shadow along
+the top of the strip (4 px, from 7% easing to 2% by 1.5 px, against the header's
+10 px from 10% to 3% by 4 px) so the strip reads as tucked tight under the bar,
+with its opacity at three times the reveal progress: it appears only as the
+strip comes out, is full by a third of the way, and never shows over plain
+content scrolling under the header. Desktop and the landscape phone layout hide
+it; the rail and desktop card already show the balance.
