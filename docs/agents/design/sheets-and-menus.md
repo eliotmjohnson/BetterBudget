@@ -103,9 +103,13 @@ chat's full height while fitted, eases with the keyboard rather than snapping;
 the hold also lifts `max-height` (`none`) until the fit is cleared. While a
 following sheet is fitted its height is set in pixels, so `inSetHeightSheet`
 counts it as a set-height sheet and a reveal's scroll-room loan is applied at
-once rather than eased in as extra height. Its height transition also counts as
-keyboard-fit motion (`isKeyboardFitMotion`), so the reveal scrolls the Amount
-field alongside the rise instead of waiting the 440 ms for the height to settle.
+once rather than eased in as extra height. For the same reason the reveal takes
+its pending rise (`pendingSheetRise`) from that pixel target, never from the
+computed `max-height`: with the cap lifted, reading it predicted Move money
+rising past its cap, so the reveal scrolled Amount too little and left it behind
+the number pad. Its height transition also counts as keyboard-fit motion
+(`isKeyboardFitMotion`), so the reveal scrolls the Amount field alongside the
+rise instead of waiting the 440 ms for the height to settle.
 
 A sheet's focused field must sit inside its `.sheet-body`, never in its
 `footer`: with a field in the footer focused and the keyboard up, iOS would not

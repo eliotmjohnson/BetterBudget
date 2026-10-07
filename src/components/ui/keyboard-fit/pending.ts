@@ -77,8 +77,10 @@ function insetSheet(body: HTMLElement) {
  * `max-height`, so it changes height by the inset and keeps its body's. A
  * sheet at its cap, or a `full-screen-mobile` sheet, whose
  * height is set rather than taken from its content, keeps its own height and
- * its body gives or takes the inset instead. Zero for a container outside
- * such a sheet.
+ * its body gives or takes the inset instead. A sheet following the keyboard
+ * ends at the height `followKeyboard` set on it, since its `max-height` is
+ * lifted while it is fitted (`holdHeight`) and no longer caps it. Zero for a
+ * container outside such a sheet.
  */
 function pendingSheetChange(body: HTMLElement) {
     const sheet = insetSheet(body);
@@ -92,6 +94,10 @@ function pendingSheetChange(body: HTMLElement) {
     if (FIXED_HEIGHT_VARIANTS.has(sheet.dataset.variant ?? ''))
         return { sheet: 0, body: -inset };
     const height = sheet.getBoundingClientRect().height;
+    const target = Number.parseFloat(sheet.style.height);
+
+    if (!Number.isNaN(target))
+        return { sheet: target - height, body: target - height - inset };
     const cap = Number.parseFloat(style.maxHeight);
     const settled = height - body.clientHeight + body.scrollHeight + inset;
     const growth =
