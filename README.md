@@ -144,15 +144,17 @@ are unchanged.
   stored in the `better-budget-assistant-v1` cookie like the default amount
   view. It is on by default wherever the server has a key.
 
-**Cost design:** the assistant uses Claude Haiku 4.5, the cheapest current
-model, with extended thinking off and a 1,024-token reply cap. The system
+**Cost design:** the assistant uses Claude Haiku 5.5, the cheapest current
+model, with extended thinking off and a 4,096-token reply cap. A reply that
+reaches the cap logs a warning and ends with a note asking the person to check
+the budget and continue, and any tool call it cut off is never run. The system
 prompt and the sixteen tool definitions form a frozen prefix of roughly 7,000
-tokens, deliberately above Haiku 4.5's 4,096-token minimum cacheable prefix, so
+tokens, well above Haiku 5.5's 512-token minimum cacheable prefix, so
 it is written to the prompt cache once and then read at a tenth of the input
 price. A second cache breakpoint follows the growing conversation. Tools return
 compact text rather than snapshot JSON, and items, categories, and income
-sources are referenced by name rather than by UUID. Expect roughly $0.002 to
-$0.006 per message. A turn makes at most six model calls, a conversation holds
+sources are referenced by name rather than by UUID. Expect roughly $0.0003 to
+$0.001 per message. A turn makes at most six model calls, a conversation holds
 at most twenty messages, and each household may start at most forty turns in
 any ten minutes. Set a monthly spend limit on the Anthropic Console as well.
 

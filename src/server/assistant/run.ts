@@ -8,12 +8,14 @@ import { executeAssistantTool } from './execute';
 import { SYSTEM_PROMPT } from './prompt';
 import { ASSISTANT_TOOLS } from './tools';
 
-const MODEL = 'claude-haiku-4-5';
-const MAX_OUTPUT_TOKENS = 1_024;
+const MODEL = 'claude-haiku-5-5';
+const MAX_OUTPUT_TOKENS = 4_096;
 const MAX_MODEL_CALLS = 6;
 const TURN_DEADLINE_MS = 25_000;
 const INTERRUPTED_REPLY =
     'I made changes but was cut off before I could finish. Check the budget before asking me to continue.';
+const TRUNCATED_NOTE =
+    'My reply got cut off before I finished. Check the budget, then ask me to continue.';
 
 /**
  * Why the Claude API failed a call: `account` covers a missing credit balance
@@ -100,6 +102,7 @@ async function callModel(messages: AssistantMessage[], signal: AbortSignal) {
             {
                 model: MODEL,
                 max_tokens: MAX_OUTPUT_TOKENS,
+                thinking: { type: 'disabled' },
                 system: [
                     {
                         type: 'text',
@@ -206,6 +209,12 @@ export async function runAssistantTurn({
                 : [];
         const content = toHistoryContent(response.content, toolUses);
 
+        if (response.stop_reason === 'max_tokens') {
+            console.warn(
+                `[assistant] reply hit the ${MAX_OUTPUT_TOKENS}-token cap (message ${response.id}).`
+            );
+            content.push({ type: 'text', text: TRUNCATED_NOTE });
+        }
         if (content.length) appended.push({ role: 'assistant', content });
         if (toolUses.length === 0) break;
         const results: AssistantMessage['content'] = [];
