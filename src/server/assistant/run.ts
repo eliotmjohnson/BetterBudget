@@ -9,7 +9,7 @@ import { SYSTEM_PROMPT } from './prompt';
 import { ASSISTANT_TOOLS } from './tools';
 
 const MODEL = 'claude-haiku-5-5';
-const MAX_OUTPUT_TOKENS = 1_536;
+const MAX_OUTPUT_TOKENS = 4_096;
 const MAX_MODEL_CALLS = 6;
 const TURN_DEADLINE_MS = 25_000;
 const INTERRUPTED_REPLY =

@@ -6,7 +6,7 @@ export const MAX_USER_TURNS = 20;
 
 const textBlock = z.object({
     type: z.literal('text'),
-    text: z.string().max(8_000)
+    text: z.string().max(20_000)
 });
 const toolUseBlock = z.object({
     type: z.literal('tool_use'),

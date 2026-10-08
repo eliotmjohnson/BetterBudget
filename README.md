@@ -145,7 +145,7 @@ are unchanged.
   view. It is on by default wherever the server has a key.
 
 **Cost design:** the assistant uses Claude Haiku 5.5, the cheapest current
-model, with extended thinking off and a 1,536-token reply cap. A reply that
+model, with extended thinking off and a 4,096-token reply cap. A reply that
 reaches the cap logs a warning and ends with a note asking the person to check
 the budget and continue, and any tool call it cut off is never run. The system
 prompt and the sixteen tool definitions form a frozen prefix of roughly 7,000
