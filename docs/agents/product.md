@@ -144,7 +144,7 @@ The implemented product supports:
   assistive technology under the tab's own name.
 - Better Buddy, an optional budget assistant, present only when
   `ANTHROPIC_API_KEY` is set: a floating robot button on every authenticated
-  page opens a chat sheet driven by Claude Haiku 4.5. The Settings Assistant
+  page opens a chat sheet driven by Claude Haiku 5.5. The Settings Assistant
   section has a per-device **Better Buddy** switch, on by default, that hides or
   shows it. Dragging him into the beam of the spaceship that drops in during any
   drag beams him aboard and flies him away, which turns that same switch off,

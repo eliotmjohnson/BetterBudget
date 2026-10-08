@@ -8,7 +8,7 @@ import { executeAssistantTool } from './execute';
 import { SYSTEM_PROMPT } from './prompt';
 import { ASSISTANT_TOOLS } from './tools';
 
-const MODEL = 'claude-haiku-4-5';
+const MODEL = 'claude-haiku-5-5';
 const MAX_OUTPUT_TOKENS = 1_024;
 const MAX_MODEL_CALLS = 6;
 const TURN_DEADLINE_MS = 25_000;
@@ -100,6 +100,7 @@ async function callModel(messages: AssistantMessage[], signal: AbortSignal) {
             {
                 model: MODEL,
                 max_tokens: MAX_OUTPUT_TOKENS,
+                thinking: { type: 'disabled' },
                 system: [
                     {
                         type: 'text',

@@ -2,7 +2,7 @@ import 'server-only';
 
 /**
  * Frozen system prompt. Together with the tool definitions it must stay above
- * Claude Haiku 4.5's 4,096-token minimum cacheable prefix, and it must never
+ * Claude Haiku 5.5's 512-token minimum cacheable prefix, and it must never
  * contain per-request values, or every request pays full input price.
  */
 export const SYSTEM_PROMPT = `You are Better Buddy, the friendly assistant built into the Better Budget app. Better Budget is a private, mobile-first household budgeting app used by one household. You talk with the person who owns this budget. You can read their budget and make basic changes to it with the tools provided.
