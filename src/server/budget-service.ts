@@ -1,5 +1,5 @@
 import 'server-only';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, lt } from 'drizzle-orm';
 import type { MonthKey } from '@/domain/money';
 import type { MutationResult } from '@/domain/types';
 import { getDatabase, type AppDb } from '@/db';
@@ -62,6 +62,29 @@ async function recordMutationReceipt(
         month: monthDate(input.monthKey),
         result: { ok: true }
     });
+}
+
+const MUTATION_RECEIPT_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
+
+async function pruneMutationReceipts(
+    db: AppDb,
+    householdId: string
+): Promise<void> {
+    try {
+        await db
+            .delete(mutationReceipts)
+            .where(
+                and(
+                    eq(mutationReceipts.householdId, householdId),
+                    lt(
+                        mutationReceipts.createdAt,
+                        new Date(Date.now() - MUTATION_RECEIPT_RETENTION_MS)
+                    )
+                )
+            );
+    } catch (error) {
+        console.error(error);
+    }
 }
 
 async function dispatch(
@@ -218,6 +241,7 @@ export async function applyBudgetMutation(
             await dispatch(tx as AppDb, householdId, monthId, input);
             await recordMutationReceipt(tx as AppDb, householdId, input);
         });
+        await pruneMutationReceipts(db, householdId);
 
         return {
             ok: true,

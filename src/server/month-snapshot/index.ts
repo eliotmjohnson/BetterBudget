@@ -4,10 +4,7 @@ import { monthDate } from '@/domain/calendar';
 import { leftToBudget } from '@/domain/budget-calculations';
 import type { MonthSnapshot } from '@/domain/types';
 import { getDatabase } from '@/db';
-import {
-    loadDeletableCategoryIds,
-    loadItemUsage
-} from '@/server/definition-usage';
+import { loadCategoryUsage } from '@/server/definition-usage';
 import {
     buildCarryoverChains,
     deriveBalances,
@@ -61,7 +58,7 @@ export async function getMonthSnapshot(
         currentTransactionRows
     } = await loadTargetMonthRows(db, householdId, targetMonthId, targetDate);
     const targetDefinitionIds = targetPlanRows.map((plan) => plan.itemId);
-    const [historicalPlanRows, itemUsage, deletableCategoryIds] =
+    const [historicalPlanRows, { itemUsage, deletableCategoryIds }] =
         await Promise.all([
             loadHistoricalPlanRows(
                 db,
@@ -69,8 +66,7 @@ export async function getMonthSnapshot(
                 targetDate,
                 targetDefinitionIds
             ),
-            loadItemUsage(db, householdId, targetDate, targetDefinitionIds),
-            loadDeletableCategoryIds(db, householdId, targetDate, [
+            loadCategoryUsage(db, householdId, targetDate, [
                 ...new Set([
                     ...activeCategoryRows.map((category) => category.id),
                     ...targetPlanRows.map((plan) => plan.categoryId)

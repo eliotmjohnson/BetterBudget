@@ -19,6 +19,14 @@ as the financial mutation. Retrying the same mutation ID must return its
 existing result and must never duplicate transactions, income receipts, splits,
 or month copies.
 
+Mutation receipts are kept for 30 days. After each committed mutation,
+`applyBudgetMutation` deletes the household's older receipts outside the
+financial transaction, using the `created_at` index, and logs rather than
+surfaces a pruning failure. Retries arrive within seconds and version 1 never
+queues offline writes, so only a receipt that no retry can still reach is ever
+removed; the one exception is a **Retry** toast left open for more than 30 days.
+Keep the retention far above any real retry window if it changes.
+
 Safe optimistic operations currently include:
 
 - Planned-amount edits committed on blur, Enter, or the established short

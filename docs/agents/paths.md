@@ -56,7 +56,11 @@ moved, renamed, or takes on a new responsibility.
   per-household turn guard. `src/app/api/assistant/route.ts` is the endpoint.
 - `src/server/definition-usage.ts` — later-month activity and never-used
   (permanently deletable) status per definition, shared by the snapshot and the
-  hard-delete handlers.
+  hard-delete handlers. Each check is one grouped query returning a row per
+  definition, with `EXISTS` probes on the split index, so it never loads an
+  item's allocation history; keep it that way, since the snapshot runs it on
+  every read and save. `loadCategoryUsage` returns item usage alongside category
+  deletability so the snapshot reads it once.
 - `src/components/shell/use-budget-data.ts` — hydration, retry, reconciliation,
   sync state.
 - `src/components/shell/optimistic.ts` — optimistic cache patches: clones the

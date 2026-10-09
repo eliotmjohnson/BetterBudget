@@ -1,5 +1,5 @@
 import 'server-only';
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, exists, inArray, isNull, sql } from 'drizzle-orm';
 import type { AppDb } from '@/db';
 import {
     budgetItems,
@@ -16,6 +16,12 @@ export interface ItemUsage {
     permanentlyDeletable: boolean;
 }
 
+/**
+ * Answers both flags in one grouped query: each monthly row probes the split
+ * index with `EXISTS` instead of returning every allocation ever made, so the
+ * cost follows the number of months an item spans rather than its history of
+ * transactions.
+ */
 export async function loadItemUsage(
     db: AppDb,
     householdId: string,
@@ -30,11 +36,29 @@ export async function loadItemUsage(
     );
 
     if (itemIds.length === 0) return usage;
-    const monthlyRows = await db
+    const anyAllocation = db
+        .select({ one: sql`1` })
+        .from(transactionSplits)
+        .where(eq(transactionSplits.monthlyItemId, monthlyBudgetItems.id));
+    const liveAllocation = db
+        .select({ one: sql`1` })
+        .from(transactionSplits)
+        .innerJoin(
+            transactions,
+            eq(transactionSplits.transactionId, transactions.id)
+        )
+        .where(
+            and(
+                eq(transactionSplits.monthlyItemId, monthlyBudgetItems.id),
+                isNull(transactions.deletedAt)
+            )
+        );
+    const rows = await db
         .select({
-            monthlyId: monthlyBudgetItems.id,
             itemId: monthlyBudgetItems.budgetItemId,
-            month: budgetMonths.month
+            budgetedInOtherMonth: sql<boolean>`bool_or(${budgetMonths.month} <> ${targetDate})`,
+            allocated: sql<boolean>`bool_or(${exists(anyAllocation)})`,
+            hasLaterActivity: sql<boolean>`bool_or(${budgetMonths.month} > ${targetDate} and ${exists(liveAllocation)})`
         })
         .from(monthlyBudgetItems)
         .innerJoin(
@@ -46,54 +70,36 @@ export async function loadItemUsage(
                 eq(budgetMonths.householdId, householdId),
                 inArray(monthlyBudgetItems.budgetItemId, itemIds)
             )
-        );
-    const splitRows =
-        monthlyRows.length > 0
-            ? await db
-                  .select({
-                      monthlyItemId: transactionSplits.monthlyItemId,
-                      deletedAt: transactions.deletedAt
-                  })
-                  .from(transactionSplits)
-                  .innerJoin(
-                      transactions,
-                      eq(transactionSplits.transactionId, transactions.id)
-                  )
-                  .where(
-                      inArray(
-                          transactionSplits.monthlyItemId,
-                          monthlyRows.map((row) => row.monthlyId)
-                      )
-                  )
-            : [];
-    const monthlyById = new Map(monthlyRows.map((row) => [row.monthlyId, row]));
+        )
+        .groupBy(monthlyBudgetItems.budgetItemId);
 
-    for (const row of monthlyRows) {
-        const entry = usage.get(row.itemId);
-
-        if (entry && row.month !== targetDate)
-            entry.permanentlyDeletable = false;
-    }
-    for (const split of splitRows) {
-        const row = monthlyById.get(split.monthlyItemId);
-        const entry = row ? usage.get(row.itemId) : undefined;
-
-        if (!row || !entry) continue;
-        entry.permanentlyDeletable = false;
-        if (split.deletedAt === null && row.month > targetDate)
-            entry.hasLaterActivity = true;
-    }
+    for (const row of rows)
+        usage.set(row.itemId, {
+            hasLaterActivity: row.hasLaterActivity === true,
+            permanentlyDeletable:
+                row.budgetedInOtherMonth !== true && row.allocated !== true
+        });
 
     return usage;
 }
 
-export async function loadDeletableCategoryIds(
+export interface CategoryUsage {
+    deletableCategoryIds: Set<string>;
+    itemUsage: Map<string, ItemUsage>;
+}
+
+/**
+ * Also returns the usage of every item in the given categories, archived ones
+ * included, so a caller that needs both reads item history once.
+ */
+export async function loadCategoryUsage(
     db: AppDb,
     householdId: string,
     targetDate: string,
     categoryIds: string[]
-): Promise<Set<string>> {
-    if (categoryIds.length === 0) return new Set();
+): Promise<CategoryUsage> {
+    if (categoryIds.length === 0)
+        return { deletableCategoryIds: new Set(), itemUsage: new Map() };
     const [itemRows, participationRows] = await Promise.all([
         db
             .select({ id: budgetItems.id, categoryId: budgetItems.categoryId })
@@ -106,10 +112,7 @@ export async function loadDeletableCategoryIds(
                 )
             ),
         db
-            .select({
-                categoryId: monthlyBudgetCategories.categoryId,
-                month: budgetMonths.month
-            })
+            .select({ categoryId: monthlyBudgetCategories.categoryId })
             .from(monthlyBudgetCategories)
             .innerJoin(
                 budgetMonths,
@@ -121,6 +124,8 @@ export async function loadDeletableCategoryIds(
                     inArray(monthlyBudgetCategories.categoryId, categoryIds)
                 )
             )
+            .groupBy(monthlyBudgetCategories.categoryId)
+            .having(sql`bool_or(${budgetMonths.month} <> ${targetDate})`)
     ]);
     const itemUsage = await loadItemUsage(
         db,
@@ -128,13 +133,23 @@ export async function loadDeletableCategoryIds(
         targetDate,
         itemRows.map((row) => row.id)
     );
-    const deletable = new Set(categoryIds);
+    const deletableCategoryIds = new Set(categoryIds);
 
     for (const row of participationRows)
-        if (row.month !== targetDate) deletable.delete(row.categoryId);
+        deletableCategoryIds.delete(row.categoryId);
     for (const row of itemRows)
         if (!itemUsage.get(row.id)?.permanentlyDeletable)
-            deletable.delete(row.categoryId);
+            deletableCategoryIds.delete(row.categoryId);
 
-    return deletable;
+    return { deletableCategoryIds, itemUsage };
+}
+
+export async function loadDeletableCategoryIds(
+    db: AppDb,
+    householdId: string,
+    targetDate: string,
+    categoryIds: string[]
+): Promise<Set<string>> {
+    return (await loadCategoryUsage(db, householdId, targetDate, categoryIds))
+        .deletableCategoryIds;
 }

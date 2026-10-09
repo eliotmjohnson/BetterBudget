@@ -119,23 +119,25 @@ The implemented product supports:
   strings; transaction and receipt creation times, which order same-day
   activity, are carried so a Replace keeps the activity feed order; splits
   reference household item definitions) and imports it in one database
-  transaction. **Replace** permanently deletes the household's budget rows and
-  mutation receipts, then restores the file. **Merge** never changes an existing
-  row and only adds what is missing: categories match by id, then by
-  case-insensitive name among live categories; items by id, then by resolved
-  category and name; months by month key; income plans by id, then by name
-  within the month; receipts and transactions are skipped when their id already
-  exists. Existing plans, carryover settings, and notes win. A file from another
-  installation therefore duplicates transactions whose ids differ, and a merge
-  that would add live spending to an item archived here is refused so the
-  allocation cannot silently drop out of Spent. The file is validated before
-  anything is written; auth, household, and member rows are never exported.
-  Export fetches the file and hands it to the Web Share sheet (Save to Files on
-  iOS) whenever `navigator.canShare` accepts files, falling back to a blob
-  download elsewhere. Never link directly to `/api/backup`: an installed iOS PWA
-  opens it in a full-screen viewer with no way back. If the share call loses its
-  user activation while the file downloads, the prepared file is kept for 60
-  seconds and the next tap shares it immediately.
+  transaction. The export is compact JSON with no indentation, which roughly
+  halves its size, because import refuses files over 10 MB and the whole file is
+  parsed in the 256 MiB production Node heap. **Replace** permanently deletes
+  the household's budget rows and mutation receipts, then restores the file.
+  **Merge** never changes an existing row and only adds what is missing:
+  categories match by id, then by case-insensitive name among live categories;
+  items by id, then by resolved category and name; months by month key; income
+  plans by id, then by name within the month; receipts and transactions are
+  skipped when their id already exists. Existing plans, carryover settings, and
+  notes win. A file from another installation therefore duplicates transactions
+  whose ids differ, and a merge that would add live spending to an item archived
+  here is refused so the allocation cannot silently drop out of Spent. The file
+  is validated before anything is written; auth, household, and member rows are
+  never exported. Export fetches the file and hands it to the Web Share sheet
+  (Save to Files on iOS) whenever `navigator.canShare` accepts files, falling
+  back to a blob download elsewhere. Never link directly to `/api/backup`: an
+  installed iOS PWA opens it in a full-screen viewer with no way back. If the
+  share call loses its user activation while the file downloads, the prepared
+  file is kept for 60 seconds and the next tap shares it immediately.
 - Pulling down past the top of any tab to refresh the selected month from the
   server. The gesture rides the browser's native elastic overscroll, so it works
   only where the browser rubber-bands a scroll container (iOS and iPadOS);

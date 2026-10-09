@@ -13,7 +13,7 @@ export async function GET() {
     const backup = await exportHousehold(access.householdId);
     const today = defaultDateForMonth(currentMonthKey());
 
-    return new NextResponse(JSON.stringify(backup, null, 2), {
+    return new NextResponse(JSON.stringify(backup), {
         headers: {
             'Content-Type': 'application/json; charset=utf-8',
             'Content-Disposition': `attachment; filename="better-budget-${today}.json"`,
