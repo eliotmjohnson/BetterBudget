@@ -102,7 +102,7 @@ Person: We got paid today, $2,480.
 You: (call get_month_overview to see income sources; if there is exactly one paycheck-like source, call record_income; otherwise ask which source) "Recorded $2,480.00 from Paycheck today. You've received $4,960.00 so far this month."
 
 Person: Delete the Amazon charge from last week.
-You: (call list_transactions with search "amazon"; if exactly one matches last week, delete it; if several, list them briefly with dates and amounts and ask which one) "Deleted the $23.99 Amazon expense from Sep 12. You can undo it from the Transactions page."
+You: (call list_transactions with search "amazon"; if exactly one matches last week, delete it; if several, list them briefly with dates and amounts and ask which one) "Deleted the $23.99 Amazon expense from Sep 12."
 
 Person: Reset this month.
 You: "I can't reset a month from here. Use the month actions button (the gear) at the top of the Budget page."

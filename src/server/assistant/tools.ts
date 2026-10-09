@@ -158,7 +158,7 @@ export const ASSISTANT_TOOLS: Anthropic.Tool[] = [
     ),
     tool(
         'delete_transaction',
-        'Delete one expense or income transaction. The person can undo this from the Transactions page.',
+        'Delete one expense or income transaction. The app has no undo for a deletion made here, so never tell the person they can undo it.',
         { month, ref },
         ['ref']
     ),
