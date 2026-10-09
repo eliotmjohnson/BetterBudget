@@ -10,22 +10,20 @@ import type { ItemUsage } from '@/server/definition-usage';
 import type { DerivedBalance } from './carryover';
 import type {
     ActiveCategoryRow,
-    HistoricalPlanRow,
     ReceiptRow,
     SplitRow,
+    TargetPlanRow,
     TransactionRow
 } from './queries';
 
 export function buildCategories(
     activeCategoryRows: ActiveCategoryRow[],
-    planRows: HistoricalPlanRow[],
+    targetPlanRows: TargetPlanRow[],
     calculated: Map<string, DerivedBalance>,
     {
-        targetDate,
         itemUsage,
         deletableCategoryIds
     }: {
-        targetDate: string;
         itemUsage: Map<string, ItemUsage>;
         deletableCategoryIds: Set<string>;
     }
@@ -46,7 +44,7 @@ export function buildCategories(
         ])
     );
 
-    for (const row of planRows.filter((plan) => plan.month === targetDate)) {
+    for (const row of targetPlanRows) {
         const values = calculated.get(row.monthlyId) ?? {
             available: 0n,
             carryIn: 0n,
@@ -93,19 +91,17 @@ export function buildCategories(
 }
 
 export interface ActivityInput {
-    planRows: HistoricalPlanRow[];
+    targetPlanRows: TargetPlanRow[];
     splitRows: SplitRow[];
     currentTransactionRows: TransactionRow[];
     currentReceiptRows: ReceiptRow[];
-    targetDate: string;
 }
 
 export function buildActivity({
-    planRows,
+    targetPlanRows,
     splitRows,
     currentTransactionRows,
-    currentReceiptRows,
-    targetDate
+    currentReceiptRows
 }: ActivityInput): ActivityEntry[] {
     const splitInfoByTransaction = new Map<
         string,
@@ -115,12 +111,19 @@ export function buildActivity({
             allocations: Array<{ monthlyItemId: string; amountCents: Cents }>;
         }
     >();
-    const planLookup = new Map(planRows.map((row) => [row.monthlyId, row]));
+    const budgetPosition = new Map(
+        targetPlanRows.map((row, position) => [row.monthlyId, position])
+    );
+    const splitsInBudgetOrder = splitRows
+        .filter((split) => budgetPosition.has(split.monthlyItemId))
+        .toSorted(
+            (a, b) =>
+                budgetPosition.get(a.monthlyItemId)! -
+                budgetPosition.get(b.monthlyItemId)!
+        );
 
-    for (const split of splitRows) {
-        const plan = planLookup.get(split.monthlyItemId);
-
-        if (!plan || plan.month !== targetDate) continue;
+    for (const split of splitsInBudgetOrder) {
+        const plan = targetPlanRows[budgetPosition.get(split.monthlyItemId)!]!;
         const existing = splitInfoByTransaction.get(split.transactionId) ?? {
             itemNames: [],
             tone: plan.categoryTone,

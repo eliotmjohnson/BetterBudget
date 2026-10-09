@@ -1,5 +1,17 @@
 import 'server-only';
-import { and, asc, desc, eq, gt, inArray, isNull, lte, or } from 'drizzle-orm';
+import {
+    and,
+    asc,
+    desc,
+    eq,
+    gt,
+    gte,
+    inArray,
+    isNull,
+    lt,
+    or,
+    sql
+} from 'drizzle-orm';
 import type { AppDb } from '@/db';
 import {
     budgetItems,
@@ -238,6 +250,10 @@ export async function loadTargetMonthRows(
     };
 }
 
+/**
+ * Earlier months only, and only what carryover derivation reads; the target
+ * month's own rows come from `loadTargetMonthRows`.
+ */
 export async function loadHistoricalPlanRows(
     db: AppDb,
     householdId: string,
@@ -248,39 +264,30 @@ export async function loadHistoricalPlanRows(
         ? await db
               .select({
                   monthlyId: monthlyBudgetItems.id,
-                  monthlyVersion: monthlyBudgetItems.version,
                   month: budgetMonths.month,
                   plannedCents: monthlyBudgetItems.plannedCents,
                   carryoverEnabled: monthlyBudgetItems.carryoverEnabled,
-                  itemId: budgetItems.id,
-                  itemVersion: budgetItems.version,
-                  itemName: budgetItems.name,
-                  itemOrder: budgetItems.sortOrder,
-                  categoryId: categories.id,
-                  categoryName: categories.name,
-                  categoryIcon: categories.icon,
-                  categoryTone: categories.tone,
-                  categoryOrder: categories.sortOrder,
-                  categoryVersion: categories.version
+                  itemId: monthlyBudgetItems.budgetItemId
               })
               .from(monthlyBudgetItems)
               .innerJoin(
                   budgetMonths,
                   eq(monthlyBudgetItems.monthId, budgetMonths.id)
               )
-              .innerJoin(
-                  budgetItems,
-                  eq(monthlyBudgetItems.budgetItemId, budgetItems.id)
-              )
-              .innerJoin(categories, eq(budgetItems.categoryId, categories.id))
               .where(
                   and(
                       eq(budgetMonths.householdId, householdId),
-                      lte(budgetMonths.month, targetDate),
-                      inArray(budgetItems.id, targetDefinitionIds)
+                      lt(budgetMonths.month, targetDate),
+                      inArray(
+                          monthlyBudgetItems.budgetItemId,
+                          targetDefinitionIds
+                      )
                   )
               )
-              .orderBy(asc(budgetItems.id), asc(budgetMonths.month))
+              .orderBy(
+                  asc(monthlyBudgetItems.budgetItemId),
+                  asc(budgetMonths.month)
+              )
         : [];
 }
 
@@ -311,6 +318,56 @@ export async function loadSplitRows(
                   )
               )
         : [];
+}
+
+/**
+ * Net spending per monthly item of the given definitions in months from
+ * `fromDate` up to but excluding `beforeDate`, with refunds subtracted, summed
+ * by the database so carryover history never sends individual allocations to
+ * Node. Filtering by definition and month range is about twice as fast as an
+ * `IN` list of every monthly item id in a long chain.
+ */
+export async function loadSpendTotals(
+    db: AppDb,
+    householdId: string,
+    definitionIds: string[],
+    { fromDate, beforeDate }: { fromDate: string; beforeDate: string }
+): Promise<Map<string, bigint>> {
+    if (definitionIds.length === 0 || fromDate >= beforeDate) return new Map();
+    const rows = await db
+        .select({
+            monthlyItemId: transactionSplits.monthlyItemId,
+            netCents: sql<
+                string | bigint
+            >`sum(case when ${transactions.kind} = 'refund' then -${transactionSplits.amountCents} else ${transactionSplits.amountCents} end)::bigint`
+        })
+        .from(transactionSplits)
+        .innerJoin(
+            transactions,
+            eq(transactionSplits.transactionId, transactions.id)
+        )
+        .innerJoin(
+            monthlyBudgetItems,
+            eq(transactionSplits.monthlyItemId, monthlyBudgetItems.id)
+        )
+        .innerJoin(
+            budgetMonths,
+            eq(monthlyBudgetItems.monthId, budgetMonths.id)
+        )
+        .where(
+            and(
+                eq(budgetMonths.householdId, householdId),
+                gte(budgetMonths.month, fromDate),
+                lt(budgetMonths.month, beforeDate),
+                inArray(monthlyBudgetItems.budgetItemId, definitionIds),
+                isNull(transactions.deletedAt)
+            )
+        )
+        .groupBy(transactionSplits.monthlyItemId);
+
+    return new Map(
+        rows.map((row) => [row.monthlyItemId, BigInt(row.netCents)])
+    );
 }
 
 export type TargetPlanRow = Awaited<

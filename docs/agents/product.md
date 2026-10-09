@@ -67,7 +67,10 @@ The implemented product supports:
 - Expense and refund transactions, including exact splits across budget items.
   One tap fills a split with whatever of the total is still unassigned, from a
   Remaining chip on the phone's operator bar or the Remaining total under the
-  splits.
+  splits. Once saved, a split's parts, its item names, and its color (taken from
+  the first part's category) follow budget order, category then item, because
+  the database keeps no entry order for them; only the instant optimistic row
+  shows them in the order they were entered.
 - Adding transactions globally or from a line-item detail with that item
   preselected, editing transactions, duplicating them into the same date and
   allocations, soft deleting, and undoing transaction deletion. Transaction rows

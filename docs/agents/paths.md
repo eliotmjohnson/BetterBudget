@@ -42,7 +42,14 @@ moved, renamed, or takes on a new responsibility.
 - `src/server/month-snapshot/` — canonical month snapshot read path. `index.ts`
   is orchestration only; `queries.ts` holds every database read, `carryover.ts`
   the chronological carryover chains and balance derivation, `assemble.ts` the
-  category, activity, and receipt view assembly.
+  category, activity, and receipt view assembly. Only the viewed month loads
+  plan rows with display columns and individual splits; earlier months load just
+  the five columns carryover reads (`loadHistoricalPlanRows`) and spending
+  already summed per monthly item by the database (`loadSpendTotals`), so a long
+  carryover history never sends its transactions to Node. Verify any change here
+  by comparing whole snapshots for every month before and after on a multi-year
+  history with refunds, deleted and split transactions, carryover breaks, gap
+  months, and negative balances.
 - `src/server/mutation-failures.ts` — mutation-failure class, not-found/conflict
   helpers.
 - `src/server/assistant/` — the budget assistant. `run.ts` is the Claude tool

@@ -14,6 +14,7 @@ import { buildActivity, buildCategories, rollUpReceipts } from './assemble';
 import {
     loadHistoricalPlanRows,
     loadPreviousMonthProbe,
+    loadSpendTotals,
     loadSplitRows,
     loadTargetMonthRows
 } from './queries';
@@ -76,14 +77,25 @@ export async function getMonthSnapshot(
     const planRows = buildCarryoverChains(
         targetPlanRows,
         historicalPlanRows,
-        monthKey,
-        targetDate
+        monthKey
     );
-    const relevantMonthlyItemIds = planRows.map((plan) => plan.monthlyId);
-    const splitRows = await loadSplitRows(db, relevantMonthlyItemIds);
+    const [splitRows, historicalSpend] = await Promise.all([
+        loadSplitRows(
+            db,
+            targetPlanRows.map((plan) => plan.monthlyId)
+        ),
+        loadSpendTotals(db, householdId, targetDefinitionIds, {
+            fromDate: planRows.reduce(
+                (earliest, row) =>
+                    row.month < earliest ? row.month : earliest,
+                targetDate
+            ),
+            beforeDate: targetDate
+        })
+    ]);
     const calculated = deriveBalances(
         planRows,
-        sumSpendByMonthlyItem(splitRows)
+        new Map([...historicalSpend, ...sumSpendByMonthlyItem(splitRows)])
     );
     const { receiptTotalsByPlan, receiptsByPlan } =
         rollUpReceipts(currentReceiptRows);
@@ -95,25 +107,23 @@ export async function getMonthSnapshot(
         (total, receipt) => total + receipt.amountCents,
         0n
     );
-    const currentPlans = planRows.filter((row) => row.month === targetDate);
-    const planned = currentPlans.reduce(
+    const planned = targetPlanRows.reduce(
         (total, plan) => total + plan.plannedCents,
         0n
     );
-    const spent = currentPlans.reduce(
+    const spent = targetPlanRows.reduce(
         (total, plan) => total + (calculated.get(plan.monthlyId)?.spent ?? 0n),
         0n
     );
     const activity = buildActivity({
-        planRows,
+        targetPlanRows,
         splitRows,
         currentTransactionRows,
-        currentReceiptRows,
-        targetDate
+        currentReceiptRows
     });
     const targetHasCopyBlockingContent =
         activeCategoryRows.length > 0 ||
-        currentPlans.length > 0 ||
+        targetPlanRows.length > 0 ||
         currentIncomeRows.length > 0 ||
         currentTransactionRows.length > 0;
 
@@ -136,11 +146,12 @@ export async function getMonthSnapshot(
                 cents(planned)
             )
         },
-        categories: buildCategories(activeCategoryRows, planRows, calculated, {
-            targetDate,
-            itemUsage,
-            deletableCategoryIds
-        }),
+        categories: buildCategories(
+            activeCategoryRows,
+            targetPlanRows,
+            calculated,
+            { itemUsage, deletableCategoryIds }
+        ),
         incomePlans: currentIncomeRows.map((plan) => ({
             id: plan.id,
             name: plan.name,

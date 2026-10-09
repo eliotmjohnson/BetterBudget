@@ -3,6 +3,8 @@ import { cents, shiftMonth, type MonthKey } from '@/domain/money';
 import { availableBalance } from '@/domain/budget-calculations';
 import type { HistoricalPlanRow, SplitRow, TargetPlanRow } from './queries';
 
+type CarryoverRow = HistoricalPlanRow;
+
 export interface DerivedBalance {
     available: bigint;
     carryIn: bigint;
@@ -18,13 +20,9 @@ export interface DerivedBalance {
 export function buildCarryoverChains(
     targetPlanRows: TargetPlanRow[],
     historicalPlanRows: HistoricalPlanRow[],
-    monthKey: MonthKey,
-    targetDate: string
-): HistoricalPlanRow[] {
-    const historicalPlansByDefinition = new Map<
-        string,
-        typeof historicalPlanRows
-    >();
+    monthKey: MonthKey
+): CarryoverRow[] {
+    const historicalPlansByDefinition = new Map<string, HistoricalPlanRow[]>();
 
     for (const plan of historicalPlanRows) {
         const plans = historicalPlansByDefinition.get(plan.itemId) ?? [];
@@ -32,18 +30,14 @@ export function buildCarryoverChains(
         plans.push(plan);
         historicalPlansByDefinition.set(plan.itemId, plans);
     }
-    const planRows = targetPlanRows.flatMap((targetPlan) => {
+
+    return targetPlanRows.flatMap((targetPlan) => {
         const history =
             historicalPlansByDefinition.get(targetPlan.itemId) ?? [];
-        const targetIndex = history.findLastIndex(
-            (plan) => plan.month === targetDate
-        );
-
-        if (targetIndex < 0) return [];
-        const chain = [history[targetIndex]!];
+        const chain: CarryoverRow[] = [targetPlan];
         let nextMonth = monthKey;
 
-        for (let index = targetIndex - 1; index >= 0; index -= 1) {
+        for (let index = history.length - 1; index >= 0; index -= 1) {
             const plan = history[index]!;
             const expectedMonth = shiftMonth(nextMonth, -1);
 
@@ -58,8 +52,6 @@ export function buildCarryoverChains(
 
         return chain;
     });
-
-    return planRows;
 }
 
 export function sumSpendByMonthlyItem(
@@ -81,7 +73,7 @@ export function sumSpendByMonthlyItem(
 }
 
 export function deriveBalances(
-    planRows: HistoricalPlanRow[],
+    planRows: CarryoverRow[],
     spendByMonthlyItem: Map<string, bigint>
 ): Map<string, DerivedBalance> {
     const balancesByDefinition = new Map<
