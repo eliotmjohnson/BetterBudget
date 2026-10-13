@@ -21,6 +21,15 @@ leaves 50 px of gutter on each side (`min(1200px, 100% - 100px)` in
 `responsive-motion.css`) so the docked launcher never covers item names; narrow
 that gutter only together with the launcher's dock.
 
+Screens without a floating add button (Settings and Income) give the launcher
+room at the end of their scroll while he is shown: the
+`.app-frame:has(.assistant-launcher)` rule in `assistant.css` raises their
+bottom padding to the bottom navigation plus 80 px below 760 px (his 12 px lift,
+his 64 px, and 4 px of air) and to 96 px on desktop (his 24 px reserve, his 64
+px, and 8 px), so the last row can always scroll just above him. The user found
+16 px and 24 px of air too much. Screens with `.screen--floating-add` keep their
+own clearance. Change these together with the launcher's size or bottom reserve.
+
 ### Drag and throw
 
 A press that moves more than 8 px becomes a drag: the button follows the pointer

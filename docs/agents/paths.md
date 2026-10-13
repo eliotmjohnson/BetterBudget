@@ -50,6 +50,8 @@ moved, renamed, or takes on a new responsibility.
   by comparing whole snapshots for every month before and after on a multi-year
   history with refunds, deleted and split transactions, carryover breaks, gap
   months, and negative balances.
+- `src/server/household-lock.ts` — `lockHouseholdWrites`, the per-household row
+  lock every budget write and backup import takes first.
 - `src/server/mutation-failures.ts` — mutation-failure class, not-found/conflict
   helpers.
 - `src/server/assistant/` — the budget assistant. `run.ts` is the Claude tool

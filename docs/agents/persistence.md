@@ -113,10 +113,42 @@ Mutation lifecycle rules:
     unsafe inline mutations and maintain the persistent offline banner. Offline
     write synchronization is outside version 1.
 
+Every `applyBudgetMutation` transaction and every backup import first takes
+`lockHouseholdWrites` (`src/server/household-lock.ts`), a `FOR NO KEY UPDATE`
+lock on the household row, so two devices' writes run one after the other rather
+than interleaving. Several handlers check a condition and then write (an
+archive's empty-target check, a hard delete's never-used check, an income-source
+deletion's receipt list, a reorder's membership check, a receipt edit's
+version), and under PostgreSQL's read-committed isolation a concurrent write
+landing between the check and the write would otherwise slip through. Without
+the lock, PostgreSQL 17 reproduced this on every attempt: a transaction added on
+one device while the other archived its item was committed onto the archived
+item and dropped out of Spent, and two edits of one receipt with the same
+expected version both succeeded. PGlite runs one transaction at a time, so only
+PostgreSQL can show these races. One household's writes are rare enough that
+serializing them costs nothing noticeable. Keep the lock as the first statement
+of any new write transaction and take no other lock before it. Handlers still
+put the expected version in their write's `WHERE` clause rather than only
+checking it on a prior read.
+
+A month-note save carries the month's `version` captured when the note editor
+opened, and the server answers `conflict` when the note changed elsewhere. A
+month that was only viewed reports version 0, which matches the version 1 that
+`ensureMonth` creates, since only note edits raise a month's version. Better
+Buddy's note tool omits the version and writes the note it was told to.
+
 Other devices converge through refetches on window focus, route/month
 navigation, successful mutations, an explicit pull-to-refresh on any tab, and a
-10-second visible-tab interval (paused while the tab is hidden). Version checks
-remain mandatory even without WebSockets.
+5-second visible-tab interval (paused while the tab is hidden). Version checks
+remain mandatory even without WebSockets. The interval was 10 seconds until the
+user asked for livelier convergence while two people use the app at once. It
+only bounds how long another device's change takes to appear and plays no part
+in conflict safety. An unchanged refetch does not re-render, because TanStack
+Query's structural sharing keeps the same snapshot object. The cost is about one
+snapshot build and session lookup per visible device every 5 seconds, mostly
+from a desktop tab left visible all day; there is no snapshot rate limit. Do not
+go much below 3 seconds, where refetches start landing during interactions for
+little gain.
 
 Every snapshot refetch first waits until no budget mutation is pending. A save
 can take several retries of up to 8 s each, and a refetch landing in between

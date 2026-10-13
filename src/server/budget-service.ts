@@ -8,6 +8,7 @@ import type { BudgetMutation } from './mutation-schema';
 import { monthDate } from '@/domain/calendar';
 import { getMonthSnapshot } from './month-snapshot';
 import { MutationFailure } from './mutation-failures';
+import { lockHouseholdWrites } from './household-lock';
 import {
     ensureMonth,
     type MutationContext
@@ -191,6 +192,7 @@ export async function applyBudgetMutation(
 
     try {
         await db.transaction(async (tx) => {
+            await lockHouseholdWrites(tx as AppDb, householdId);
             const noOpWhenMonthIsMissing =
                 input.type === 'clearPlannedAmounts' ||
                 input.type === 'resetBudget' ||

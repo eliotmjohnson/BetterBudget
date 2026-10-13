@@ -187,7 +187,7 @@ export function useBudgetSnapshot(initialSnapshot: MonthSnapshot) {
         },
         initialData: initialSnapshot,
         refetchOnWindowFocus: 'always',
-        refetchInterval: 10_000,
+        refetchInterval: 5_000,
         refetchIntervalInBackground: false
     });
 }

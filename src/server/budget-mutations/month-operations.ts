@@ -84,14 +84,29 @@ export async function updateMonthNote({
     monthId,
     input
 }: MutationContext<'updateMonthNote'>): Promise<void> {
-    await tx
+    const { expectedVersion } = input;
+    const updated = await tx
         .update(budgetMonths)
         .set({
             note: input.note || null,
             version: sql`${budgetMonths.version} + 1`,
             updatedAt: new Date()
         })
-        .where(eq(budgetMonths.id, monthId));
+        .where(
+            and(
+                eq(budgetMonths.id, monthId),
+                expectedVersion === undefined
+                    ? undefined
+                    : eq(budgetMonths.version, Math.max(expectedVersion, 1))
+            )
+        )
+        .returning({ id: budgetMonths.id });
+
+    if (!updated[0])
+        throw new MutationFailure(
+            'conflict',
+            'This month’s note changed on another device. The latest version has been loaded.'
+        );
 }
 
 async function assertCopyTargetEmpty(

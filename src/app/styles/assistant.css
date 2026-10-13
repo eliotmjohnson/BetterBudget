@@ -35,6 +35,10 @@
     -webkit-tap-highlight-color: transparent;
     transition: transform 420ms cubic-bezier(0.3, 0.84, 0.21, 1);
 }
+.app-frame:has(.assistant-launcher)
+    .standard-screen:not(.screen--floating-add) {
+    padding-bottom: calc(var(--bottom-nav-height) + 80px);
+}
 .assistant-launcher[data-side='right'] {
     --buddy-enter-x: 140px;
     --buddy-enter-rotate: 14deg;
@@ -550,6 +554,10 @@
     }
 }
 @media (min-width: 760px) {
+    .app-frame:has(.assistant-launcher)
+        .standard-screen:not(.screen--floating-add) {
+        padding-bottom: 96px;
+    }
     .assistant-launcher {
         --assistant-launcher-inset: 24px;
         --assistant-launcher-bottom-reserve: 24px;

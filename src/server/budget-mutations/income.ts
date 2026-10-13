@@ -141,7 +141,12 @@ export async function updateIncomeReceipt({
             version: input.expectedVersion + 1,
             updatedAt: new Date()
         })
-        .where(eq(incomeReceipts.id, input.incomeReceiptId));
+        .where(
+            and(
+                eq(incomeReceipts.id, input.incomeReceiptId),
+                eq(incomeReceipts.version, input.expectedVersion)
+            )
+        );
 }
 
 export async function deleteIncomeReceipt({
@@ -179,7 +184,12 @@ export async function deleteIncomeReceipt({
             version: input.expectedVersion + 1,
             updatedAt: new Date()
         })
-        .where(eq(incomeReceipts.id, input.incomeReceiptId));
+        .where(
+            and(
+                eq(incomeReceipts.id, input.incomeReceiptId),
+                eq(incomeReceipts.version, input.expectedVersion)
+            )
+        );
 }
 
 export async function deleteIncomePlan({

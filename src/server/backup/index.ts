@@ -1,5 +1,6 @@
 import 'server-only';
 import { getDatabase, type AppDb } from '@/db';
+import { lockHouseholdWrites } from '@/server/household-lock';
 import { MutationFailure } from '@/server/mutation-failures';
 import { clearHousehold } from './import-replace';
 import { mergeBackup } from './import-merge';
@@ -24,6 +25,7 @@ export async function importBackup(
 
     try {
         const summary = await db.transaction(async (tx) => {
+            await lockHouseholdWrites(tx as AppDb, householdId);
             if (mode === 'replace')
                 await clearHousehold(tx as AppDb, householdId);
 

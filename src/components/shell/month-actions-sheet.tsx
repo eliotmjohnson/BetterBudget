@@ -27,6 +27,7 @@ export function MonthActionsSheet({
         'copy' | 'clear' | 'note' | 'reset' | null
     >(null);
     const [note, setNote] = useState(snapshot.note ?? '');
+    const [noteVersion, setNoteVersion] = useState(snapshot.version);
     const close = () => {
         setConfirm(null);
         onOpenChange(false);
@@ -41,7 +42,12 @@ export function MonthActionsSheet({
             copy: { type: 'copyPreviousMonth', ...base },
             clear: { type: 'clearPlannedAmounts', ...base },
             reset: { type: 'resetBudget', ...base },
-            note: { type: 'updateMonthNote', note, ...base }
+            note: {
+                type: 'updateMonthNote',
+                note,
+                expectedVersion: noteVersion,
+                ...base
+            }
         } satisfies Record<NonNullable<typeof confirm>, BudgetMutation>;
 
         if (confirm && !mutate(mutations[confirm])) return;
@@ -178,6 +184,7 @@ export function MonthActionsSheet({
                         disabled={mutationPending}
                         onClick={() => {
                             setNote(snapshot.note ?? '');
+                            setNoteVersion(snapshot.version);
                             setConfirm('note');
                         }}
                     >

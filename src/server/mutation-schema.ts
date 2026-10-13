@@ -219,7 +219,8 @@ export const mutationSchema = z.discriminatedUnion('type', [
     }),
     base.extend({
         type: z.literal('updateMonthNote'),
-        note: z.string().trim().max(500)
+        note: z.string().trim().max(500),
+        expectedVersion: z.number().int().nonnegative().optional()
     }),
     base.extend({ type: z.literal('copyPreviousMonth') }),
     base.extend({ type: z.literal('clearPlannedAmounts') }),
