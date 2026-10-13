@@ -121,6 +121,11 @@ collapse. The 65 % keyframe stop and the `0.65` in that transform are
 `titleCompactScale`; change them together. Past the stop the head fade equals
 the reveal fraction, so the transform reuses it for the final horizontal glide.
 
+Tapping the header outside its controls scrolls the body back to the top (the
+shell contract is in `shell-and-platform.md`). At the top the header is
+transparent to touches, which costs nothing because there is nowhere to scroll;
+once the body scrolls, the header bar takes pointers and the tap lands.
+
 ### Header shadow
 
 A soft 10 px shadow (`.navigation-detail-header::after`) sits at the compact

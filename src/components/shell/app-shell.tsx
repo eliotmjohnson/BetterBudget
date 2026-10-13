@@ -24,6 +24,7 @@ import {
     continuousMask,
     useContinuousCorners
 } from '@/components/ui/continuous-corners';
+import { scrollToTopOnHeaderTap } from '@/components/ui/scroll-to-top';
 import { shiftMonth, type MonthKey } from '@/domain/money';
 import { MonthPicker } from './month-picker';
 import { PullRefreshDial, PullToRefresh } from './pull-to-refresh';
@@ -134,7 +135,12 @@ export function AppShell({
                 </nav>
             </aside>
             <main className='app-main'>
-                <header className='mobile-header'>
+                <header
+                    className='mobile-header'
+                    onClick={(event) =>
+                        scrollToTopOnHeaderTap(event, contentRef.current)
+                    }
+                >
                     <BrandMark compact />
                     <div
                         className='month-switcher'

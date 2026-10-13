@@ -23,6 +23,7 @@ import {
     type EdgeDragContext,
     type EdgeDragState
 } from './edge-drag';
+import { scrollToTopOnHeaderTap } from '@/components/ui/scroll-to-top';
 import { setupHeaderCover } from './header-cover';
 import { clearSummaryMotion, setupSummaryMotion } from './summary-motion';
 import {
@@ -342,6 +343,9 @@ export function NavigationDetail({
                     <header
                         ref={headerRef}
                         className='navigation-detail-header'
+                        onClick={(event) =>
+                            scrollToTopOnHeaderTap(event, bodyRef.current)
+                        }
                     >
                         <button
                             className='navigation-detail-back'

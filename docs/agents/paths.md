@@ -153,6 +153,8 @@ moved, renamed, or takes on a new responsibility.
   that lets the drawn header bar take pointers.
   `src/components/ui/docked-summary.ts` is the scroll tracking both docked
   strips share.
+- `src/components/ui/scroll-to-top.ts` — the header tap that scrolls the tab or
+  pushed detail back to the top.
 - `src/components/ui/left-edge-gesture-guard.tsx` — global Safari left-edge
   history-gesture suppression.
 - `src/components/ui/still-focus/` — focus without the iOS page slide, for every

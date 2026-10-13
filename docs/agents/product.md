@@ -165,6 +165,9 @@ The implemented product supports:
   elsewhere it is absent. It reveals a progress dial from beneath the header,
   refreshes when released past the threshold, and announces the outcome to
   assistive technology under the tab's own name.
+- Tapping the header on any tab, or a pushed detail's header, outside its
+  controls scrolls back to the top, standing in for iOS's status-bar tap, which
+  cannot reach the app's own scroll containers.
 - Better Buddy, an optional budget assistant, present only when
   `ANTHROPIC_API_KEY` is set: a floating robot button on every authenticated
   page opens a chat sheet driven by Claude Haiku 5.5. The Settings Assistant

@@ -278,6 +278,22 @@ Settings and Organize suppress the entrance animation entirely for month
 changes, however the month was chosen, and every tab change keeps the
 blur-to-sharp motion.
 
+## Tap the header to scroll to top
+
+Tapping the mobile header anywhere that is not one of its controls (the logo,
+the gaps, or the status-bar band its top padding covers) scrolls `.app-content`
+back to the top, and tapping a pushed detail's header does the same for its
+body. iOS's own status-bar tap only scrolls the page, and every route here
+scrolls inside its own container while the page stays pinned at zero, so the
+system gesture has nothing to move. `scrollToTopOnHeaderTap` in
+`src/components/ui/scroll-to-top.ts` ignores taps on links, buttons, fields,
+labels, and the month picker popover (`role="dialog"`) only when they sit inside
+the tapped header, because the pushed detail's whole header is itself inside a
+Radix dialog. A click the month picker swallowed while dismissing never reaches
+it. The scroll is smooth, and instant under reduced motion. Do not try to
+recover the system gesture by leaving the page scrollable by a pixel: it fights
+the pinned page that `still-focus` and the viewport-height rules depend on.
+
 ## Pull-to-refresh
 
 ### Native bounce
