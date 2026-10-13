@@ -62,10 +62,15 @@ export function renderOverview(snapshot: MonthSnapshot): string {
     }
     if (snapshot.incomePlans.length === 0) lines.push('No income sources.');
     else lines.push('Income sources:');
-    for (const [index, plan] of snapshot.incomePlans.entries())
+    for (const [index, plan] of snapshot.incomePlans.entries()) {
         lines.push(
             `- ${incomePlanLabel(snapshot, index)}: expected ${money(plan.expectedCents)}, received ${money(plan.receivedCents)} (${plan.receipts.length} receipt${plan.receipts.length === 1 ? '' : 's'})${plan.oneTime ? ', one-time' : ''}`
         );
+        for (const receipt of plan.receipts)
+            lines.push(
+                `  - receipt ${transactionRef(receipt.id)} | ${receipt.receivedOn} | ${money(receipt.amountCents)}${receipt.note ? ` | note: ${receipt.note}` : ''}`
+            );
+    }
     const transactionCount = snapshot.activity.filter(
         (entry) => entry.type !== 'income'
     ).length;

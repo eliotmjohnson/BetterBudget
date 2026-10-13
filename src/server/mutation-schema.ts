@@ -142,6 +142,14 @@ export const mutationSchema = z.discriminatedUnion('type', [
         note: z.string().trim().max(500).optional()
     }),
     base.extend({
+        type: z.literal('updateIncomeReceipt'),
+        incomeReceiptId: z.string().uuid(),
+        expectedVersion: z.number().int().positive(),
+        receivedOn: z.string().date(),
+        amountCents: positiveCentsSchema,
+        note: z.string().trim().max(500).optional()
+    }),
+    base.extend({
         type: z.literal('deleteIncomeReceipt'),
         incomeReceiptId: z.string().uuid(),
         expectedVersion: z.number().int().positive()
@@ -149,7 +157,8 @@ export const mutationSchema = z.discriminatedUnion('type', [
     base.extend({
         type: z.literal('deleteIncomePlan'),
         incomePlanId: z.string().uuid(),
-        expectedVersion: z.number().int().positive()
+        expectedVersion: z.number().int().positive(),
+        receiptIds: z.array(z.string().uuid()).max(500).default([])
     }),
     base.extend({
         type: z.literal('addCategory'),

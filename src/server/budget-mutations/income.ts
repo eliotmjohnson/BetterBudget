@@ -104,6 +104,46 @@ export async function addIncomeReceipt({
     });
 }
 
+export async function updateIncomeReceipt({
+    tx,
+    monthId,
+    input
+}: MutationContext<'updateIncomeReceipt'>): Promise<void> {
+    const receipt = await tx
+        .select({ version: incomeReceipts.version })
+        .from(incomeReceipts)
+        .innerJoin(incomePlans, eq(incomeReceipts.incomePlanId, incomePlans.id))
+        .where(
+            and(
+                eq(incomeReceipts.id, input.incomeReceiptId),
+                eq(incomePlans.monthId, monthId),
+                isNull(incomeReceipts.deletedAt)
+            )
+        )
+        .limit(1);
+
+    if (!receipt[0])
+        throw new MutationFailure(
+            'not_found',
+            'That received-income transaction no longer exists.'
+        );
+    if (receipt[0].version !== input.expectedVersion)
+        throw new MutationFailure(
+            'conflict',
+            'This income transaction changed on another device. The latest version has been loaded.'
+        );
+    await tx
+        .update(incomeReceipts)
+        .set({
+            receivedOn: input.receivedOn,
+            amountCents: BigInt(input.amountCents),
+            note: input.note ?? null,
+            version: input.expectedVersion + 1,
+            updatedAt: new Date()
+        })
+        .where(eq(incomeReceipts.id, input.incomeReceiptId));
+}
+
 export async function deleteIncomeReceipt({
     tx,
     monthId,
@@ -168,25 +208,24 @@ export async function deleteIncomePlan({
             'conflict',
             'This income source changed on another device. The latest version has been loaded.'
         );
-    const activeReceipt = await tx
-        .select({ id: incomeReceipts.id })
-        .from(incomeReceipts)
-        .where(
-            and(
-                eq(incomeReceipts.incomePlanId, input.incomePlanId),
-                isNull(incomeReceipts.deletedAt)
-            )
-        )
-        .limit(1);
-
-    if (activeReceipt[0])
-        throw new MutationFailure(
-            'validation',
-            'Delete this source’s received-income transactions first.'
-        );
-    await tx
+    const removed = await tx
         .delete(incomeReceipts)
-        .where(eq(incomeReceipts.incomePlanId, input.incomePlanId));
+        .where(eq(incomeReceipts.incomePlanId, input.incomePlanId))
+        .returning({
+            id: incomeReceipts.id,
+            deletedAt: incomeReceipts.deletedAt
+        });
+    const active = removed.filter((receipt) => receipt.deletedAt === null);
+    const seen = new Set(input.receiptIds);
+
+    if (
+        active.length !== seen.size ||
+        active.some((receipt) => !seen.has(receipt.id))
+    )
+        throw new MutationFailure(
+            'conflict',
+            'This income source’s received income changed on another device. The latest version has been loaded.'
+        );
     await tx
         .delete(incomePlans)
         .where(

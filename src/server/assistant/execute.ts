@@ -2,16 +2,21 @@ import 'server-only';
 import { z } from 'zod';
 import {
     addCategory,
-    addIncomeSource,
     addItem,
-    recordIncome,
     renameCategory,
     renameItem,
     setCarryover,
     setMonthNote,
-    setPlanAmount,
-    updateIncomeSource
+    setPlanAmount
 } from './budget-tools';
+import {
+    addIncomeSource,
+    deleteIncomeReceipt,
+    deleteIncomeSource,
+    recordIncome,
+    updateIncomeReceipt,
+    updateIncomeSource
+} from './income-tools';
 import {
     parseInput,
     resolveMonth,
@@ -79,6 +84,9 @@ const handlers = new Map<string, ToolHandler>(
         add_income_source: addIncomeSource,
         update_income_source: updateIncomeSource,
         record_income: recordIncome,
+        update_income_receipt: updateIncomeReceipt,
+        delete_income_receipt: deleteIncomeReceipt,
+        delete_income_source: deleteIncomeSource,
         add_category: addCategory,
         add_item: addItem,
         rename_category: renameCategory,

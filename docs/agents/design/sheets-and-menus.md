@@ -1,8 +1,8 @@
 # Sheets, menus, and toasts
 
-Read this before changing any sheet, the transaction hold menu, or toasts.
-`history/sheets-and-menus.md` holds the recordings and superseded builds behind
-these rules; read the matching section there before reverting one.
+Read this before changing any sheet, the transaction or receipt hold menu, or
+toasts. `history/sheets-and-menus.md` holds the recordings and superseded builds
+behind these rules; read the matching section there before reverting one.
 
 ## Sheets
 
@@ -57,8 +57,9 @@ so a draft dismissed without saving never reappears. Reset the fields when the
 sheet opens, never after a save or on close, or the fields visibly empty while
 it slides away. A sheet that owns its state resets during render when `open`
 turns true (`TransactionSheet`, Add income source) or when its target changes to
-a new one (Record income, which also re-dates to the viewed month); a sheet
-whose state lives in its parent resets in the handler that opens it (Add
+a new one (Record income, which also re-dates to the viewed month, and the
+received-income edit sheet, which reloads from the receipt it opens for); a
+sheet whose state lives in its parent resets in the handler that opens it (Add
 category, Add line item, Change password, Import backup, which returns to
 Merge); a sheet mounted per opening takes a fresh `key` (Move money, the
 allocation picker).
@@ -116,7 +117,10 @@ A sheet's focused field must sit inside its `.sheet-body`, never in its
 scroll the body at all (`assistant.md`). Every date field sits in a
 `.date-input-shell` with the `CalendarDays` icon, as in Add transaction and
 Record income: iOS sizes a bare `<input type='date'>` to its own content rather
-than the field.
+than the field. The Record income and received-income edit sheets set `min` and
+`max` to the viewed month, but the iOS date picker ignores both and still offers
+every month, so the sheets also show an inline "Pick a date in …" error and
+disable saving while the date falls outside the month.
 
 ### Keyboard fit
 
@@ -249,16 +253,18 @@ page. The sheets open from controlled state rather than Radix's
 
 ### Opening
 
-Transaction rows open an iOS-style hold menu from
-`src/components/ui/hold-menu/`. A touch or pen press held 450 ms without moving
-more than 8 px opens it; the row eases to 0.97 scale with the long-press tint
-after a 120 ms delay so taps and scrolls never visibly shrink it. A mouse never
-starts the timer: right-click, a two-finger trackpad tap, Android's own long
-press, and the keyboard context-menu key or Shift+F10 all arrive as
-`contextmenu` and open the same menu, which a second `contextmenu` while open
-ignores. The menu is a modal Radix Dialog so it layers correctly over the
-line-item detail (itself a Radix Dialog): its Escape, focus trap, and
-pointer-outside handling stack with the detail's instead of closing it.
+Transaction rows and the received-income rows in an income-source detail open an
+iOS-style hold menu from `src/components/ui/hold-menu/`; both offer Edit,
+Duplicate, and Delete, and a receipt's Delete still asks for confirmation
+because it has no Undo. A touch or pen press held 450 ms without moving more
+than 8 px opens it; the row eases to 0.97 scale with the long-press tint after a
+120 ms delay so taps and scrolls never visibly shrink it. A mouse never starts
+the timer: right-click, a two-finger trackpad tap, Android's own long press, and
+the keyboard context-menu key or Shift+F10 all arrive as `contextmenu` and open
+the same menu, which a second `contextmenu` while open ignores. The menu is a
+modal Radix Dialog so it layers correctly over the line-item detail (itself a
+Radix Dialog): its Escape, focus trap, and pointer-outside handling stack with
+the detail's instead of closing it.
 
 ### Layers and the lifted row
 

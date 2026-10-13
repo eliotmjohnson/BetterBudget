@@ -183,7 +183,7 @@ export async function updateTransaction({
             merchant: input.merchant,
             occurredOn: input.occurredOn,
             totalCents: total,
-            note: input.note,
+            note: input.note ?? null,
             version: input.expectedVersion + 1,
             updatedAt: new Date()
         })

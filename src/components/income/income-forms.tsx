@@ -8,9 +8,15 @@ import { Sheet } from '@/components/ui/sheet';
 import type {
     CategoryTone,
     IncomePlanView,
+    IncomeReceiptView,
     MonthSnapshot
 } from '@/domain/types';
-import { defaultDateForMonth } from '@/domain/calendar';
+import {
+    dateInMonth,
+    defaultDateForMonth,
+    monthDateRange
+} from '@/domain/calendar';
+import { monthLabel } from '@/domain/money';
 import { createUuid } from '@/domain/uuid';
 import { CategoryIcon } from '@/components/shared/category-icon';
 import type { Mutate } from '@/components/shared/budget-view-helpers';
@@ -176,45 +182,185 @@ export function RecordIncome({
             }}
         >
             <div className='form-grid'>
-                <div className='field'>
-                    <label htmlFor='receipt-amount'>Amount received</label>
-                    <CurrencyInput
-                        id='receipt-amount'
-                        value={amount}
-                        onValueChange={setAmount}
-                    />
-                </div>
-                <div className='field'>
-                    <label htmlFor='receipt-date'>Date</label>
-                    <div className='date-input-shell'>
-                        <input
-                            id='receipt-date'
-                            type='date'
-                            value={date}
-                            onChange={(event) => setDate(event.target.value)}
-                        />
-                        <CalendarDays
-                            aria-hidden='true'
-                            size={18}
-                            strokeWidth={1.8}
-                        />
-                    </div>
-                </div>
-                <div className='field'>
-                    <label htmlFor='receipt-note'>Note (optional)</label>
-                    <StillTextarea
-                        id='receipt-note'
-                        value={note}
-                        onChange={(event) => setNote(event.target.value)}
-                    />
-                </div>
+                <ReceiptFields
+                    amount={amount}
+                    date={date}
+                    monthKey={snapshot.monthKey}
+                    note={note}
+                    onAmountChange={setAmount}
+                    onDateChange={setDate}
+                    onNoteChange={setNote}
+                />
                 <button
                     className='primary-button primary-button--wide'
                     type='button'
-                    disabled={BigInt(amount || '0') <= 0n}
+                    disabled={
+                        BigInt(amount || '0') <= 0n ||
+                        !dateInMonth(date, snapshot.monthKey)
+                    }
                     onClick={submit}
                 >
                     Record income
+                </button>
+            </div>
+        </Sheet>
+    );
+}
+
+function ReceiptFields({
+    amount,
+    date,
+    monthKey,
+    note,
+    onAmountChange,
+    onDateChange,
+    onNoteChange
+}: {
+    amount: string;
+    date: string;
+    monthKey: MonthSnapshot['monthKey'];
+    note: string;
+    onAmountChange: (amount: string) => void;
+    onDateChange: (date: string) => void;
+    onNoteChange: (note: string) => void;
+}) {
+    const { first, last } = monthDateRange(monthKey);
+    const outsideMonth = !dateInMonth(date, monthKey);
+
+    return (
+        <>
+            <div className='field'>
+                <label htmlFor='receipt-amount'>Amount received</label>
+                <CurrencyInput
+                    id='receipt-amount'
+                    value={amount}
+                    onValueChange={onAmountChange}
+                />
+            </div>
+            <div className='field'>
+                <label htmlFor='receipt-date'>Date</label>
+                <div className='date-input-shell'>
+                    <input
+                        id='receipt-date'
+                        type='date'
+                        min={first}
+                        max={last}
+                        value={date}
+                        aria-invalid={outsideMonth}
+                        aria-describedby={
+                            outsideMonth ? 'receipt-date-error' : undefined
+                        }
+                        onChange={(event) => onDateChange(event.target.value)}
+                    />
+                    <CalendarDays
+                        aria-hidden='true'
+                        size={18}
+                        strokeWidth={1.8}
+                    />
+                </div>
+                {outsideMonth ? (
+                    <p
+                        className='form-error'
+                        id='receipt-date-error'
+                        role='alert'
+                    >
+                        {`Pick a date in ${monthLabel(monthKey)}.`}
+                    </p>
+                ) : null}
+            </div>
+            <div className='field'>
+                <label htmlFor='receipt-note'>Note (optional)</label>
+                <StillTextarea
+                    id='receipt-note'
+                    value={note}
+                    onChange={(event) => onNoteChange(event.target.value)}
+                />
+            </div>
+        </>
+    );
+}
+
+export function EditIncomeReceipt({
+    open,
+    plan,
+    receipt,
+    snapshot,
+    mutate,
+    onOpenChange,
+    onExitComplete
+}: {
+    open: boolean;
+    plan: IncomePlanView;
+    receipt: IncomeReceiptView | null;
+    snapshot: MonthSnapshot;
+    mutate: Mutate;
+    onOpenChange: (open: boolean) => void;
+    onExitComplete: () => void;
+}) {
+    const [amount, setAmount] = useState(receipt?.amountCents ?? '');
+    const [date, setDate] = useState(receipt?.receivedOn ?? '');
+    const [note, setNote] = useState(receipt?.note ?? '');
+    const [loadedId, setLoadedId] = useState(receipt?.id ?? null);
+
+    if (receipt && receipt.id !== loadedId) {
+        setLoadedId(receipt.id);
+        setAmount(receipt.amountCents);
+        setDate(receipt.receivedOn);
+        setNote(receipt.note ?? '');
+    }
+
+    if (!receipt) return null;
+    const unchanged =
+        amount === receipt.amountCents &&
+        date === receipt.receivedOn &&
+        note.trim() === (receipt.note ?? '');
+    const submit = () => {
+        const accepted =
+            unchanged ||
+            mutate({
+                type: 'updateIncomeReceipt',
+                clientMutationId: createUuid(),
+                monthKey: snapshot.monthKey,
+                incomeReceiptId: receipt.id,
+                expectedVersion: receipt.version,
+                receivedOn: date,
+                amountCents: amount || '0',
+                note: note.trim() || undefined
+            });
+
+        if (accepted) onOpenChange(false);
+    };
+
+    return (
+        <Sheet
+            open={open}
+            title={`Edit ${plan.name}`}
+            onOpenChange={onOpenChange}
+            onExitComplete={() => {
+                setLoadedId(null);
+                onExitComplete();
+            }}
+        >
+            <div className='form-grid'>
+                <ReceiptFields
+                    amount={amount}
+                    date={date}
+                    monthKey={snapshot.monthKey}
+                    note={note}
+                    onAmountChange={setAmount}
+                    onDateChange={setDate}
+                    onNoteChange={setNote}
+                />
+                <button
+                    className='primary-button primary-button--wide'
+                    type='button'
+                    disabled={
+                        BigInt(amount || '0') <= 0n ||
+                        !dateInMonth(date, snapshot.monthKey)
+                    }
+                    onClick={submit}
+                >
+                    Save changes
                 </button>
             </div>
         </Sheet>

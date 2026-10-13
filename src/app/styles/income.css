@@ -120,13 +120,18 @@
     border-top: 1px solid var(--line);
 }
 .income-receipt-row {
+    width: 100%;
     min-height: 70px;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 44px;
+    grid-template-columns: minmax(0, 1fr) 24px;
     align-items: center;
     gap: 10px;
     padding: 9px 0;
+    border: 0;
     border-bottom: 1px solid var(--line);
+    background: white;
+    text-align: left;
+    cursor: pointer;
 }
 .income-receipt-copy {
     min-width: 0;
@@ -147,9 +152,6 @@
     margin-top: 3px;
     color: var(--muted);
     font-size: 12px;
-}
-.income-receipt-delete {
-    color: #e3474d;
 }
 .income-receipt-empty {
     display: grid;
@@ -185,20 +187,12 @@
     gap: 7px;
     line-height: 1;
 }
-.income-source-delete .text-button svg {
-    flex: 0 0 auto;
-    margin: 0;
-    vertical-align: initial;
-}
 .income-source-delete .text-button:disabled {
     opacity: 0.45;
     cursor: not-allowed;
 }
-.income-source-delete p {
-    max-width: 310px;
+.income-source-delete .text-button svg {
+    flex: 0 0 auto;
     margin: 0;
-    color: var(--muted);
-    font-size: 11px;
-    line-height: 1.45;
-    text-align: center;
+    vertical-align: initial;
 }

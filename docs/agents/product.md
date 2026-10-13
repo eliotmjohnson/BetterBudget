@@ -88,11 +88,18 @@ The implemented product supports:
   one-time sources behind, so a source such as a bonus stays in its own month.
   When a month has no income sources, the Income page shows a guided empty state
   with an action that opens the add-source flow. Each source exposes its receipt
-  history on the Income page, individual receipts can be soft deleted, and a
-  source can be deleted after its active receipts are cleared. Income-source
-  details are URL-backed and reuse the budget-item navigation-detail pattern:
-  mobile push navigation with Back, browser history, and left-edge swipe
-  dismissal plus a desktop modal fallback.
+  history on the Income page. Tapping a receipt opens an edit sheet for its
+  amount, date, and note; a touch hold, right-click, or the keyboard
+  context-menu key opens the same hold menu as transaction rows (Edit,
+  Duplicate, Delete), and Delete asks for confirmation before soft deleting the
+  receipt. Receipt rows carry no trash button. The record and edit sheets limit
+  the date picker to the viewed month and disable saving, with an inline
+  message, while the date falls outside it; the server rejects such a date too.
+  Deleting a source also permanently deletes its received transactions for that
+  month in the same database transaction; the confirmation sheet names how many
+  and their total. Income-source details are URL-backed and reuse the
+  budget-item navigation-detail pattern: mobile push navigation with Back,
+  browser history, and left-edge swipe dismissal plus a desktop modal fallback.
 - Searchable and filterable transaction history plus a combined month activity
   feed. The Transactions page shows only expense and refund records, labels
   refunds as Income, and leaves received-income/paycheck receipts on the Income
@@ -169,16 +176,25 @@ The implemented product supports:
   planned) with server-computed totals, averages, and over-planned statistics,
   so the model never does the arithmetic and makes basic changes described in
   plain language: planned amounts, carryover, expense and income transaction
-  add/edit/delete with exact splits, income sources and received income, adding
-  and renaming categories and items, and the month note. It speaks the
-  interface's vocabulary rather than the code's: a `refund` transaction is an
-  **income transaction** (money into a budget item, shown as Income on the
-  Transactions page), which it keeps distinct from **received income** recorded
-  against an income source on the Income page, and it asks which one is meant
-  when a request is ambiguous. It refers to budget items by name
-  (`Category / Item` when a name repeats), income sources by name (`Name #2`
-  when a name repeats), and transactions by the first eight characters of their
-  id. It declines unrelated questions and every destructive or structural
+  add/edit/delete with exact splits, adding, editing, and deleting income
+  sources, recording received income, correcting a receipt's amount, date, or
+  note within its month, deleting a receipt, adding and renaming categories and
+  items, and the month note. It speaks the interface's vocabulary rather than
+  the code's: a `refund` transaction is an **income transaction** (money into a
+  budget item, shown as Income on the Transactions page), which it keeps
+  distinct from **received income** recorded against an income source on the
+  Income page, and it asks which one is meant when a request is ambiguous. It
+  refers to budget items by name (`Category / Item` when a name repeats), income
+  sources by name (`Name #2` when a name repeats), and transactions and
+  received-income receipts by the first eight characters of their id;
+  `get_month_overview` lists each source's receipts with that ref. A receipt
+  edit that would move its date into another month is refused without changing
+  anything, because receipts belong to their source's month; Better Buddy offers
+  to record the amount in the other month and delete the original instead.
+  Deleting a source deletes its receipts with it in one mutation; when the
+  source has received income, Better Buddy confirms the amount first and the
+  tool refuses if that amount has changed since, and none of these deletions has
+  an Undo. It declines unrelated questions and every destructive or structural
   operation it lacks a tool for, and names where the person can do it. A
   conversation is held only in the browser's memory; **New chat** or a reload
   starts over. Assistant writes are server-confirmed and refresh every cached

@@ -4,6 +4,7 @@ import type {
     BudgetCategoryView,
     BudgetItemView,
     IncomePlanView,
+    IncomeReceiptView,
     MonthSnapshot
 } from '@/domain/types';
 import { incomePlanLabel } from './render';
@@ -125,5 +126,28 @@ export function resolveTransaction(
 
     throw new AssistantToolError(
         `No single transaction with ref "${ref}" in ${snapshot.monthKey}. Call list_transactions for that month and use the 8-character ref it shows.`
+    );
+}
+
+export function resolveIncomeReceipt(
+    snapshot: MonthSnapshot,
+    ref: string
+): { plan: IncomePlanView; receipt: IncomeReceiptView } {
+    const wanted = ref.trim().toLowerCase();
+    const matches =
+        wanted.length < 4
+            ? []
+            : snapshot.incomePlans.flatMap((plan) =>
+                  plan.receipts
+                      .filter((receipt) =>
+                          receipt.id.toLowerCase().startsWith(wanted)
+                      )
+                      .map((receipt) => ({ plan, receipt }))
+              );
+
+    if (matches.length === 1 && matches[0]) return matches[0];
+
+    throw new AssistantToolError(
+        `No single received-income receipt with ref "${ref}" in ${snapshot.monthKey}. Call get_month_overview for that month and use the 8-character receipt ref it lists under the income source.`
     );
 }

@@ -43,6 +43,7 @@ function carryoverInvalidationStart(input: BudgetMutation): MonthKey | null {
         case 'addIncomePlan':
         case 'updateIncomePlan':
         case 'addIncomeReceipt':
+        case 'updateIncomeReceipt':
         case 'deleteIncomeReceipt':
         case 'deleteIncomePlan':
         case 'addCategory':

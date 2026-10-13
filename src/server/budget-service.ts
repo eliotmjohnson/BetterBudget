@@ -29,7 +29,8 @@ import {
     addIncomeReceipt,
     deleteIncomePlan,
     deleteIncomeReceipt,
-    updateIncomePlan
+    updateIncomePlan,
+    updateIncomeReceipt
 } from '@/server/budget-mutations/income';
 import {
     addCategory,
@@ -120,6 +121,8 @@ async function dispatch(
             return updateIncomePlan(context(input));
         case 'addIncomeReceipt':
             return addIncomeReceipt(context(input));
+        case 'updateIncomeReceipt':
+            return updateIncomeReceipt(context(input));
         case 'deleteIncomeReceipt':
             return deleteIncomeReceipt(context(input));
         case 'deleteIncomePlan':

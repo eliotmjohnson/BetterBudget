@@ -30,3 +30,18 @@ export function defaultDateForMonth(
 }
 
 export const monthDate = (monthKey: MonthKey | string) => `${monthKey}-01`;
+
+export function monthDateRange(monthKey: MonthKey | string) {
+    const [year, month] = monthKey.split('-').map(Number);
+    const lastDay = new Date(
+        Date.UTC(year ?? 1970, month ?? 1, 0)
+    ).getUTCDate();
+
+    return {
+        first: monthDate(monthKey),
+        last: `${monthKey}-${String(lastDay).padStart(2, '0')}`
+    };
+}
+
+export const dateInMonth = (date: string, monthKey: MonthKey | string) =>
+    date.startsWith(`${monthKey}-`) && date.length === 10;

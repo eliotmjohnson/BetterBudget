@@ -205,6 +205,51 @@ export const ASSISTANT_TOOLS: Anthropic.Tool[] = [
         ['source', 'date', 'amount']
     ),
     tool(
+        'update_income_receipt',
+        'Change the amount, date, or note of received income already recorded against an income source. Only pass the fields that change. The date must stay in the receipt’s month.',
+        {
+            month,
+            ref: {
+                type: 'string',
+                description:
+                    'The 8-character receipt ref get_month_overview lists under the income source.'
+            },
+            date,
+            amount: amount('New amount received.'),
+            note: {
+                type: 'string',
+                description: 'New note; an empty string removes it.'
+            }
+        },
+        ['ref']
+    ),
+    tool(
+        'delete_income_receipt',
+        'Delete one received-income receipt from an income source. The app has no undo for a deletion made here, so never tell the person they can undo it.',
+        {
+            month,
+            ref: {
+                type: 'string',
+                description:
+                    'The 8-character receipt ref get_month_overview lists under the income source.'
+            }
+        },
+        ['ref']
+    ),
+    tool(
+        'delete_income_source',
+        'Delete an income source from one month, together with all of its received income in that month, removing its expected amount from left to budget. The app has no undo for a deletion made here.',
+        {
+            month,
+            source: {
+                type: 'string',
+                description:
+                    'Income source name as get_month_overview shows it.'
+            }
+        },
+        ['source']
+    ),
+    tool(
         'add_category',
         'Add a new budget category to a month.',
         {

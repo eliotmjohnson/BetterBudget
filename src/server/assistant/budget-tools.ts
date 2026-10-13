@@ -2,21 +2,15 @@ import 'server-only';
 import { z } from 'zod';
 import { cents } from '@/domain/money';
 import {
-    categoryIconSchema,
-    categoryToneSchema
-} from '@/server/mutation-schema';
-import {
     commit,
-    dateSchema,
     dollars,
     money,
-    monthOfDate,
     parseInput,
     resolveMonth,
     snapshotFor,
     type AssistantToolContext
 } from './commit';
-import { resolveCategory, resolveIncomePlan, resolveItem } from './resolve';
+import { resolveCategory, resolveItem } from './resolve';
 
 const optionalMonth = { month: z.string().optional() };
 
@@ -70,119 +64,6 @@ export async function setCarryover(
     );
 
     return `Carryover for ${item.name} in ${monthKey} is now ${args.enabled ? 'on' : 'off'}.`;
-}
-
-export async function addIncomeSource(
-    input: unknown,
-    context: AssistantToolContext
-): Promise<string> {
-    const args = parseInput(
-        z.object({
-            ...optionalMonth,
-            name: z.string(),
-            expected_amount: z.string(),
-            one_time: z.boolean().optional()
-        }),
-        input
-    );
-    const monthKey = resolveMonth(args.month, context);
-    const expectedCents = dollars(args.expected_amount, 'Expected amount', {
-        allowZero: true
-    });
-    const after = await commit(
-        {
-            type: 'addIncomePlan',
-            monthKey,
-            name: args.name,
-            icon: 'wallet',
-            tone: 'mint',
-            expectedCents,
-            oneTime: args.one_time ?? false
-        },
-        context
-    );
-
-    return `Added ${args.one_time ? 'one-time ' : ''}income source ${args.name} expecting ${money(expectedCents)} in ${monthKey}. Left to budget: ${money(after.summary.leftToBudgetCents)}.`;
-}
-
-export async function updateIncomeSource(
-    input: unknown,
-    context: AssistantToolContext
-): Promise<string> {
-    const args = parseInput(
-        z.object({
-            ...optionalMonth,
-            source: z.string(),
-            new_name: z.string().optional(),
-            expected_amount: z.string().optional(),
-            one_time: z.boolean().optional()
-        }),
-        input
-    );
-    const monthKey = resolveMonth(args.month, context);
-    const plan = resolveIncomePlan(
-        await snapshotFor(monthKey, context),
-        args.source
-    );
-    const expectedCents =
-        args.expected_amount === undefined
-            ? plan.expectedCents
-            : dollars(args.expected_amount, 'Expected amount', {
-                  allowZero: true
-              });
-    const name = args.new_name || plan.name;
-    const oneTime = args.one_time ?? plan.oneTime;
-
-    await commit(
-        {
-            type: 'updateIncomePlan',
-            monthKey,
-            incomePlanId: plan.id,
-            expectedVersion: plan.version,
-            name,
-            icon: categoryIconSchema.catch('wallet').parse(plan.icon),
-            tone: categoryToneSchema.catch('mint').parse(plan.tone),
-            expectedCents,
-            oneTime
-        },
-        context
-    );
-
-    return `Income source ${name} now expects ${money(expectedCents)} in ${monthKey} and ${oneTime ? 'is one-time, so copying the month leaves it behind' : 'carries forward when the month is copied'}.`;
-}
-
-export async function recordIncome(
-    input: unknown,
-    context: AssistantToolContext
-): Promise<string> {
-    const args = parseInput(
-        z.object({
-            source: z.string(),
-            date: dateSchema,
-            amount: z.string(),
-            note: z.string().optional()
-        }),
-        input
-    );
-    const monthKey = monthOfDate(args.date);
-    const plan = resolveIncomePlan(
-        await snapshotFor(monthKey, context),
-        args.source
-    );
-    const amountCents = dollars(args.amount, 'Amount');
-    const after = await commit(
-        {
-            type: 'addIncomeReceipt',
-            monthKey,
-            incomePlanId: plan.id,
-            receivedOn: args.date,
-            amountCents,
-            note: args.note || undefined
-        },
-        context
-    );
-
-    return `Recorded ${money(amountCents)} from ${plan.name} on ${args.date}. Received this month: ${money(after.summary.receivedIncomeCents)}.`;
 }
 
 export async function addCategory(

@@ -21,14 +21,20 @@ import {
     incomeIconValue,
     type IncomeIconValue
 } from './income-fields';
+import { EditIncomeReceipt } from './income-forms';
+import { IncomeReceiptList, receiptDayLabel } from './income-receipt-list';
 
-const dayLabel = (date: string) =>
-    new Intl.DateTimeFormat('en-US', {
-        month: 'long',
-        day: 'numeric',
-        year: 'numeric',
-        timeZone: 'UTC'
-    }).format(new Date(`${date}T00:00:00Z`));
+function sourceDeleteCopy(plan: IncomePlanView, monthLabel: string) {
+    const count = plan.receipts.length;
+    const receipts =
+        count === 0
+            ? ''
+            : count === 1
+              ? ` Its ${money(plan.receivedCents)} received transaction will be deleted too.`
+              : ` All ${count} of its received transactions, totaling ${money(plan.receivedCents)}, will be deleted too.`;
+
+    return `Delete ${plan.name} from ${monthLabel}? Its ${money(plan.expectedCents)} expected amount will be removed from this month's budget.${receipts}`;
+}
 
 type IncomeDeleteTarget =
     { type: 'receipt'; receipt: IncomeReceiptView } | { type: 'source' };
@@ -54,6 +60,9 @@ export function IncomeSourceDetails({
         null
     );
     const [deleteOpen, setDeleteOpen] = useState(false);
+    const [editingReceipt, setEditingReceipt] =
+        useState<IncomeReceiptView | null>(null);
+    const [editOpen, setEditOpen] = useState(false);
     const [appearanceOpen, setAppearanceOpen] = useState(false);
     const [appearanceIcon, setAppearanceIcon] =
         useState<IncomeIconValue>('wallet');
@@ -70,6 +79,7 @@ export function IncomeSourceDetails({
         setPreviousPlan(plan);
         if (plan?.id !== previousPlan?.id) {
             setDeleteOpen(false);
+            setEditOpen(false);
             setAppearanceOpen(false);
         }
         if (plan) setRenderedPlan(plan);
@@ -78,6 +88,7 @@ export function IncomeSourceDetails({
     if (!renderedPlan) return null;
     const close = () => {
         setDeleteOpen(false);
+        setEditOpen(false);
         setAppearanceOpen(false);
         onOpenChange(false);
     };
@@ -135,10 +146,15 @@ export function IncomeSourceDetails({
             clientMutationId: createUuid(),
             monthKey: snapshot.monthKey,
             incomePlanId: renderedPlan.id,
-            expectedVersion: renderedPlan.version
+            expectedVersion: renderedPlan.version,
+            receiptIds: renderedPlan.receipts.map((receipt) => receipt.id)
         });
         close();
     };
+    const pendingSource = [
+        renderedPlan.id,
+        ...renderedPlan.receipts.map((receipt) => receipt.id)
+    ].some((id) => id.startsWith('optimistic-'));
     const receiptTarget =
         deleteTarget?.type === 'receipt' ? deleteTarget.receipt : null;
 
@@ -210,40 +226,19 @@ export function IncomeSourceDetails({
                     />
                     <h3 className='section-title'>Received transactions</h3>
                     {renderedPlan.receipts.length > 0 ? (
-                        <div className='income-receipt-list'>
-                            {renderedPlan.receipts.map((receipt) => (
-                                <div
-                                    className='income-receipt-row'
-                                    key={receipt.id}
-                                >
-                                    <div className='income-receipt-copy'>
-                                        <strong>
-                                            +{money(receipt.amountCents)}
-                                        </strong>
-                                        <span>
-                                            {dayLabel(receipt.receivedOn)}
-                                        </span>
-                                        {receipt.note ? (
-                                            <span>{receipt.note}</span>
-                                        ) : null}
-                                    </div>
-                                    <button
-                                        className='icon-button income-receipt-delete'
-                                        type='button'
-                                        aria-label={`Delete ${money(receipt.amountCents)} received on ${dayLabel(receipt.receivedOn)}`}
-                                        onClick={() => {
-                                            setDeleteTarget({
-                                                type: 'receipt',
-                                                receipt
-                                            });
-                                            setDeleteOpen(true);
-                                        }}
-                                    >
-                                        <Trash2 size={18} />
-                                    </button>
-                                </div>
-                            ))}
-                        </div>
+                        <IncomeReceiptList
+                            plan={renderedPlan}
+                            snapshot={snapshot}
+                            mutate={mutate}
+                            onDelete={(receipt) => {
+                                setDeleteTarget({ type: 'receipt', receipt });
+                                setDeleteOpen(true);
+                            }}
+                            onEdit={(receipt) => {
+                                setEditingReceipt(receipt);
+                                setEditOpen(true);
+                            }}
+                        />
                     ) : (
                         <div className='income-receipt-empty'>
                             <strong>No income recorded yet</strong>
@@ -257,12 +252,7 @@ export function IncomeSourceDetails({
                         <button
                             className='text-button danger-text'
                             type='button'
-                            disabled={renderedPlan.receipts.length > 0}
-                            aria-describedby={
-                                renderedPlan.receipts.length > 0
-                                    ? 'income-source-delete-help'
-                                    : undefined
-                            }
+                            disabled={pendingSource}
                             onClick={() => {
                                 setDeleteTarget({ type: 'source' });
                                 setDeleteOpen(true);
@@ -271,12 +261,6 @@ export function IncomeSourceDetails({
                             <Trash2 size={17} />
                             Delete income source
                         </button>
-                        {renderedPlan.receipts.length > 0 ? (
-                            <p id='income-source-delete-help'>
-                                Delete the received transactions above before
-                                deleting this source.
-                            </p>
-                        ) : null}
                     </div>
                 </div>
             </NavigationDetail>
@@ -316,6 +300,17 @@ export function IncomeSourceDetails({
                     </button>
                 </div>
             </Sheet>
+            <EditIncomeReceipt
+                open={plan !== null && editOpen}
+                plan={renderedPlan}
+                receipt={editingReceipt}
+                snapshot={snapshot}
+                mutate={mutate}
+                onOpenChange={setEditOpen}
+                onExitComplete={() => {
+                    if (!editOpen) setEditingReceipt(null);
+                }}
+            />
             {deleteTarget ? (
                 <Sheet
                     open={plan !== null && deleteOpen}
@@ -332,7 +327,7 @@ export function IncomeSourceDetails({
                     {receiptTarget ? (
                         <div className='form-grid'>
                             <p className='confirmation-copy'>
-                                {`Delete ${money(receiptTarget.amountCents)} received on ${dayLabel(receiptTarget.receivedOn)}? This will update the month's received-income total.`}
+                                {`Delete ${money(receiptTarget.amountCents)} received on ${receiptDayLabel(receiptTarget.receivedOn)}? This will update the month's received-income total.`}
                             </p>
                             <button
                                 className='primary-button primary-button--wide danger-button'
@@ -352,7 +347,7 @@ export function IncomeSourceDetails({
                     ) : (
                         <div className='form-grid'>
                             <p className='confirmation-copy'>
-                                {`Delete ${renderedPlan.name} from ${snapshot.label}? Its ${money(renderedPlan.expectedCents)} expected amount will be removed from this month's budget.`}
+                                {sourceDeleteCopy(renderedPlan, snapshot.label)}
                             </p>
                             <button
                                 className='primary-button primary-button--wide danger-button'

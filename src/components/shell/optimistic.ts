@@ -46,6 +46,7 @@ export function optimisticSnapshot(
         case 'addIncomePlan':
         case 'updateIncomePlan':
         case 'addIncomeReceipt':
+        case 'updateIncomeReceipt':
         case 'deleteIncomeReceipt':
         case 'deleteIncomePlan':
             applyIncomePatch(next, input);

@@ -55,12 +55,13 @@ moved, renamed, or takes on a new responsibility.
 - `src/server/assistant/` — the budget assistant. `run.ts` is the Claude tool
   loop and model settings, `prompt.ts` the frozen system prompt, `tools.ts` the
   frozen tool definitions, `execute.ts` the tool dispatcher and read tools,
-  `history.ts` the multi-month history read tool, `budget-tools.ts` and
-  `transaction-tools.ts` the write tools, `commit.ts` the shared mutation,
-  money, and month helpers, `resolve.ts` name and transaction-ref resolution,
-  `render.ts` the compact text the model reads, `conversation-schema.ts` the
-  request contract, `config.ts` the key-presence switch, and `rate-limit.ts` the
-  per-household turn guard. `src/app/api/assistant/route.ts` is the endpoint.
+  `history.ts` the multi-month history read tool, `budget-tools.ts`,
+  `income-tools.ts` (income sources and receipts), and `transaction-tools.ts`
+  the write tools, `commit.ts` the shared mutation, money, and month helpers,
+  `resolve.ts` name and transaction- and receipt-ref resolution, `render.ts` the
+  compact text the model reads, `conversation-schema.ts` the request contract,
+  `config.ts` the key-presence switch, and `rate-limit.ts` the per-household
+  turn guard. `src/app/api/assistant/route.ts` is the endpoint.
 - `src/server/definition-usage.ts` — later-month activity and never-used
   (permanently deletable) status per definition, shared by the snapshot and the
   hard-delete handlers. Each check is one grouped query returning a row per
@@ -103,7 +104,8 @@ moved, renamed, or takes on a new responsibility.
   card and the compact strip that docks under the detail header.
 - `src/components/income/income-view.tsx` — Income page: expected-income plans
   and received-income receipts. `income-source-details.tsx` is the pushed
-  detail, `income-forms.tsx` the add-source and record-income sheets,
+  detail, `income-receipt-list.tsx` its receipt rows and their hold menu,
+  `income-forms.tsx` the add-source, record-income, and edit-receipt sheets,
   `income-fields.tsx` the shared title, plan-amount, and appearance inputs.
 - `src/components/organize/organizer-view.tsx` — category and item structure
   editing, drag reordering, archive/delete; `organizer-category-section.tsx`

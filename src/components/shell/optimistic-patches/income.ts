@@ -6,9 +6,75 @@ type Input = PatchOf<
     | 'addIncomePlan'
     | 'updateIncomePlan'
     | 'addIncomeReceipt'
+    | 'updateIncomeReceipt'
     | 'deleteIncomeReceipt'
     | 'deleteIncomePlan'
 >;
+
+function findReceipt(next: MonthSnapshot, incomeReceiptId: string) {
+    const plan = next.incomePlans.find((candidate) =>
+        candidate.receipts.some((receipt) => receipt.id === incomeReceiptId)
+    );
+
+    return {
+        plan,
+        receipt: plan?.receipts.find(
+            (candidate) => candidate.id === incomeReceiptId
+        )
+    };
+}
+
+function updateReceipt(
+    next: MonthSnapshot,
+    input: PatchOf<'updateIncomeReceipt'>
+): void {
+    const { plan, receipt } = findReceipt(next, input.incomeReceiptId);
+
+    if (!plan || !receipt) return;
+    const amountDelta = BigInt(input.amountCents) - BigInt(receipt.amountCents);
+
+    receipt.receivedOn = input.receivedOn;
+    receipt.amountCents = cents(input.amountCents);
+    receipt.note = input.note ?? null;
+    receipt.version += 1;
+    plan.receipts.sort((left, right) =>
+        right.receivedOn.localeCompare(left.receivedOn)
+    );
+    plan.receivedCents = cents(BigInt(plan.receivedCents) + amountDelta);
+    next.summary.receivedIncomeCents = cents(
+        BigInt(next.summary.receivedIncomeCents) + amountDelta
+    );
+    for (const entry of next.activity) {
+        if (entry.id !== input.incomeReceiptId) continue;
+        entry.occurredOn = input.receivedOn;
+        entry.amountCents = cents(input.amountCents);
+        entry.note = input.note;
+        entry.version += 1;
+    }
+}
+
+function deleteReceipt(
+    next: MonthSnapshot,
+    input: PatchOf<'deleteIncomeReceipt'>
+): void {
+    const { plan, receipt } = findReceipt(next, input.incomeReceiptId);
+
+    if (plan && receipt) {
+        plan.receivedCents = cents(
+            BigInt(plan.receivedCents) - BigInt(receipt.amountCents)
+        );
+        plan.receipts = plan.receipts.filter(
+            (candidate) => candidate.id !== input.incomeReceiptId
+        );
+        next.summary.receivedIncomeCents = cents(
+            BigInt(next.summary.receivedIncomeCents) -
+                BigInt(receipt.amountCents)
+        );
+    }
+    next.activity = next.activity.filter(
+        (entry) => entry.id !== input.incomeReceiptId
+    );
+}
 
 export function applyIncomePatch(next: MonthSnapshot, input: Input): void {
     switch (input.type) {
@@ -100,33 +166,12 @@ export function applyIncomePatch(next: MonthSnapshot, input: Input): void {
             });
             break;
         }
-        case 'deleteIncomeReceipt': {
-            const plan = next.incomePlans.find((candidate) =>
-                candidate.receipts.some(
-                    (receipt) => receipt.id === input.incomeReceiptId
-                )
-            );
-            const receipt = plan?.receipts.find(
-                (candidate) => candidate.id === input.incomeReceiptId
-            );
-
-            if (plan && receipt) {
-                plan.receivedCents = cents(
-                    BigInt(plan.receivedCents) - BigInt(receipt.amountCents)
-                );
-                plan.receipts = plan.receipts.filter(
-                    (candidate) => candidate.id !== input.incomeReceiptId
-                );
-                next.summary.receivedIncomeCents = cents(
-                    BigInt(next.summary.receivedIncomeCents) -
-                        BigInt(receipt.amountCents)
-                );
-            }
-            next.activity = next.activity.filter(
-                (entry) => entry.id !== input.incomeReceiptId
-            );
+        case 'updateIncomeReceipt':
+            updateReceipt(next, input);
             break;
-        }
+        case 'deleteIncomeReceipt':
+            deleteReceipt(next, input);
+            break;
         case 'deleteIncomePlan': {
             const plan = next.incomePlans.find(
                 (candidate) => candidate.id === input.incomePlanId

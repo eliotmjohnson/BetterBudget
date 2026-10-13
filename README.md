@@ -129,12 +129,12 @@ are unchanged.
   whole budget. Over planned counts expenses alone; income into an item is
   reported separately.
 - Sets planned amounts and carryover; adds, edits, and deletes expense and
-  income transactions (refunds in the data model), including exact splits; adds and edits expected-income sources,
-  including whether each is one-time, and records received income; adds and renames categories and items; and writes the
+  income transactions (refunds in the data model), including exact splits; adds, edits, and deletes expected-income sources,
+  including whether each is one-time (deleting a source deletes its received income with it); records, corrects, and deletes received income; adds and renames categories and items; and writes the
   month note.
 - Declines anything unrelated to Better Budget, and declines archiving,
   deleting definitions, copying, clearing, or resetting a month, reordering,
-  deleting income, and backups, pointing to where the person can do those
+  and backups, pointing to where the person can do those
   themselves.
 - Holds context for one conversation only. The conversation lives in the
   browser's memory; **New chat** or a reload starts over, and nothing is stored
@@ -404,6 +404,8 @@ Open `http://<mac-ip-address>:3000` on the phone. For example, an address of `19
 At development-server startup, `next.config.ts` automatically allows the computer's active IPv4 network addresses to access Next.js development assets. Restart `npm run dev:mobile` after changing Wi-Fi networks or receiving a different local address. Client-generated UUIDs also include a fallback for plain-HTTP LAN development, where browsers may withhold secure-context crypto APIs.
 
 Use this only on a trusted network. Real Better Auth sessions also require `BETTER_AUTH_URL` to exactly match the LAN origin; the default `AUTH_BYPASS=true` workflow does not.
+
+The Claude desktop app's browser pane starts the app from `.claude/launch.json`, whose `dev` entry runs `npm run db:reset && npm run dev:mobile`. Every launch from there therefore discards `.data/pglite` and starts from a freshly migrated, reseeded database; a server that is already running is reused rather than reset. Start `npm run dev:mobile` yourself to keep local data between runs.
 
 ### Optional environment file
 

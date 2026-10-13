@@ -43,8 +43,19 @@ Safe optimistic operations currently include:
 - Category and item renaming/reordering.
 - Simple category, item, expected-income, receipt, and transaction additions
   after full client validation.
-- Received-income receipt deletion and unused income-source deletion.
+- Received-income receipt edits (amount, date, and note; the receipt stays under
+  its source), receipt deletion, and income-source deletion, which removes the
+  source's receipts with it. The deletion carries the ids of the active receipts
+  the person saw (`receiptIds`, defaulting to none for older clients that could
+  only delete an empty source), and the server answers `conflict` when they
+  differ; the delete button is disabled while the source or one of its receipts
+  is still optimistic. The server compares them against the active rows its
+  receipt `DELETE … RETURNING` removed, so a mismatch throws inside the mutation
+  transaction and rolls that delete back. An edit that omits the note clears it.
 - Validated expense/refund edits and splits that remain within the same month.
+  Like a receipt edit, an `updateTransaction` that omits the note clears it;
+  both the transaction sheet and Better Buddy send the existing note when it is
+  unchanged.
 - Soft transaction deletion with Undo.
 - Local collapse, filter, draft, and navigation state.
 
