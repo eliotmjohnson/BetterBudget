@@ -101,12 +101,15 @@ from its computed outline. Both apply the same superellipse and extent (their
 elements keep a scale of 1), or a capsule end when the radius fills a side. The
 element paints the largest circular radius that contains the curve and its
 clip-path removes only the slivers between that circle and the curve, so
-shadows, focus rings, and contents keep painting normally. Each sliver reaches
-0.5 px past the painted circle (`sliverOverreach` in `geometry.ts`): stopping
-exactly on it left the circle's antialiased edge half-covered, a faint line
-along each corner when zoomed in. The cost is the first half pixel of the
-element's shadow just outside that circle, where a soft shadow is at its
-faintest. A CSS border stays and is also stroked along the curve as a background
+shadows, focus rings, and contents keep painting normally. Each sliver stops
+exactly on the painted circle. Where the circle's antialiased edge meets the
+clip's, a faint line survives along each corner, visible only when zoomed in; it
+is left alone on purpose. 6.5.0 pushed the slivers 0.5 px past the circle to
+hide it, but that also cut the first half pixel of each control's shadow, and a
+shadow offset downward is strongest right under the bottom edge, so shadowed
+buttons such as the Transactions **Add** showed a white line along their lower
+corners; 6.5.1 reverted it. Sheets avoid the line another way (see Sheet
+surface). A CSS border stays and is also stroked along the curve as a background
 layer, re-read whenever a state attribute, hover, or border transition changes
 it. That layer is `!important`, because component state rules restyle with the
 `background` shorthand, which would reset it at any specificity. The border
