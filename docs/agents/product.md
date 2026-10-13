@@ -92,8 +92,11 @@ The implemented product supports:
   amount, date, and note; a touch hold, right-click, or the keyboard
   context-menu key opens the same hold menu as transaction rows (Edit,
   Duplicate, Delete), and Delete asks for confirmation before soft deleting the
-  receipt. Receipt rows carry no trash button. The record and edit sheets limit
-  the date picker to the viewed month and disable saving, with an inline
+  receipt. Receipt rows carry no trash button. While a receipt's amount is being
+  typed on a phone, in the record or edit sheet, a Remaining chip on the
+  operator bar shows what of the source's expected amount is still unreceived
+  after the draft and tops the receipt up to it. The record and edit sheets
+  limit the date picker to the viewed month and disable saving, with an inline
   message, while the date falls outside it; the server rejects such a date too.
   Deleting a source also permanently deletes its received transactions for that
   month in the same database transaction; the confirmation sheet names how many

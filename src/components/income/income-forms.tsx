@@ -2,7 +2,7 @@
 
 import { StillInput, StillTextarea } from '@/components/ui/still-focus';
 import { CalendarDays } from 'lucide-react';
-import { useState } from 'react';
+import { useState, type ComponentProps } from 'react';
 import { CurrencyInput } from '@/components/ui/currency-input';
 import { Sheet } from '@/components/ui/sheet';
 import type {
@@ -25,6 +25,7 @@ import {
     IncomeOneTimeSwitch,
     type IncomeIconValue
 } from './income-fields';
+import { incomeRemainingFill } from './income-remaining-fill';
 
 export function AddIncomeSource({
     open,
@@ -184,6 +185,7 @@ export function RecordIncome({
             <div className='form-grid'>
                 <ReceiptFields
                     amount={amount}
+                    amountFill={incomeRemainingFill(renderedPlan, amount)}
                     date={date}
                     monthKey={snapshot.monthKey}
                     note={note}
@@ -209,6 +211,7 @@ export function RecordIncome({
 
 function ReceiptFields({
     amount,
+    amountFill,
     date,
     monthKey,
     note,
@@ -217,6 +220,7 @@ function ReceiptFields({
     onNoteChange
 }: {
     amount: string;
+    amountFill: ComponentProps<typeof CurrencyInput>['fill'];
     date: string;
     monthKey: MonthSnapshot['monthKey'];
     note: string;
@@ -234,6 +238,7 @@ function ReceiptFields({
                 <CurrencyInput
                     id='receipt-amount'
                     value={amount}
+                    fill={amountFill}
                     onValueChange={onAmountChange}
                 />
             </div>
@@ -344,6 +349,11 @@ export function EditIncomeReceipt({
             <div className='form-grid'>
                 <ReceiptFields
                     amount={amount}
+                    amountFill={incomeRemainingFill(
+                        plan,
+                        amount,
+                        receipt.amountCents
+                    )}
                     date={date}
                     monthKey={snapshot.monthKey}
                     note={note}

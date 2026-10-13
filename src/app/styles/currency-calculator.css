@@ -13,7 +13,7 @@
     align-items: center;
     gap: 4px;
     padding: 6px max(6px, env(safe-area-inset-right)) 6px
-        max(10px, env(safe-area-inset-left));
+        max(8px, env(safe-area-inset-left));
     border-top: 1px solid rgb(35 45 64 / 10%);
     background: rgb(246 247 249 / 82%);
     backdrop-filter: blur(20px) saturate(1.6);
@@ -95,8 +95,7 @@
     align-content: center;
     justify-items: start;
     gap: 1px;
-    margin-right: 2px;
-    padding: 0 8px;
+    padding: 0 4px;
     container-type: inline-size;
     border-radius: calc(12px * var(--corner-radius-scale));
     background: #eaf2ff;
@@ -129,8 +128,8 @@
 }
 .calculator-bar-fill strong {
     font-size: max(
-        11px,
-        min(16px, calc(100cqi / (var(--amount-chars, 1) * 0.56)))
+        10px,
+        min(16px, calc(100cqi / (var(--amount-chars, 1) * 0.63)))
     );
     font-weight: 780;
     letter-spacing: -0.02em;

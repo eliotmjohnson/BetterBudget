@@ -462,15 +462,12 @@ the filled plan is between
 $0 and `MAX_ENTRY_CENTS`, so an overage larger than
 the item's saved plan offers no chip there; an expression in progress takes the
 slot back for its result preview. The chip is a size container and its amount
-shrinks from 16 px to fit its width (`--amount-chars` times 0.56 em per
-character, the same fit the Budget amounts use), with an 11 px floor: on a 402
-px iPhone 17 Pro a cents amount such as `+$2,834.56`
-shows in full at about 14 px, while on a 375 px phone amounts past about seven
-characters still end in an ellipsis at the floor, since the 44 px keys leave the
-chip about 62 px there. Only planned amounts (Budget rows and the line-item
-detail) and transaction split amounts pass a fill, and like the rest of the bar
-it exists only with a coarse pointer and an on-screen keyboard, so desktop has
-no fill.
+shrinks from 16 px to fit its width (`--amount-chars` times 0.63 em per
+character), with a 10 px floor, so every amount up to `+$9,999.99`shows in full on a 375 px phone and wider. The factor is measured, not the 0.56 the Budget amounts use: below 20 px SF switches to its wider Text optical size, and at the chip's 780 weight and −0.02 em tracking the widest ten-character amounts run 0.59 em per character at 15 px and 0.615 at 10 px, so 0.56 left a scaled amount filling 99.8% of the chip and any rendering difference ended it in an ellipsis. With 0.63 the widest amount fills about 97% of the chip at 375 px and 94% at 402 px. The 375 px fit is tight by design: the 44 px keys leave the chip 73 px there, so its 4 px side padding, the absent margin before the keys, and the bar's 8 px left padding are what make room for ten characters at the floor; widening any of them, or adding a key, brings the ellipsis back on small phones. Amounts of eleven characters or more, such as`+$12,345.67`,
+may still end in an ellipsis at 375 px, and the caption can at that width too.
+Only planned amounts (Budget rows and the line-item detail), transaction split
+amounts, and receipt amounts pass a fill, and like the rest of the bar it exists
+only with a coarse pointer and an on-screen keyboard, so desktop has no fill.
 
 ### Fill a split with what's left
 
@@ -503,6 +500,22 @@ already shows it. A sheet dismissed without saving therefore never reopens with
 the old entry, and the date follows the viewed month. The draft is not cleared
 on close, so the sheet keeps its contents while it animates away. Every other
 draft-holding sheet follows the same rule (`sheets-and-menus.md`).
+
+### Fill a receipt with what's still expected
+
+While a receipt's Amount received field is focused on a phone, in the Record
+income sheet or the edit-receipt sheet, the operator bar offers a fill chip
+captioned Remaining (`incomeRemainingFill` in
+`src/components/income/income-remaining-fill.ts`). Like the Left to budget chip
+it accounts for the draft: it reads `+$600` when $400 of a $1,000 remainder has
+been typed, and tapping it sets the field to `receiptFillingIncomeExpected`
+(`src/domain/budget-calculations.ts`), the amount that brings the source's
+received total exactly to its expected amount whatever the field held. That is
+expected less received, plus the edited receipt's own saved amount, since the
+received total already counts it; a new receipt counts nothing back in. The chip
+hides once the draft meets or passes what is still expected, so an over-received
+source never offers a red take-back chip, because receiving more than expected
+is a surplus rather than an error, and it hides above `MAX_ENTRY_CENTS`.
 
 ### Long expressions
 

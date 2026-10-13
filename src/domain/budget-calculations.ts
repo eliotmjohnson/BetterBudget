@@ -134,3 +134,26 @@ export function availableAfterMove({
         destination: cents(BigInt(destinationAvailableCents) + amount)
     };
 }
+
+/**
+ * The amount for one receipt that brings its income source's received total
+ * exactly to its expected amount: what is still expected beyond every other
+ * receipt, counting the receipt's own saved amount (zero for a new receipt)
+ * back in. It is zero or negative once the other receipts meet the expected
+ * amount.
+ */
+export function receiptFillingIncomeExpected({
+    expectedCents,
+    receivedCents,
+    savedReceiptCents
+}: {
+    expectedCents: Cents | string;
+    receivedCents: Cents | string;
+    savedReceiptCents: Cents | string;
+}): Cents {
+    return cents(
+        BigInt(expectedCents) -
+            BigInt(receivedCents) +
+            BigInt(savedReceiptCents)
+    );
+}
