@@ -10,13 +10,13 @@ changing.
 file owns the palette and the reference viewports, and indexes the interaction
 contracts built on them.
 
-| Read before changing                                                                                                 | File                                       |
-| -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
-| The pushed detail view, its collapsing title and header shadow, or either docked summary strip                       | `docs/agents/design/navigation-detail.md`  |
-| Sheets, the transaction hold menu, or toasts                                                                         | `docs/agents/design/sheets-and-menus.md`   |
-| Bottom navigation, continuous corners, safe areas, touch guards, pull-to-refresh, page entrance, or landscape phones | `docs/agents/design/shell-and-platform.md` |
-| Budget rows, reordering, the summary arc, Transactions filters, or money inputs and the calculator                   | `docs/agents/design/budget-and-inputs.md`  |
-| The Better Buddy launcher, its throw, fall, and spaceship, or the chat sheet                                         | `docs/agents/design/assistant.md`          |
+| Read before changing                                                                                                    | File                                       |
+| ----------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| The pushed detail view, its collapsing title and header shadow, or either docked summary strip                          | `docs/agents/design/navigation-detail.md`  |
+| Sheets, the transaction hold menu, or toasts                                                                            | `docs/agents/design/sheets-and-menus.md`   |
+| Bottom navigation, continuous corners, safe areas, touch guards, pull-to-refresh, page entrance, or landscape phones    | `docs/agents/design/shell-and-platform.md` |
+| Budget rows, reordering, the summary arc, Transactions filters and Recently deleted, or money inputs and the calculator | `docs/agents/design/budget-and-inputs.md`  |
+| The Better Buddy launcher, its throw, fall, and spaceship, or the chat sheet                                            | `docs/agents/design/assistant.md`          |
 
 When a contract changes, update the topic file that owns it. Add a new topic
 file, and a row here, only when a new area does not fit an existing one.

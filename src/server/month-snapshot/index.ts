@@ -10,8 +10,14 @@ import {
     deriveBalances,
     sumSpendByMonthlyItem
 } from './carryover';
-import { buildActivity, buildCategories, rollUpReceipts } from './assemble';
 import {
+    buildActivity,
+    buildCategories,
+    buildDeletedTransactions,
+    rollUpReceipts
+} from './assemble';
+import {
+    loadDeletedTransactions,
     loadHistoricalPlanRows,
     loadPreviousMonthProbe,
     loadSpendTotals,
@@ -48,7 +54,8 @@ export async function getMonthSnapshot(
             },
             categories: [],
             incomePlans: [],
-            activity: []
+            activity: [],
+            deletedTransactions: []
         };
     const targetMonthId = currentMonth.id;
     const {
@@ -59,7 +66,7 @@ export async function getMonthSnapshot(
         currentTransactionRows
     } = await loadTargetMonthRows(db, householdId, targetMonthId, targetDate);
     const targetDefinitionIds = targetPlanRows.map((plan) => plan.itemId);
-    const [historicalPlanRows, { itemUsage, deletableCategoryIds }] =
+    const [historicalPlanRows, { itemUsage, deletableCategoryIds }, deleted] =
         await Promise.all([
             loadHistoricalPlanRows(
                 db,
@@ -72,7 +79,8 @@ export async function getMonthSnapshot(
                     ...activeCategoryRows.map((category) => category.id),
                     ...targetPlanRows.map((plan) => plan.categoryId)
                 ])
-            ])
+            ]),
+            loadDeletedTransactions(db, targetMonthId)
         ]);
     const planRows = buildCarryoverChains(
         targetPlanRows,
@@ -163,6 +171,7 @@ export async function getMonthSnapshot(
             receipts: receiptsByPlan.get(plan.id) ?? [],
             version: plan.version
         })),
-        activity
+        activity,
+        deletedTransactions: buildDeletedTransactions(targetPlanRows, deleted)
     };
 }

@@ -1,5 +1,9 @@
 import { cents } from '@/domain/money';
-import type { MonthSnapshot } from '@/domain/types';
+import type {
+    ActivityEntry,
+    DeletedTransactionEntry,
+    MonthSnapshot
+} from '@/domain/types';
 import type { AdjustAllocation, PatchOf } from './context';
 
 type Input = PatchOf<
@@ -7,7 +11,60 @@ type Input = PatchOf<
     | 'transferBetweenItems'
     | 'updateTransaction'
     | 'deleteTransaction'
+    | 'undoDeleteTransaction'
 >;
+
+function applyAllocations(
+    next: MonthSnapshot,
+    entry: ActivityEntry,
+    sign: bigint,
+    adjustAllocation: AdjustAllocation
+) {
+    const direction = (entry.type === 'refund' ? -1n : 1n) * sign;
+
+    for (const allocation of entry.allocations ?? [])
+        adjustAllocation(
+            allocation.monthlyItemId,
+            BigInt(allocation.amountCents) * direction
+        );
+    next.summary.spentCents = cents(
+        BigInt(next.summary.spentCents) + BigInt(entry.amountCents) * direction
+    );
+}
+
+/** Moves a restorable deleted transaction back into its date's place in the activity. */
+function restoreTransaction(
+    next: MonthSnapshot,
+    input: PatchOf<'undoDeleteTransaction'>,
+    adjustAllocation: AdjustAllocation
+) {
+    const deleted = next.deletedTransactions.find(
+        (entry) => entry.id === input.transactionId
+    );
+
+    if (!deleted?.restorable) return;
+    next.deletedTransactions = next.deletedTransactions.filter(
+        (entry) => entry.id !== input.transactionId
+    );
+    applyAllocations(next, deleted, 1n, adjustAllocation);
+    const entry: ActivityEntry &
+        Partial<Pick<DeletedTransactionEntry, 'deletedAt' | 'restorable'>> = {
+        ...deleted,
+        version: deleted.version + 1
+    };
+
+    delete entry.deletedAt;
+    delete entry.restorable;
+    const position = next.activity.findIndex(
+        (candidate) => candidate.occurredOn <= entry.occurredOn
+    );
+
+    next.activity.splice(
+        position === -1 ? next.activity.length : position,
+        0,
+        entry
+    );
+}
 
 function transferLegs(
     next: MonthSnapshot,
@@ -170,23 +227,22 @@ export function applyTransactionPatch(
                 (entry) => entry.id === input.transactionId
             );
 
-            if (activity) {
-                const direction = activity.type === 'refund' ? -1n : 1n;
-
-                for (const allocation of activity.allocations ?? [])
-                    adjustAllocation(
-                        allocation.monthlyItemId,
-                        -BigInt(allocation.amountCents) * direction
-                    );
-                next.summary.spentCents = cents(
-                    BigInt(next.summary.spentCents) -
-                        BigInt(activity.amountCents) * direction
-                );
-            }
             next.activity = next.activity.filter(
                 (entry) => entry.id !== input.transactionId
             );
+            if (!activity || activity.type === 'income') break;
+            applyAllocations(next, activity, -1n, adjustAllocation);
+            next.deletedTransactions.unshift({
+                ...activity,
+                type: activity.type,
+                version: activity.version + 1,
+                deletedAt: new Date().toISOString(),
+                restorable: true
+            });
             break;
         }
+        case 'undoDeleteTransaction':
+            restoreTransaction(next, input, adjustAllocation);
+            break;
     }
 }

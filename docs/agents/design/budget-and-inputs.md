@@ -166,6 +166,22 @@ to the far edge of the row. That action resets the applied type, item, and split
 filters without clearing search. A populated search field exposes an accessible
 clear control that empties the query without returning focus to the input.
 
+## Recently deleted
+
+Recently deleted sits after the last Transactions group, or after the empty
+state, as a bordered row with a trash icon, a count pill, and a chevron, the iOS
+Photos and Notes convention for recovering deletions, so it needs no explaining.
+It is absent while the month has nothing deleted, and it ignores search and
+filters, because a deleted transaction is never in the filtered list. Its sheet
+lists entries newest deletion first, since the one the person is looking for is
+usually the one they just deleted. Each row reuses the activity row's icon,
+title, and amount, with the item names and the transaction's own date as the
+subtitle, and a Restore button in place of the chevron; the row itself is not a
+button, so a stray tap restores nothing. Restore is optimistic, shows a toast
+naming the transaction, and closes the sheet when it restores the last
+restorable entry, leaving the person on the list with the transaction back in
+place.
+
 ## Money inputs
 
 ### Calculator entry

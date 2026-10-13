@@ -11,6 +11,7 @@ import type { Mutate } from '@/components/shared/budget-view-helpers';
 import { FloatingAddButton } from '@/components/shared/floating-add-button';
 import { useTransactionHoldMenu } from '@/components/shared/transaction-hold-menu';
 import { TransactionRow } from '@/components/shared/transaction-row';
+import { RecentlyDeleted } from './recently-deleted';
 import { TransactionSheet } from './transaction-sheet';
 
 type Filter = 'all' | 'expense' | 'refund';
@@ -319,6 +320,7 @@ export function TransactionsView({
                     </section>
                 ))
             )}
+            <RecentlyDeleted snapshot={snapshot} mutate={mutate} />
             {holdMenu.menu}
             <FloatingAddButton
                 visible={addButtonPassed}

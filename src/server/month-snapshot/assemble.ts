@@ -4,12 +4,14 @@ import type {
     ActivityEntry,
     BudgetCategoryView,
     BudgetItemView,
+    DeletedTransactionEntry,
     IncomeReceiptView
 } from '@/domain/types';
 import type { ItemUsage } from '@/server/definition-usage';
 import type { DerivedBalance } from './carryover';
 import type {
     ActiveCategoryRow,
+    DeletedTransactions,
     ReceiptRow,
     SplitRow,
     TargetPlanRow,
@@ -97,20 +99,24 @@ export interface ActivityInput {
     currentReceiptRows: ReceiptRow[];
 }
 
-export function buildActivity({
-    targetPlanRows,
-    splitRows,
-    currentTransactionRows,
-    currentReceiptRows
-}: ActivityInput): ActivityEntry[] {
-    const splitInfoByTransaction = new Map<
-        string,
-        {
-            itemNames: string[];
-            tone: ActivityEntry['tone'];
-            allocations: Array<{ monthlyItemId: string; amountCents: Cents }>;
-        }
-    >();
+interface SplitInfo {
+    itemNames: string[];
+    tone: ActivityEntry['tone'];
+    allocations: Array<{ monthlyItemId: string; amountCents: Cents }>;
+}
+
+/**
+ * Each transaction's allocations to the month's live items, in budget order.
+ * Allocations to items deleted for the month are left out.
+ */
+function splitInfoByTransaction(
+    targetPlanRows: TargetPlanRow[],
+    splitRows: Pick<
+        SplitRow,
+        'monthlyItemId' | 'transactionId' | 'amountCents'
+    >[]
+): Map<string, SplitInfo> {
+    const infoByTransaction = new Map<string, SplitInfo>();
     const budgetPosition = new Map(
         targetPlanRows.map((row, position) => [row.monthlyId, position])
     );
@@ -124,7 +130,7 @@ export function buildActivity({
 
     for (const split of splitsInBudgetOrder) {
         const plan = targetPlanRows[budgetPosition.get(split.monthlyItemId)!]!;
-        const existing = splitInfoByTransaction.get(split.transactionId) ?? {
+        const existing = infoByTransaction.get(split.transactionId) ?? {
             itemNames: [],
             tone: plan.categoryTone,
             allocations: []
@@ -135,28 +141,67 @@ export function buildActivity({
             monthlyItemId: split.monthlyItemId,
             amountCents: cents(split.amountCents)
         });
-        splitInfoByTransaction.set(split.transactionId, existing);
+        infoByTransaction.set(split.transactionId, existing);
     }
 
-    const expenseActivity: ActivityEntry[] = currentTransactionRows.map(
-        (transaction) => {
-            const splitInfo = splitInfoByTransaction.get(transaction.id);
-            const split = (splitInfo?.itemNames.length ?? 0) > 1;
+    return infoByTransaction;
+}
 
-            return {
-                id: transaction.id,
-                type: transaction.kind,
-                title: transaction.merchant,
-                subtitle: splitInfo?.itemNames.join(', ') || 'Budget item',
-                occurredOn: transaction.occurredOn,
-                amountCents: cents(transaction.totalCents),
-                tone: splitInfo?.tone ?? 'blue',
-                split,
-                version: transaction.version,
-                note: transaction.note,
-                allocations: splitInfo?.allocations ?? []
-            };
-        }
+function transactionEntry(
+    transaction: TransactionRow,
+    splitInfo: SplitInfo | undefined
+): ActivityEntry & { type: TransactionRow['kind'] } {
+    return {
+        id: transaction.id,
+        type: transaction.kind,
+        title: transaction.merchant,
+        subtitle: splitInfo?.itemNames.join(', ') || 'Budget item',
+        occurredOn: transaction.occurredOn,
+        amountCents: cents(transaction.totalCents),
+        tone: splitInfo?.tone ?? 'blue',
+        split: (splitInfo?.itemNames.length ?? 0) > 1,
+        version: transaction.version,
+        note: transaction.note,
+        allocations: splitInfo?.allocations ?? []
+    };
+}
+
+export function buildDeletedTransactions(
+    targetPlanRows: TargetPlanRow[],
+    { deletedTransactionRows, deletedSplitRows }: DeletedTransactions
+): DeletedTransactionEntry[] {
+    const infoByTransaction = splitInfoByTransaction(
+        targetPlanRows,
+        deletedSplitRows
+    );
+    const splitCounts = Map.groupBy(
+        deletedSplitRows,
+        (split) => split.transactionId
+    );
+
+    return deletedTransactionRows.map((transaction) => {
+        const splitInfo = infoByTransaction.get(transaction.id);
+
+        return {
+            ...transactionEntry(transaction, splitInfo),
+            deletedAt: (transaction.deletedAt ?? new Date(0)).toISOString(),
+            restorable:
+                (splitInfo?.allocations.length ?? 0) ===
+                (splitCounts.get(transaction.id)?.length ?? 0)
+        };
+    });
+}
+
+export function buildActivity({
+    targetPlanRows,
+    splitRows,
+    currentTransactionRows,
+    currentReceiptRows
+}: ActivityInput): ActivityEntry[] {
+    const infoByTransaction = splitInfoByTransaction(targetPlanRows, splitRows);
+    const expenseActivity: ActivityEntry[] = currentTransactionRows.map(
+        (transaction) =>
+            transactionEntry(transaction, infoByTransaction.get(transaction.id))
     );
     const incomeActivity: ActivityEntry[] = currentReceiptRows.map(
         (receipt) => ({

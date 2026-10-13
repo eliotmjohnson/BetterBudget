@@ -46,6 +46,16 @@ export interface ActivityEntry {
     allocations?: Array<{ monthlyItemId: string; amountCents: Cents }>;
 }
 
+export interface DeletedTransactionEntry extends ActivityEntry {
+    type: 'expense' | 'refund';
+
+    /** ISO timestamp of the soft deletion; the list is newest deletion first. */
+    deletedAt: string;
+
+    /** False once a budget item it was allocated to is deleted for its month, because the server then refuses to restore it. */
+    restorable: boolean;
+}
+
 export interface IncomePlanView {
     id: string;
     name: string;
@@ -88,6 +98,9 @@ export interface MonthSnapshot {
     categories: BudgetCategoryView[];
     incomePlans: IncomePlanView[];
     activity: ActivityEntry[];
+
+    /** The month's soft-deleted expenses and refunds, which Recently deleted can restore. */
+    deletedTransactions: DeletedTransactionEntry[];
 }
 
 export type MutationErrorCode =
