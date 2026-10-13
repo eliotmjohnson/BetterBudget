@@ -60,10 +60,13 @@ Safe optimistic operations currently include:
   Undo toast or Recently deleted. The month snapshot carries the month's
   soft-deleted expenses and refunds in `deletedTransactions`, so the delete
   patch moves the entry there and the restore patch moves it back into the
-  activity and re-applies its allocations. Each entry's `restorable` flag
-  mirrors the server's own refusal: it is false once any allocation's item is
-  deleted for the month, and the restore patch and the Restore button both skip
-  such an entry.
+  activity and re-applies its allocations. An entry's `needsDestination` flag is
+  true once any allocation's item is deleted for the month; its `allocations`
+  then list only the live parts, and the restore must carry a
+  `destinationItemId` from the month's live items. The patch adds the
+  transaction total less the live parts to that item, merging into an existing
+  part, which is exactly what the server moves; without a destination the patch
+  does nothing and the server answers `validation`.
 - Local collapse, filter, draft, and navigation state.
 
 Server-confirmed operations currently include:

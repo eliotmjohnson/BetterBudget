@@ -178,9 +178,18 @@ usually the one they just deleted. Each row reuses the activity row's icon,
 title, and amount, with the item names and the transaction's own date as the
 subtitle, and a Restore button in place of the chevron; the row itself is not a
 button, so a stray tap restores nothing. Restore is optimistic, shows a toast
-naming the transaction, and closes the sheet when it restores the last
-restorable entry, leaving the person on the list with the transaction back in
-place.
+naming the transaction, and closes the sheet when it restores the last entry,
+leaving the person on the list with the transaction back in place.
+
+When a transaction's item was deleted for its month, the subtitle reads "Item
+deleted" with the date, and the button still reads Restore, because a wider
+"Restore to…" label truncated the date on a 390 px phone. It opens a nested
+**Restore to** sheet: a sentence naming how much moves (for a split, only the
+orphaned part, and it says the rest stays), then the month's budget items
+grouped by category in the allocation picker's styling, each with its available
+amount and a chevron. One tap restores there and closes both sheets once nothing
+is left, so the choice needs no separate confirm; a wrong pick is fixed by
+editing the transaction.
 
 ## Money inputs
 

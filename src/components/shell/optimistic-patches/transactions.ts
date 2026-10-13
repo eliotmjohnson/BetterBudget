@@ -32,7 +32,50 @@ function applyAllocations(
     );
 }
 
-/** Moves a restorable deleted transaction back into its date's place in the activity. */
+/**
+ * The allocations a restore commits: the live ones, plus whatever sat on
+ * deleted items merged into the destination. Null when a destination is
+ * needed and missing.
+ */
+function restoredAllocations(
+    next: MonthSnapshot,
+    deleted: DeletedTransactionEntry,
+    destinationItemId: string | undefined
+): ActivityEntry['allocations'] | null {
+    const allocations = (deleted.allocations ?? []).map((allocation) => ({
+        ...allocation
+    }));
+
+    if (!deleted.needsDestination) return allocations;
+    const destination = next.categories
+        .flatMap((category) => category.items)
+        .find((item) => item.id === destinationItemId);
+
+    if (!destination) return null;
+    const orphanedCents =
+        BigInt(deleted.amountCents) -
+        allocations.reduce(
+            (total, allocation) => total + BigInt(allocation.amountCents),
+            0n
+        );
+    const existing = allocations.find(
+        (allocation) => allocation.monthlyItemId === destination.id
+    );
+
+    if (existing)
+        existing.amountCents = cents(
+            BigInt(existing.amountCents) + orphanedCents
+        );
+    else
+        allocations.push({
+            monthlyItemId: destination.id,
+            amountCents: cents(orphanedCents)
+        });
+
+    return allocations;
+}
+
+/** Moves a deleted transaction back into its date's place in the activity. */
 function restoreTransaction(
     next: MonthSnapshot,
     input: PatchOf<'undoDeleteTransaction'>,
@@ -41,20 +84,36 @@ function restoreTransaction(
     const deleted = next.deletedTransactions.find(
         (entry) => entry.id === input.transactionId
     );
+    const allocations =
+        deleted && restoredAllocations(next, deleted, input.destinationItemId);
 
-    if (!deleted?.restorable) return;
+    if (!deleted || !allocations) return;
     next.deletedTransactions = next.deletedTransactions.filter(
         (entry) => entry.id !== input.transactionId
     );
-    applyAllocations(next, deleted, 1n, adjustAllocation);
+    const items = next.categories.flatMap((category) =>
+        category.items.map((item) => ({ item, tone: category.tone }))
+    );
+    const allocated = allocations.flatMap(
+        (allocation) =>
+            items.find(({ item }) => item.id === allocation.monthlyItemId) ?? []
+    );
     const entry: ActivityEntry &
-        Partial<Pick<DeletedTransactionEntry, 'deletedAt' | 'restorable'>> = {
+        Partial<
+            Pick<DeletedTransactionEntry, 'deletedAt' | 'needsDestination'>
+        > = {
         ...deleted,
+        subtitle:
+            allocated.map(({ item }) => item.name).join(', ') || 'Budget item',
+        tone: allocated[0]?.tone ?? deleted.tone,
+        split: allocations.length > 1,
+        allocations,
         version: deleted.version + 1
     };
 
     delete entry.deletedAt;
-    delete entry.restorable;
+    delete entry.needsDestination;
+    applyAllocations(next, entry, 1n, adjustAllocation);
     const position = next.activity.findIndex(
         (candidate) => candidate.occurredOn <= entry.occurredOn
     );
@@ -237,7 +296,7 @@ export function applyTransactionPatch(
                 type: activity.type,
                 version: activity.version + 1,
                 deletedAt: new Date().toISOString(),
-                restorable: true
+                needsDestination: false
             });
             break;
         }

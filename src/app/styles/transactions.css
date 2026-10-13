@@ -205,12 +205,6 @@
     grid-template-columns: 44px 1fr auto auto;
     cursor: default;
 }
-.deleted-transaction-row[data-restorable='false'] {
-    grid-template-columns: 44px 1fr auto;
-}
-.deleted-transaction-row[data-restorable='false'] .activity-amount {
-    color: var(--muted);
-}
 .deleted-transaction-restore {
     gap: 5px;
     padding: 0 12px;
@@ -224,4 +218,16 @@
     color: var(--muted);
     font-size: 14px;
     text-align: center;
+}
+.restore-destination-item {
+    width: 100%;
+    grid-template-columns: minmax(0, 1fr) 18px;
+    border-inline: 0;
+    border-top: 0;
+    background: white;
+    color: var(--ink);
+    text-align: left;
+}
+.restore-destination-item > svg {
+    color: #a2a7af;
 }

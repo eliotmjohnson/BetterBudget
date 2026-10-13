@@ -7,7 +7,11 @@ import { useToast } from '@/components/ui/toast-provider';
 import type { Mutate } from '@/components/shared/budget-view-helpers';
 import { TransactionIcon } from '@/components/shared/transaction-icon';
 import { formatCurrency } from '@/domain/money';
-import type { DeletedTransactionEntry, MonthSnapshot } from '@/domain/types';
+import type {
+    BudgetCategoryView,
+    DeletedTransactionEntry,
+    MonthSnapshot
+} from '@/domain/types';
 import { createUuid } from '@/domain/uuid';
 
 const shortDay = (date: string) =>
@@ -16,8 +20,17 @@ const shortDay = (date: string) =>
         day: 'numeric',
         timeZone: 'UTC'
     }).format(new Date(`${date}T00:00:00Z`));
+const snapshotEmptyCopy =
+    'This month has no budget items yet. Add one on the Budget page, then restore this transaction.';
+const money = (value: string) => formatCurrency(value).replace('.00', '');
 const signedAmount = (entry: DeletedTransactionEntry) =>
-    `${entry.type === 'expense' ? '−' : '+'}${formatCurrency(entry.amountCents).replace('.00', '')}`;
+    `${entry.type === 'expense' ? '−' : '+'}${money(entry.amountCents)}`;
+const orphanedCents = (entry: DeletedTransactionEntry) =>
+    BigInt(entry.amountCents) -
+    (entry.allocations ?? []).reduce(
+        (total, allocation) => total + BigInt(allocation.amountCents),
+        0n
+    );
 
 function DeletedTransactionRow({
     entry,
@@ -26,14 +39,12 @@ function DeletedTransactionRow({
     entry: DeletedTransactionEntry;
     onRestore: () => void;
 }) {
-    const detail = entry.restorable
-        ? `${entry.subtitle} · ${shortDay(entry.occurredOn)}`
-        : 'Its budget item was deleted';
+    const detail = `${entry.needsDestination ? 'Item deleted' : entry.subtitle} · ${shortDay(entry.occurredOn)}`;
 
     return (
         <div
             className='activity-row deleted-transaction-row'
-            data-restorable={entry.restorable ? 'true' : 'false'}
+            data-needs-destination={entry.needsDestination ? 'true' : 'false'}
         >
             <TransactionIcon type={entry.type} tone={entry.tone} />
             <span className='activity-copy'>
@@ -43,18 +54,106 @@ function DeletedTransactionRow({
             <span className={`activity-amount ${entry.type}`}>
                 {signedAmount(entry)}
             </span>
-            {entry.restorable ? (
-                <button
-                    className='soft-button deleted-transaction-restore'
-                    type='button'
-                    aria-label={`Restore ${entry.title}, ${signedAmount(entry)}, ${shortDay(entry.occurredOn)}`}
-                    onClick={onRestore}
-                >
-                    <RotateCcw size={15} strokeWidth={2.2} />
-                    Restore
-                </button>
-            ) : null}
+            <button
+                className='soft-button deleted-transaction-restore'
+                type='button'
+                aria-haspopup={entry.needsDestination ? 'dialog' : undefined}
+                aria-label={`${entry.needsDestination ? 'Choose where to restore' : 'Restore'} ${entry.title}, ${signedAmount(entry)}, ${shortDay(entry.occurredOn)}`}
+                onClick={onRestore}
+            >
+                <RotateCcw size={15} strokeWidth={2.2} />
+                Restore
+            </button>
         </div>
+    );
+}
+
+function RestoreDestinationSheet({
+    entry,
+    categories,
+    open,
+    onOpenChange,
+    onExitComplete,
+    onChoose
+}: {
+    entry: DeletedTransactionEntry;
+    categories: BudgetCategoryView[];
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    onExitComplete: () => void;
+    onChoose: (monthlyItemId: string) => void;
+}) {
+    const partial = (entry.allocations ?? []).length > 0;
+    const orphaned = money(orphanedCents(entry).toString());
+
+    return (
+        <Sheet
+            open={open}
+            onOpenChange={onOpenChange}
+            onExitComplete={onExitComplete}
+            title='Restore to'
+            layer='nested'
+        >
+            <div className='recently-deleted-sheet'>
+                <p className='confirmation-copy'>
+                    {partial
+                        ? `${orphaned} of ${entry.title} was in a budget item that has been deleted. Choose where that part goes; the rest stays where it was.`
+                        : `${entry.title} was in a budget item that has been deleted. Choose where to restore its ${orphaned}.`}
+                </p>
+                {categories.some((category) => category.items.length > 0) ? (
+                    <div className='allocation-picker-list'>
+                        {categories
+                            .filter((category) => category.items.length > 0)
+                            .map((category) => (
+                                <section
+                                    className='allocation-picker-category'
+                                    key={category.id}
+                                >
+                                    <div className='allocation-picker-category-heading'>
+                                        <h3>{category.name}</h3>
+                                    </div>
+                                    <div className='allocation-picker-items'>
+                                        {category.items.map((item) => (
+                                            <button
+                                                className='allocation-picker-item restore-destination-item'
+                                                type='button'
+                                                key={item.id}
+                                                aria-label={`Restore to ${item.name}, ${category.name}`}
+                                                onClick={() =>
+                                                    onChoose(item.id)
+                                                }
+                                            >
+                                                <span className='allocation-picker-item-copy'>
+                                                    <strong>{item.name}</strong>
+                                                    <span
+                                                        className={
+                                                            BigInt(
+                                                                item.availableCents
+                                                            ) < 0n
+                                                                ? 'negative'
+                                                                : undefined
+                                                        }
+                                                    >
+                                                        {`${money(item.availableCents)} available`}
+                                                    </span>
+                                                </span>
+                                                <ChevronRight
+                                                    size={17}
+                                                    aria-hidden='true'
+                                                />
+                                            </button>
+                                        ))}
+                                    </div>
+                                </section>
+                            ))}
+                    </div>
+                ) : (
+                    <p className='recently-deleted-empty'>
+                        {snapshotEmptyCopy}
+                    </p>
+                )}
+            </div>
+        </Sheet>
     );
 }
 
@@ -66,22 +165,38 @@ export function RecentlyDeleted({
     mutate: Mutate;
 }) {
     const [open, setOpen] = useState(false);
+    const [choosing, setChoosing] = useState<DeletedTransactionEntry | null>(
+        null
+    );
+    const [choosingOpen, setChoosingOpen] = useState(false);
     const showToast = useToast();
     const deleted = snapshot.deletedTransactions;
-    const restore = (entry: DeletedTransactionEntry) => {
+    const restore = (
+        entry: DeletedTransactionEntry,
+        destination?: { id: string; name: string }
+    ) => {
         const sent = mutate({
             type: 'undoDeleteTransaction',
             clientMutationId: createUuid(),
             monthKey: snapshot.monthKey,
             transactionId: entry.id,
-            expectedVersion: entry.version
+            expectedVersion: entry.version,
+            destinationItemId: destination?.id
         });
 
         if (!sent) return;
-        if (deleted.every((other) => other === entry || !other.restorable))
-            setOpen(false);
-        showToast({ message: `${entry.title} restored.` });
+        setChoosingOpen(false);
+        if (deleted.length === 1) setOpen(false);
+        showToast({
+            message: destination
+                ? `${entry.title} restored to ${destination.name}.`
+                : `${entry.title} restored.`
+        });
     };
+    const itemName = (monthlyItemId: string) =>
+        snapshot.categories
+            .flatMap((category) => category.items)
+            .find((item) => item.id === monthlyItemId)?.name ?? 'budget item';
 
     return (
         <>
@@ -106,7 +221,8 @@ export function RecentlyDeleted({
                 <div className='recently-deleted-sheet'>
                     <p className='confirmation-copy'>
                         Transactions deleted from {snapshot.label}. Restoring
-                        one puts it back in its budget items.
+                        one puts it back in its budget items, or one you choose
+                        if its item was deleted.
                     </p>
                     {deleted.length > 0 ? (
                         <div className='activity-list'>
@@ -114,7 +230,12 @@ export function RecentlyDeleted({
                                 <DeletedTransactionRow
                                     key={entry.id}
                                     entry={entry}
-                                    onRestore={() => restore(entry)}
+                                    onRestore={() => {
+                                        if (!entry.needsDestination)
+                                            return restore(entry);
+                                        setChoosing(entry);
+                                        setChoosingOpen(true);
+                                    }}
                                 />
                             ))}
                         </div>
@@ -124,6 +245,22 @@ export function RecentlyDeleted({
                         </p>
                     )}
                 </div>
+                {choosing ? (
+                    <RestoreDestinationSheet
+                        key={choosing.id}
+                        entry={choosing}
+                        categories={snapshot.categories}
+                        open={choosingOpen}
+                        onOpenChange={setChoosingOpen}
+                        onExitComplete={() => setChoosing(null)}
+                        onChoose={(monthlyItemId) =>
+                            restore(choosing, {
+                                id: monthlyItemId,
+                                name: itemName(monthlyItemId)
+                            })
+                        }
+                    />
+                ) : null}
             </Sheet>
         </>
     );

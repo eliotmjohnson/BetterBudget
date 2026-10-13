@@ -185,8 +185,8 @@ export function buildDeletedTransactions(
         return {
             ...transactionEntry(transaction, splitInfo),
             deletedAt: (transaction.deletedAt ?? new Date(0)).toISOString(),
-            restorable:
-                (splitInfo?.allocations.length ?? 0) ===
+            needsDestination:
+                (splitInfo?.allocations.length ?? 0) !==
                 (splitCounts.get(transaction.id)?.length ?? 0)
         };
     });

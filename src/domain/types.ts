@@ -52,8 +52,12 @@ export interface DeletedTransactionEntry extends ActivityEntry {
     /** ISO timestamp of the soft deletion; the list is newest deletion first. */
     deletedAt: string;
 
-    /** False once a budget item it was allocated to is deleted for its month, because the server then refuses to restore it. */
-    restorable: boolean;
+    /**
+     * True once a budget item it was allocated to is deleted for its month;
+     * `allocations` then lists only its live parts, and restoring it needs a
+     * destination item for the rest.
+     */
+    needsDestination: boolean;
 }
 
 export interface IncomePlanView {

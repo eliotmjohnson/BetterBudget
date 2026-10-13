@@ -78,15 +78,18 @@ The implemented product supports:
   bottom of the Transactions page, shown with its count whenever the viewed
   month has deleted expenses or refunds. It opens a sheet listing them, newest
   deletion first, each with a **Restore** button that puts it back in its budget
-  items; the sheet closes once nothing restorable is left. A transaction whose
-  budget item was later deleted for its month stays listed with "Its budget item
-  was deleted" and no Restore button, because the server refuses it.
-  Transactions are never permanently purged from the list. Transaction rows on
-  the Transactions page and in a line-item detail open a hold menu (Edit,
-  Duplicate, Delete) on a touch hold, right-click, or the keyboard context-menu
-  key; a plain tap still opens the edit sheet. The merchant is optional: a blank
-  one saves as `Expense` or `Income`, matching the sheet's type toggle, so the
-  stored merchant is never empty.
+  items; the sheet closes once nothing is left. A transaction whose budget item
+  was later deleted for its month is listed as "Item deleted", and its Restore
+  opens a **Restore to** sheet of the month's live budget items with their
+  available amounts; tapping one restores the transaction there. For a split,
+  only the part that was on the deleted item moves, merging into the chosen
+  item's part if it already has one, and the sheet says how much moves. The
+  toast names the destination. Transactions are never permanently purged from
+  the list. Transaction rows on the Transactions page and in a line-item detail
+  open a hold menu (Edit, Duplicate, Delete) on a touch hold, right-click, or
+  the keyboard context-menu key; a plain tap still opens the edit sheet. The
+  merchant is optional: a blank one saves as `Expense` or `Income`, matching the
+  sheet's type toggle, so the stored merchant is never empty.
 - Expected-income sources with editable names, icons, colors, and expected
   amounts plus one or more dated received-income receipts. Each source has a
   **One-time** switch, off by default, in the Add income source sheet and its
@@ -210,9 +213,10 @@ The implemented product supports:
   an Undo. It declines unrelated questions and every destructive or structural
   operation it lacks a tool for, and names where the person can do it, including
   restoring a deleted transaction from Recently deleted, which it has no tool
-  for. A conversation is held only in the browser's memory; **New chat** or a
-  reload starts over. Assistant writes are server-confirmed and refresh every
-  cached month. Its error replies name Better Buddy, never "the assistant", and
-  when the latest reply is an outage or rate-limit failure it offers **Try
-  again**, which resends the same message.
+  for; after deleting a transaction it says it can be restored there. A
+  conversation is held only in the browser's memory; **New chat** or a reload
+  starts over. Assistant writes are server-confirmed and refresh every cached
+  month. Its error replies name Better Buddy, never "the assistant", and when
+  the latest reply is an outage or rate-limit failure it offers **Try again**,
+  which resends the same message.
 - File-persistent PGlite development, PostgreSQL parity, and Docker packaging.

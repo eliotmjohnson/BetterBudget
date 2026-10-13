@@ -114,7 +114,8 @@ export const mutationSchema = z.discriminatedUnion('type', [
     base.extend({
         type: z.literal('undoDeleteTransaction'),
         transactionId: z.string().uuid(),
-        expectedVersion: z.number().int().positive()
+        expectedVersion: z.number().int().positive(),
+        destinationItemId: z.string().uuid().optional()
     }),
     base.extend({
         type: z.literal('addIncomePlan'),
