@@ -121,7 +121,8 @@ export const mutationSchema = z.discriminatedUnion('type', [
         name: z.string().trim().min(1).max(80),
         icon: categoryIconSchema,
         tone: categoryToneSchema,
-        expectedCents: centsSchema
+        expectedCents: centsSchema,
+        oneTime: z.boolean().default(false)
     }),
     base.extend({
         type: z.literal('updateIncomePlan'),
@@ -130,7 +131,8 @@ export const mutationSchema = z.discriminatedUnion('type', [
         name: z.string().trim().min(1).max(80),
         icon: categoryIconSchema,
         tone: categoryToneSchema,
-        expectedCents: centsSchema
+        expectedCents: centsSchema,
+        oneTime: z.boolean().optional()
     }),
     base.extend({
         type: z.literal('addIncomeReceipt'),

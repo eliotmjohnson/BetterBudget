@@ -19,6 +19,28 @@
     color: var(--muted);
     font-size: 12px;
 }
+.activity-copy .income-row-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.activity-copy .income-row-name {
+    min-width: 0;
+    margin: 0;
+    color: inherit;
+    font-size: inherit;
+}
+.activity-copy .income-one-time-tag {
+    flex: none;
+    margin: 0;
+    padding: 0 6px;
+    border-radius: calc(6px * var(--corner-radius-scale));
+    background: #e8f0ff;
+    color: var(--blue);
+    font-size: 10px;
+    font-weight: 750;
+    line-height: 16px;
+}
 .income-row-button {
     width: 100%;
     border: 0;

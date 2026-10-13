@@ -210,7 +210,16 @@ export function IncomeView({
                                         tone={plan.tone}
                                     />
                                     <div className='activity-copy'>
-                                        <strong>{plan.name}</strong>
+                                        <strong className='income-row-title'>
+                                            <span className='income-row-name'>
+                                                {plan.name}
+                                            </span>
+                                            {plan.oneTime ? (
+                                                <span className='income-one-time-tag'>
+                                                    One-time
+                                                </span>
+                                            ) : null}
+                                        </strong>
                                         <span>
                                             Expected {money(plan.expectedCents)}
                                         </span>

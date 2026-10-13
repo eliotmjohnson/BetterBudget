@@ -129,8 +129,8 @@ are unchanged.
   whole budget. Over planned counts expenses alone; income into an item is
   reported separately.
 - Sets planned amounts and carryover; adds, edits, and deletes expense and
-  income transactions (refunds in the data model), including exact splits; adds and edits expected-income sources and
-  records received income; adds and renames categories and items; and writes the
+  income transactions (refunds in the data model), including exact splits; adds and edits expected-income sources,
+  including whether each is one-time, and records received income; adds and renames categories and items; and writes the
   month note.
 - Declines anything unrelated to Better Budget, and declines archiving,
   deleting definitions, copying, clearing, or resetting a month, reordering,

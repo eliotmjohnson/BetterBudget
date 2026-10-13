@@ -225,7 +225,12 @@ async function loadCopySource(
         tx
             .select()
             .from(incomePlans)
-            .where(eq(incomePlans.monthId, previousMonth.id))
+            .where(
+                and(
+                    eq(incomePlans.monthId, previousMonth.id),
+                    eq(incomePlans.oneTime, false)
+                )
+            )
     ]);
 
     if (

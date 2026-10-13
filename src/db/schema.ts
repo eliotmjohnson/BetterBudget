@@ -258,6 +258,7 @@ export const incomePlans = pgTable(
         expectedCents: bigint('expected_cents', { mode: 'bigint' })
             .notNull()
             .default(sql`0`),
+        oneTime: boolean('one_time').notNull().default(false),
         sortOrder: integer('sort_order').notNull(),
         version: integer('version').notNull().default(1),
         createdAt,

@@ -8,9 +8,9 @@ The implemented product supports:
 - A separate budget for each calendar month.
 - Previous/next month navigation and month notes.
 - Copying the immediately preceding month's plan into an empty target month when
-  the source contains active budget structure or an expected-income plan, with
-  clear feedback when there is nothing to copy. The month-actions list omits
-  copy when either side is ineligible.
+  the source contains active budget structure or an expected-income plan that is
+  not one-time, with clear feedback when there is nothing to copy. The
+  month-actions list omits copy when either side is ineligible.
 - Keeping untouched months free of persisted month, category, and item state
   when they are only viewed, with Budget-page actions to copy the previous month
   or start with a new category. The first successful mutation that needs the
@@ -78,14 +78,21 @@ The implemented product supports:
   Duplicate, Delete) on a touch hold, right-click, or the keyboard context-menu
   key; a plain tap still opens the edit sheet.
 - Expected-income sources with editable names, icons, colors, and expected
-  amounts plus one or more dated received-income receipts. When a month has no
-  income sources, the Income page shows a guided empty state with an action that
-  opens the add-source flow. Each source exposes its receipt history on the
-  Income page, individual receipts can be soft deleted, and a source can be
-  deleted after its active receipts are cleared. Income-source details are
-  URL-backed and reuse the budget-item navigation-detail pattern: mobile push
-  navigation with Back, browser history, and left-edge swipe dismissal plus a
-  desktop modal fallback.
+  amounts plus one or more dated received-income receipts. Each source has a
+  **One-time** switch, off by default, in the Add income source sheet and its
+  detail; its caption says the source stays in its month only, or names the
+  month a copy would carry it into. A one-time source's Income-page row shows a
+  small **One-time** tag inline after its name, styled like the transaction
+  **Split** tag and sized so the row keeps the same height; a long name
+  truncates with an ellipsis while the tag stays visible. Copying a month leaves
+  one-time sources behind, so a source such as a bonus stays in its own month.
+  When a month has no income sources, the Income page shows a guided empty state
+  with an action that opens the add-source flow. Each source exposes its receipt
+  history on the Income page, individual receipts can be soft deleted, and a
+  source can be deleted after its active receipts are cleared. Income-source
+  details are URL-backed and reuse the budget-item navigation-detail pattern:
+  mobile push navigation with Back, browser history, and left-edge swipe
+  dismissal plus a desktop modal fallback.
 - Searchable and filterable transaction history plus a combined month activity
   feed. The Transactions page shows only expense and refund records, labels
   refunds as Income, and leaves received-income/paycheck receipts on the Income
@@ -118,8 +125,9 @@ The implemented product supports:
 - The Settings Data section exports the whole household budget as one
   `better-budget-backup` JSON file (every month, category and item definition
   including archived ones, plan, carryover setting, income plan and receipt,
-  transaction and split, soft-deleted activity included; cents as base-10
-  strings; transaction and receipt creation times, which order same-day
+  transaction and split, soft-deleted activity included; each income plan's
+  one-time setting, read as not one-time when an older file lacks it; cents as
+  base-10 strings; transaction and receipt creation times, which order same-day
   activity, are carried so a Replace keeps the activity feed order; splits
   reference household item definitions) and imports it in one database
   transaction. The export is compact JSON with no indentation, which roughly

@@ -1,8 +1,10 @@
 'use client';
 
 import { useState } from 'react';
+import { AppSwitch } from '@/components/ui/app-switch';
 import { CurrencyInput } from '@/components/ui/currency-input';
 import { StillInput } from '@/components/ui/still-focus';
+import { monthLabel, shiftMonth, type MonthKey } from '@/domain/money';
 import type {
     CategoryTone,
     IncomePlanView,
@@ -94,6 +96,35 @@ export function IncomeAppearancePicker({
     );
 }
 
+export function IncomeOneTimeSwitch({
+    checked,
+    monthKey,
+    onCheckedChange
+}: {
+    checked: boolean;
+    monthKey: MonthKey;
+    onCheckedChange: (checked: boolean) => void;
+}) {
+    return (
+        <div className='switch-row'>
+            <div>
+                <strong>One-time</strong>
+                <span>
+                    {checked
+                        ? `Stays in ${monthLabel(monthKey)} only`
+                        : `Copied into ${monthLabel(shiftMonth(monthKey, 1))} with the budget`}
+                </span>
+            </div>
+            <AppSwitch
+                accessibilityLabel='One-time income source'
+                checked={checked}
+                onCheckedChange={onCheckedChange}
+                variant='setting'
+            />
+        </div>
+    );
+}
+
 export function EditableIncomeTitle({
     plan,
     snapshot,
@@ -128,7 +159,8 @@ export function EditableIncomeTitle({
                 name,
                 icon: incomeIconValue(plan.icon),
                 tone: plan.tone,
-                expectedCents: plan.expectedCents
+                expectedCents: plan.expectedCents,
+                oneTime: plan.oneTime
             });
         setDraft(name);
         setEditing(false);
@@ -194,7 +226,8 @@ export function IncomePlanInput({
             name: plan.name,
             icon: incomeIconValue(plan.icon),
             tone: plan.tone,
-            expectedCents
+            expectedCents,
+            oneTime: plan.oneTime
         });
     };
 

@@ -158,6 +158,7 @@ export async function getMonthSnapshot(
             icon: plan.icon,
             tone: plan.tone,
             expectedCents: cents(plan.expectedCents),
+            oneTime: plan.oneTime,
             receivedCents: cents(receiptTotalsByPlan.get(plan.id) ?? 0n),
             receipts: receiptsByPlan.get(plan.id) ?? [],
             version: plan.version

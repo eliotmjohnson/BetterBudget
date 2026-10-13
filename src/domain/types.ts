@@ -52,6 +52,9 @@ export interface IncomePlanView {
     icon: string;
     tone: CategoryTone;
     expectedCents: Cents;
+
+    /** Whether this source belongs to its month only, so copying the month leaves it behind. */
+    oneTime: boolean;
     receivedCents: Cents;
     receipts: IncomeReceiptView[];
     version: number;

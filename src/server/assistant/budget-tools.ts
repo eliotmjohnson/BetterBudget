@@ -80,7 +80,8 @@ export async function addIncomeSource(
         z.object({
             ...optionalMonth,
             name: z.string(),
-            expected_amount: z.string()
+            expected_amount: z.string(),
+            one_time: z.boolean().optional()
         }),
         input
     );
@@ -95,12 +96,13 @@ export async function addIncomeSource(
             name: args.name,
             icon: 'wallet',
             tone: 'mint',
-            expectedCents
+            expectedCents,
+            oneTime: args.one_time ?? false
         },
         context
     );
 
-    return `Added income source ${args.name} expecting ${money(expectedCents)} in ${monthKey}. Left to budget: ${money(after.summary.leftToBudgetCents)}.`;
+    return `Added ${args.one_time ? 'one-time ' : ''}income source ${args.name} expecting ${money(expectedCents)} in ${monthKey}. Left to budget: ${money(after.summary.leftToBudgetCents)}.`;
 }
 
 export async function updateIncomeSource(
@@ -112,7 +114,8 @@ export async function updateIncomeSource(
             ...optionalMonth,
             source: z.string(),
             new_name: z.string().optional(),
-            expected_amount: z.string().optional()
+            expected_amount: z.string().optional(),
+            one_time: z.boolean().optional()
         }),
         input
     );
@@ -128,6 +131,7 @@ export async function updateIncomeSource(
                   allowZero: true
               });
     const name = args.new_name || plan.name;
+    const oneTime = args.one_time ?? plan.oneTime;
 
     await commit(
         {
@@ -138,12 +142,13 @@ export async function updateIncomeSource(
             name,
             icon: categoryIconSchema.catch('wallet').parse(plan.icon),
             tone: categoryToneSchema.catch('mint').parse(plan.tone),
-            expectedCents
+            expectedCents,
+            oneTime
         },
         context
     );
 
-    return `Income source ${name} now expects ${money(expectedCents)} in ${monthKey}.`;
+    return `Income source ${name} now expects ${money(expectedCents)} in ${monthKey} and ${oneTime ? 'is one-time, so copying the month leaves it behind' : 'carries forward when the month is copied'}.`;
 }
 
 export async function recordIncome(

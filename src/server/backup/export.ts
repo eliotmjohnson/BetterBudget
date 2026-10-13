@@ -160,6 +160,7 @@ export async function exportHousehold(
             icon: plan.icon as CategoryIcon,
             tone: plan.tone,
             expectedCents: plan.expectedCents.toString(),
+            oneTime: plan.oneTime,
             sortOrder: plan.sortOrder,
             receipts: (receiptsByPlan.get(plan.id) ?? []).map(
                 ({ receipt }) => ({

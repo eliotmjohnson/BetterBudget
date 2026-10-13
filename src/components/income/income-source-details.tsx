@@ -17,6 +17,7 @@ import {
     EditableIncomeTitle,
     IncomeAppearancePicker,
     IncomePlanInput,
+    IncomeOneTimeSwitch,
     incomeIconValue,
     type IncomeIconValue
 } from './income-fields';
@@ -100,10 +101,24 @@ export function IncomeSourceDetails({
                 name: renderedPlan.name,
                 icon: appearanceIcon,
                 tone: appearanceTone,
-                expectedCents: renderedPlan.expectedCents
+                expectedCents: renderedPlan.expectedCents,
+                oneTime: renderedPlan.oneTime
             });
         setAppearanceOpen(false);
     };
+    const changeOneTime = (oneTime: boolean) =>
+        mutate({
+            type: 'updateIncomePlan',
+            clientMutationId: createUuid(),
+            monthKey: snapshot.monthKey,
+            incomePlanId: renderedPlan.id,
+            expectedVersion: renderedPlan.version,
+            name: renderedPlan.name,
+            icon: incomeIconValue(renderedPlan.icon),
+            tone: renderedPlan.tone,
+            expectedCents: renderedPlan.expectedCents,
+            oneTime
+        });
     const deleteReceipt = (receipt: IncomeReceiptView) => {
         mutate({
             type: 'deleteIncomeReceipt',
@@ -188,6 +203,11 @@ export function IncomeSourceDetails({
                             <strong>{money(renderedPlan.receivedCents)}</strong>
                         </div>
                     </div>
+                    <IncomeOneTimeSwitch
+                        checked={renderedPlan.oneTime}
+                        monthKey={snapshot.monthKey}
+                        onCheckedChange={changeOneTime}
+                    />
                     <h3 className='section-title'>Received transactions</h3>
                     {renderedPlan.receipts.length > 0 ? (
                         <div className='income-receipt-list'>

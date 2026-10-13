@@ -64,7 +64,7 @@ export function renderOverview(snapshot: MonthSnapshot): string {
     else lines.push('Income sources:');
     for (const [index, plan] of snapshot.incomePlans.entries())
         lines.push(
-            `- ${incomePlanLabel(snapshot, index)}: expected ${money(plan.expectedCents)}, received ${money(plan.receivedCents)} (${plan.receipts.length} receipt${plan.receipts.length === 1 ? '' : 's'})`
+            `- ${incomePlanLabel(snapshot, index)}: expected ${money(plan.expectedCents)}, received ${money(plan.receivedCents)} (${plan.receipts.length} receipt${plan.receipts.length === 1 ? '' : 's'})${plan.oneTime ? ', one-time' : ''}`
         );
     const transactionCount = snapshot.activity.filter(
         (entry) => entry.type !== 'income'

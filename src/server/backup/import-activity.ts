@@ -104,6 +104,7 @@ async function mergeIncome(
                 icon: plan.icon,
                 tone: plan.tone,
                 expectedCents: BigInt(plan.expectedCents),
+                oneTime: plan.oneTime,
                 sortOrder: offset + plan.sortOrder
             });
         for (const receipt of plan.receipts)

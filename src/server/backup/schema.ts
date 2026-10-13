@@ -48,6 +48,7 @@ const incomePlanSchema = z.object({
     icon: categoryIconSchema,
     tone: categoryToneSchema,
     expectedCents: centsSchema,
+    oneTime: z.boolean().default(false),
     sortOrder: sortOrderSchema,
     receipts: z.array(receiptSchema)
 });

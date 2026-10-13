@@ -19,6 +19,7 @@ export function applyIncomePatch(next: MonthSnapshot, input: Input): void {
                 icon: input.icon,
                 tone: input.tone,
                 expectedCents: cents(input.expectedCents),
+                oneTime: input.oneTime,
                 receivedCents: cents(0),
                 receipts: [],
                 version: 1
@@ -48,6 +49,7 @@ export function applyIncomePatch(next: MonthSnapshot, input: Input): void {
             plan.icon = input.icon;
             plan.tone = input.tone;
             plan.expectedCents = cents(input.expectedCents);
+            plan.oneTime = input.oneTime ?? plan.oneTime;
             plan.version += 1;
             next.summary.expectedIncomeCents = cents(
                 BigInt(next.summary.expectedIncomeCents) + expectedDelta

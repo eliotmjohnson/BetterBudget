@@ -14,7 +14,11 @@ import { defaultDateForMonth } from '@/domain/calendar';
 import { createUuid } from '@/domain/uuid';
 import { CategoryIcon } from '@/components/shared/category-icon';
 import type { Mutate } from '@/components/shared/budget-view-helpers';
-import { IncomeAppearancePicker, type IncomeIconValue } from './income-fields';
+import {
+    IncomeAppearancePicker,
+    IncomeOneTimeSwitch,
+    type IncomeIconValue
+} from './income-fields';
 
 export function AddIncomeSource({
     open,
@@ -31,6 +35,7 @@ export function AddIncomeSource({
     const [expected, setExpected] = useState('');
     const [icon, setIcon] = useState<IncomeIconValue>('wallet');
     const [tone, setTone] = useState<CategoryTone>('mint');
+    const [oneTime, setOneTime] = useState(false);
     const [openedWith, setOpenedWith] = useState(open);
 
     if (open !== openedWith) {
@@ -40,6 +45,7 @@ export function AddIncomeSource({
             setExpected('');
             setIcon('wallet');
             setTone('mint');
+            setOneTime(false);
         }
     }
     const submit = () => {
@@ -50,7 +56,8 @@ export function AddIncomeSource({
             name,
             icon,
             tone,
-            expectedCents: expected || '0'
+            expectedCents: expected || '0',
+            oneTime
         });
 
         if (accepted) onOpenChange(false);
@@ -87,6 +94,11 @@ export function AddIncomeSource({
                         onValueChange={setExpected}
                     />
                 </div>
+                <IncomeOneTimeSwitch
+                    checked={oneTime}
+                    monthKey={snapshot.monthKey}
+                    onCheckedChange={setOneTime}
+                />
                 <IncomeAppearancePicker
                     icon={icon}
                     tone={tone}

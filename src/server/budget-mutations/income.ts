@@ -21,6 +21,7 @@ export async function addIncomePlan({
         icon: input.icon,
         tone: input.tone,
         expectedCents: BigInt(input.expectedCents),
+        oneTime: input.oneTime,
         sortOrder: nextOrder
     });
 }
@@ -37,6 +38,7 @@ export async function updateIncomePlan({
             icon: input.icon,
             tone: input.tone,
             expectedCents: BigInt(input.expectedCents),
+            ...(input.oneTime === undefined ? {} : { oneTime: input.oneTime }),
             version: input.expectedVersion + 1,
             updatedAt: new Date()
         })

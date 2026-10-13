@@ -1,0 +1,1 @@
+ALTER TABLE "income_plans" ADD COLUMN "one_time" boolean DEFAULT false NOT NULL;

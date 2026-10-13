@@ -25,6 +25,11 @@ const ref = {
     type: 'string',
     description: 'The 8-character transaction ref shown by list_transactions.'
 };
+const oneTime = {
+    type: 'boolean',
+    description:
+        'true makes a one-time source that belongs to this month only, so copying the month into the next leaves it behind. false makes it carry forward when the month is copied.'
+};
 const splits = {
     type: 'array',
     description:
@@ -168,13 +173,14 @@ export const ASSISTANT_TOOLS: Anthropic.Tool[] = [
         {
             month,
             name: { type: 'string', description: 'Source name, max 80 chars.' },
-            expected_amount: amount('Expected income for the month.')
+            expected_amount: amount('Expected income for the month.'),
+            one_time: oneTime
         },
         ['name', 'expected_amount']
     ),
     tool(
         'update_income_source',
-        'Rename an income source or change its expected amount for a month. Only pass the fields that change.',
+        'Rename an income source, change its expected amount for a month, or set whether it is one-time. Only pass the fields that change.',
         {
             month,
             source: {
@@ -182,7 +188,8 @@ export const ASSISTANT_TOOLS: Anthropic.Tool[] = [
                 description: 'Current income source name.'
             },
             new_name: { type: 'string' },
-            expected_amount: amount('New expected amount.')
+            expected_amount: amount('New expected amount.'),
+            one_time: oneTime
         },
         ['source']
     ),

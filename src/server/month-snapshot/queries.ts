@@ -94,7 +94,8 @@ export async function loadPreviousMonthProbe(
             .where(
                 and(
                     eq(budgetMonths.householdId, householdId),
-                    eq(budgetMonths.month, previousDate)
+                    eq(budgetMonths.month, previousDate),
+                    eq(incomePlans.oneTime, false)
                 )
             )
             .limit(1)
