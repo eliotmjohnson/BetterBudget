@@ -13,6 +13,9 @@ import { createUuid } from '@/domain/uuid';
 import type { Mutate } from '@/components/shared/budget-view-helpers';
 import { TransactionAllocationPicker } from './transaction-allocation-picker';
 import { SplitSummary, splitRemainderFill } from './transaction-split-fill';
+import { FieldRequirement } from '@/components/ui/field-requirement';
+
+const defaultMerchant = { expense: 'Expense', refund: 'Income' } as const;
 
 interface SplitDraft {
     key: string;
@@ -114,7 +117,6 @@ export function TransactionSheet({
     );
     const remaining = BigInt(totalCents) - assignedCents;
     const submitDisabled =
-        !merchant.trim() ||
         BigInt(totalCents) <= 0n ||
         splits.length === 0 ||
         splits.some((split) => BigInt(split.amount || '0') <= 0n) ||
@@ -200,7 +202,7 @@ export function TransactionSheet({
             clientMutationId: createUuid(),
             monthKey: snapshot.monthKey,
             kind,
-            merchant,
+            merchant: merchant.trim() || defaultMerchant[kind],
             occurredOn,
             totalCents: parsedAmount,
             note: note || undefined,
@@ -269,7 +271,9 @@ export function TransactionSheet({
         >
             <div className='form-grid'>
                 <div className='field'>
-                    <label htmlFor='transaction-amount'>Amount</label>
+                    <label htmlFor='transaction-amount'>
+                        Amount <FieldRequirement />
+                    </label>
                     <CurrencyInput
                         id='transaction-amount'
                         value={amount}
@@ -283,7 +287,9 @@ export function TransactionSheet({
                     />
                 </div>
                 <div className='field'>
-                    <label htmlFor='transaction-merchant'>Merchant</label>
+                    <label htmlFor='transaction-merchant'>
+                        Merchant <FieldRequirement optional />
+                    </label>
                     <StillInput
                         id='transaction-merchant'
                         placeholder='Whole Foods'
@@ -310,7 +316,9 @@ export function TransactionSheet({
                     </div>
                 </div>
                 <div className='field'>
-                    <label>Budget allocation</label>
+                    <label>
+                        Budget allocation <FieldRequirement />
+                    </label>
                 </div>
                 {splits.map((split, index) => {
                     const item = itemsById.get(split.monthlyItemId);
@@ -393,7 +401,9 @@ export function TransactionSheet({
                     }
                 />
                 <div className='field'>
-                    <label htmlFor='transaction-note'>Note (optional)</label>
+                    <label htmlFor='transaction-note'>
+                        Note <FieldRequirement optional />
+                    </label>
                     <StillTextarea
                         id='transaction-note'
                         placeholder='Add a note'

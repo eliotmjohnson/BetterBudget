@@ -71,15 +71,15 @@ scrolls; prevent horizontal sheet overflow. A sheet may pass `headerAccessory`,
 a control that sits in that fixed chrome under the title row
 (`.sheet-header-accessory`, which also tightens the header's bottom margin from
 20 px to 8 px). Add and Edit transaction put their Expense/Income selector
-there, centered, so it never scrolls away, as `.segmented--compact`: a capsule
-at most 250 px wide and 40 px tall (listed with the other pills in the
-`corner-shape: round` opt-out in `tokens.css`), its 34 px segments widened to 44
-px tap targets by a `::after` that reaches 5 px above and below them, which is
-why the compact control keeps `overflow: visible`. Income turns the selector's
-thumb, track, and both submit buttons green (`--green`, `#1eb574`); the buttons
-carry the selected kind as `data-kind`. White text on that green is about 2.7:1,
-below the 4.5:1 AA bar for 14 px text, a trade-off the user chose for a brighter
-green.
+there, centered, so it never scrolls away, as `.segmented--compact`: a squircle
+at most 250 px wide and 40 px tall, with a 10 px track radius and an 8 px thumb
+radius on the shared continuous-corner curve rather than pill ends, its 34 px
+segments widened to 44 px tap targets by a `::after` that reaches 5 px above and
+below them, which is why the compact control keeps `overflow: visible`. Income
+turns the selector's thumb, track, and both submit buttons green (`--green`,
+`#1eb574`); the buttons carry the selected kind as `data-kind`. White text on
+that green is about 2.7:1, below the 4.5:1 AA bar for 14 px text, a trade-off
+the user chose for a brighter green.
 
 Desktop sheets use the same timing as centered modals without drag dismissal.
 Below 760 px a sheet sizes to its content up to `min(92dvh, 850px)`; the
@@ -231,6 +231,18 @@ sheet, such as a tap on its header, releases in place without the spring, so the
 fit is not held off for 450 ms. Do not lift the sheet onto the keyboard with
 `translate` instead of growing it: a sheet that moves reads worse than one that
 stays put and grows.
+
+### Field labels
+
+A form field that opens empty carries a muted hint after its label, `(required)`
+or `(optional)`, from `FieldRequirement` in
+`src/components/ui/field-requirement.tsx` (`.field-requirement`). Both are
+italic and sit one space plus 1 px after the label; `(required)` is brand blue
+and `(optional)` is muted grey, so the two read apart at a glance. Fields that
+open already filled, such as dates, icons, colors, or an edit sheet's existing
+values, carry none, except where one field component serves both an add and an
+edit sheet and keeps its hint in both. A hint must match what the form's submit
+button actually requires.
 
 ### Focus
 

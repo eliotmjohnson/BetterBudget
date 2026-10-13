@@ -490,9 +490,15 @@
     .sheet-content {
         inset: 50% auto auto 50%;
         width: min(520px, calc(100vw - 32px));
-        border-radius: calc(26px * var(--corner-radius-scale));
+        --sheet-radius-top: 26px;
+        --sheet-radius-bottom: 26px;
         transform: translate(-50%, -50%);
         padding: 14px 0 0;
+    }
+    .sheet-content > :last-child {
+        border-radius: 0 0
+            calc(var(--sheet-radius-bottom) * var(--corner-extent))
+            calc(var(--sheet-radius-bottom) * var(--corner-extent));
     }
     .sheet-content[data-variant='full-screen-mobile'] {
         inset: 50% auto auto 50%;
@@ -500,7 +506,7 @@
         height: auto;
         max-height: min(92dvh, 850px);
         padding: 14px 0 0;
-        border-radius: calc(26px * var(--corner-radius-scale));
+        --sheet-radius-top: 26px;
         transform: translate(-50%, -50%);
     }
     .sheet-drag-region--active {

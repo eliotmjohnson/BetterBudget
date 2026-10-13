@@ -9,6 +9,7 @@ import { availableAfterMove } from '@/domain/budget-calculations';
 import { defaultDateForMonth } from '@/domain/calendar';
 import type { BudgetItemView, MonthSnapshot } from '@/domain/types';
 import { createUuid } from '@/domain/uuid';
+import { FieldRequirement } from '@/components/ui/field-requirement';
 
 type MoveMode = 'plan' | 'transfer';
 
@@ -252,7 +253,9 @@ export function MoveMoneySheet({
                     </div>
                 </div>
                 <div className='field'>
-                    <label htmlFor='move-money-amount'>Amount</label>
+                    <label htmlFor='move-money-amount'>
+                        Amount <FieldRequirement />
+                    </label>
                     <CurrencyInput
                         id='move-money-amount'
                         aria-invalid={overPlan || undefined}

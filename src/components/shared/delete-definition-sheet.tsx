@@ -6,6 +6,7 @@ import { Sheet } from '@/components/ui/sheet';
 import type { BudgetItemView, MonthSnapshot } from '@/domain/types';
 import type { BudgetMutation } from '@/server/mutation-schema';
 import { money } from './budget-view-helpers';
+import { FieldRequirement } from '@/components/ui/field-requirement';
 
 export type Reassignment = NonNullable<
     Extract<BudgetMutation, { type: 'archiveItem' }>['reassignment']
@@ -137,7 +138,8 @@ export function DeleteDefinitionSheet({
                                 <label htmlFor='delete-definition-destination'>
                                     {required
                                         ? 'Move transactions to'
-                                        : 'Move plan to'}
+                                        : 'Move plan to'}{' '}
+                                    <FieldRequirement optional={!required} />
                                 </label>
                                 <select
                                     id='delete-definition-destination'

@@ -30,6 +30,7 @@ import type { BudgetAmountView } from '@/domain/budget-preferences';
 import { APP_TIME_ZONE } from '@/domain/calendar';
 import { APP_CURRENCY, type MonthKey } from '@/domain/money';
 import { authClient } from '@/lib/auth-client';
+import { FieldRequirement } from '@/components/ui/field-requirement';
 
 export function SettingsView({
     assistantAvailable,
@@ -398,7 +399,7 @@ export function SettingsView({
                 <div className='form-grid'>
                     <div className='field'>
                         <label htmlFor='current-password'>
-                            Current password
+                            Current password <FieldRequirement />
                         </label>
                         <StillInput
                             id='current-password'
@@ -410,7 +411,9 @@ export function SettingsView({
                         />
                     </div>
                     <div className='field'>
-                        <label htmlFor='new-password'>New password</label>
+                        <label htmlFor='new-password'>
+                            New password <FieldRequirement />
+                        </label>
                         <StillInput
                             id='new-password'
                             type='password'

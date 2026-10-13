@@ -104,10 +104,7 @@ html[data-safe-area-pending] ::after {
 .assistant-suggestion,
 .assistant-typing span,
 .hold-menu-item,
-.move-money-swap,
-.segmented--compact,
-.segmented--compact .segmented-thumb,
-.segmented--compact .segment {
+.move-money-swap {
     corner-shape: round;
 }
 [data-continuous-border] {

@@ -10,6 +10,7 @@ type Corner = {
 };
 
 const integrationSteps = 240;
+const sliverOverreach = 0.5;
 const pointsPerCorner = 24;
 const curveCache = new Map<string, Curve>();
 
@@ -243,21 +244,22 @@ function sliverClip(width: number, height: number, cornerSet: Corner[]) {
             return [];
         const place = (point: Point) =>
             (placements[index] ?? placements[0])(width, height, point);
+        const reach = radius + sliverOverreach;
         const arc = Array.from({ length: pointsPerCorner + 1 }, (_, step) => {
             const angle = ((step / pointsPerCorner) * Math.PI) / 2;
 
             return [
-                radius - radius * Math.cos(angle),
-                radius - radius * Math.sin(angle)
+                radius - reach * Math.cos(angle),
+                radius - reach * Math.sin(angle)
             ] as Point;
         });
 
         return [
             `M ${[
                 ...corner.points,
-                [0, radius] as Point,
+                [-sliverOverreach, reachY] as Point,
                 ...arc,
-                [reachX, 0] as Point
+                [reachX, -sliverOverreach] as Point
             ]
                 .map((point) => format(place(point)))
                 .join(' L ')} Z`

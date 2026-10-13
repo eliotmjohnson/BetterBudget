@@ -76,7 +76,9 @@ The implemented product supports:
   allocations, soft deleting, and undoing transaction deletion. Transaction rows
   on the Transactions page and in a line-item detail open a hold menu (Edit,
   Duplicate, Delete) on a touch hold, right-click, or the keyboard context-menu
-  key; a plain tap still opens the edit sheet.
+  key; a plain tap still opens the edit sheet. The merchant is optional: a blank
+  one saves as `Expense` or `Income`, matching the sheet's type toggle, so the
+  stored merchant is never empty.
 - Expected-income sources with editable names, icons, colors, and expected
   amounts plus one or more dated received-income receipts. Each source has a
   **One-time** switch, off by default, in the Add income source sheet and its

@@ -8,6 +8,7 @@ import { CategoryDetailsFields } from '@/components/shared/category-details-fiel
 import { DeleteDefinitionSheet } from '@/components/shared/delete-definition-sheet';
 import type { MonthSnapshot } from '@/domain/types';
 import type { BudgetStructureEditor } from './budget-structure-editor';
+import { FieldRequirement } from '@/components/ui/field-requirement';
 
 export function BudgetStructureSheets({
     editor,
@@ -54,7 +55,7 @@ export function BudgetStructureSheets({
                 <div className='form-grid'>
                     <div className='field'>
                         <label htmlFor='budget-new-item'>
-                            Budget item name
+                            Budget item name <FieldRequirement />
                         </label>
                         <StillInput
                             id='budget-new-item'
@@ -67,7 +68,7 @@ export function BudgetStructureSheets({
                     </div>
                     <div className='field'>
                         <label htmlFor='budget-new-item-plan'>
-                            Planned this month
+                            Planned this month <FieldRequirement optional />
                         </label>
                         <CurrencyInput
                             id='budget-new-item-plan'

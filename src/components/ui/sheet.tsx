@@ -6,7 +6,6 @@ import { isCalculatorBarTarget } from './currency-input/operator-bar';
 import { useKeyboardFit } from './keyboard-fit';
 import { isToastTarget } from './toast-provider';
 import {
-    useCallback,
     useEffect,
     useId,
     useRef,
@@ -166,14 +165,9 @@ export function Sheet({
     children: ReactNode;
 }) {
     const contentRef = useRef<HTMLDivElement>(null);
-    const [cornersRef] = useContinuousCorners<HTMLDivElement>();
-    const setContentRef = useCallback(
-        (node: HTMLDivElement | null) => {
-            contentRef.current = node;
-            cornersRef(node);
-        },
-        [cornersRef]
-    );
+    const [cornersRef] = useContinuousCorners<HTMLDivElement>({
+        clipToCurve: true
+    });
     const overlayRef = useRef<HTMLDivElement>(null);
     const shieldId = useId();
     const dragRef = useRef<DragState | null>(null);
@@ -381,7 +375,7 @@ export function Sheet({
                     data-layer={layer}
                 />
                 <Dialog.Content
-                    ref={setContentRef}
+                    ref={contentRef}
                     className='sheet-content'
                     data-has-footer={footer ? 'true' : 'false'}
                     data-interaction-disabled={
@@ -444,6 +438,11 @@ export function Sheet({
                             completeDragDismissal(event.currentTarget);
                     }}
                 >
+                    <div
+                        className='sheet-surface'
+                        ref={cornersRef}
+                        aria-hidden='true'
+                    />
                     <div
                         className='sheet-drag-region sheet-drag-region--active'
                         onPointerDown={startDrag}

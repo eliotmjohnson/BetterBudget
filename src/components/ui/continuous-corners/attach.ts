@@ -43,9 +43,27 @@ function borderImage(
     return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
 }
 
+/**
+ * Whether the browser draws `corner-shape: superellipse()` itself, in which
+ * case the `@supports` rule in `tokens.css` already shapes every element.
+ */
+export function drawsCornersNatively() {
+    return (
+        typeof CSS !== 'undefined' &&
+        CSS.supports('corner-shape', 'superellipse(2)')
+    );
+}
+
+/**
+ * Draws continuous corners on `element`. By default it paints the enclosing
+ * circle and clips only the slivers outside the curve, so shadows and focus
+ * rings keep painting; `clipToCurve` clips to the curve itself, leaving one
+ * antialiased edge, for a shadowless surface with nothing overhanging it.
+ */
 export function attachContinuousCorners(
     element: HTMLElement,
-    onShape?: (shape: ContinuousShape) => void
+    onShape?: (shape: ContinuousShape) => void,
+    { clipToCurve = false }: { clipToCurve?: boolean } = {}
 ) {
     let size: [number, number] | null = null;
     const paint = () => {
@@ -79,9 +97,16 @@ export function attachContinuousCorners(
 
         element.style.setProperty(
             'border-radius',
-            paintedRadii.map((radius) => `${radius.toFixed(2)}px`).join(' ')
+            clipToCurve
+                ? '0'
+                : paintedRadii
+                      .map((radius) => `${radius.toFixed(2)}px`)
+                      .join(' ')
         );
-        element.style.setProperty('clip-path', `path(evenodd, '${clip}')`);
+        element.style.setProperty(
+            'clip-path',
+            clipToCurve ? `path('${outline}')` : `path(evenodd, '${clip}')`
+        );
         if (border) {
             element.style.setProperty(
                 '--continuous-border-image',

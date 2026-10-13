@@ -8,23 +8,38 @@ import {
     type CSSProperties,
     type ReactNode
 } from 'react';
-import { attachContinuousCorners, type ContinuousShape } from './attach';
+import {
+    attachContinuousCorners,
+    drawsCornersNatively,
+    type ContinuousShape
+} from './attach';
 
 export type { ContinuousShape } from './attach';
 
-export function useContinuousCorners<T extends HTMLElement>() {
+/**
+ * Continuous corners for one element. Where the browser draws them natively
+ * the element is left to CSS, unless `outline` asks for the computed shape,
+ * which the tab bar and lens need to draw their rim.
+ */
+export function useContinuousCorners<T extends HTMLElement>(
+    options: { clipToCurve?: boolean; outline?: boolean } = {}
+) {
     const [element, setElement] = useState<T | null>(null);
     const [shape, setShape] = useState<ContinuousShape | null>(null);
+    const { clipToCurve = false, outline = false } = options;
 
     useLayoutEffect(() => {
-        if (!element) return;
+        if (!element || (!outline && drawsCornersNatively())) return;
 
-        return attachContinuousCorners(element, (next) =>
-            setShape((current) =>
-                current?.outline === next.outline ? current : next
-            )
+        return attachContinuousCorners(
+            element,
+            (next) =>
+                setShape((current) =>
+                    current?.outline === next.outline ? current : next
+                ),
+            { clipToCurve }
         );
-    }, [element]);
+    }, [element, clipToCurve, outline]);
 
     return [setElement, element ? shape : null] as const;
 }
@@ -66,6 +81,7 @@ const continuousControls = [
 
 export function ContinuousControls() {
     useEffect(() => {
+        if (drawsCornersNatively()) return;
         const detachers = new Map<HTMLElement, () => void>();
         const attachWithin = (root: Element) => {
             const matches = [

@@ -29,15 +29,30 @@
     max-height: min(92dvh, 850px);
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    --sheet-radius-top: 28px;
+    --sheet-radius-bottom: 0px;
+    overflow: visible;
     padding: 12px 0 var(--sheet-keyboard-inset, 0px);
-    border-radius: calc(28px * var(--corner-radius-scale))
-        calc(28px * var(--corner-radius-scale)) 0 0;
+    border-radius: calc(var(--sheet-radius-top) * var(--corner-extent))
+        calc(var(--sheet-radius-top) * var(--corner-extent))
+        calc(var(--sheet-radius-bottom) * var(--corner-extent))
+        calc(var(--sheet-radius-bottom) * var(--corner-extent));
     background: white;
     box-shadow: 0 -22px 55px rgb(19 28 45 / 18%);
     backface-visibility: hidden;
     transform: translate3d(0, var(--sheet-drag-y, 0px), 0);
     will-change: transform, opacity;
+}
+.sheet-surface {
+    position: absolute;
+    z-index: -1;
+    inset: 0;
+    border-radius: calc(var(--sheet-radius-top) * var(--corner-radius-scale))
+        calc(var(--sheet-radius-top) * var(--corner-radius-scale))
+        calc(var(--sheet-radius-bottom) * var(--corner-radius-scale))
+        calc(var(--sheet-radius-bottom) * var(--corner-radius-scale));
+    background: white;
+    pointer-events: none;
 }
 .sheet-keyboard-shield {
     position: fixed;
@@ -57,8 +72,8 @@
     width: 100%;
     height: var(--viewport-height);
     max-height: var(--viewport-height);
+    --sheet-radius-top: 0px;
     padding-top: calc(12px + var(--safe-area-top));
-    border-radius: 0;
 }
 .sheet-content:focus {
     outline: none;
@@ -219,6 +234,16 @@
     font-weight: 700;
     color: #444b55;
 }
+.field-requirement {
+    margin-left: 1px;
+    font-style: italic;
+    font-weight: 500;
+    color: var(--muted);
+}
+.field-requirement[data-requirement='required'] {
+    font-weight: 600;
+    color: var(--blue);
+}
 .field input,
 .field textarea,
 .field select {
@@ -371,19 +396,19 @@
     width: min(100%, 250px);
     overflow: visible;
     padding: 2px;
-    border-radius: 999px;
+    border-radius: calc(10px * var(--corner-radius-scale));
 }
 .segmented--compact .segmented-thumb {
     top: 2px;
     bottom: 2px;
     left: 2px;
     width: calc(50% - 2px);
-    border-radius: 999px;
+    border-radius: calc(8px * var(--corner-radius-scale));
     box-shadow: 0 3px 8px rgb(23 105 224 / 22%);
 }
 .segmented--compact .segment {
     min-height: 34px;
-    border-radius: 999px;
+    border-radius: calc(8px * var(--corner-radius-scale));
     font-size: 14px;
 }
 .segmented--compact .segment::after {

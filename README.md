@@ -89,7 +89,7 @@ release rather than an incompatibility.
   outside, or press Escape. They dim the page slightly, close smoothly, and
   return focus to whatever opened them.
 - On Add and Edit transaction, the Expense/Income selector is a compact
-  capsule fixed in the header, and Income turns it and the submit buttons
+  rounded-square bar fixed in the header, and Income turns it and the submit buttons
   green.
 - The Add transaction sheet starts a fresh draft each time it opens.
 - The Record income date field stays inside its sheet on iPhone.
@@ -1033,7 +1033,9 @@ in `src/app/styles/tokens.css`. Chromium draws them natively for every rounded
 element through CSS `corner-shape`; Safari does not support it yet, so on iOS
 the tab bar, summary cards, sheets, and button-style controls get the same
 curve from `src/components/ui/continuous-corners/`, and everything else keeps
-plain rounded corners until WebKit ships `corner-shape`. Setting
+plain rounded corners until WebKit ships `corner-shape`. The one exception is
+the mobile tab bar and its lens, which use the script everywhere because their
+light-catching rim is drawn from its outline. Setting
 `--corner-superellipse: 1`, `--corner-extent: 1`, and `--capsule-smoothing: 0`
 turns the effect off everywhere without a code change.
 

@@ -77,25 +77,36 @@ deliberately runs more continuous than that. Where the browser draws
 element the superellipse and sets `--corner-radius-scale` to the extent; every
 rectangular `border-radius` is therefore authored as
 `calc(Npx * var(--corner-radius-scale))`, and new ones must be too, while
-circles (`50%`) and pills (`999px`) stay literal. Elsewhere the scale stays 1
-and corners are plain circles.
+circles (`50%`) and pills (`999px`) stay literal. That native path is the whole
+story there, desktop Chrome included: the script below stands down
+(`drawsCornersNatively` in `attach.ts`), so sheets, buttons, and cards are drawn
+by CSS with one antialiased edge and shadows that follow the curve. Elsewhere,
+Safari on iPhone and Mac today, the scale stays 1, plain CSS corners are
+circles, and the script draws the continuous ones.
 
 ### Script-drawn corners
 
-On iOS today, continuous corners come from
-`src/components/ui/continuous-corners/`: `useContinuousCorners` for the tab bar
-and lens, the Budget and Income summary cards, and every sheet, and
-`ContinuousControls`, mounted once in `providers.tsx`, which attaches to every
-element matching its button selector list (primary and soft buttons, the
-Expense/Income segmented control and its thumb, filter tabs, the icon, tone, and
-organizer action buttons, the sheet header submit, the month picker control and
-its month cells, and the toast action) as they enter the DOM. Add a class to
-that list when a new button style needs continuous corners. Both apply the same
-superellipse and extent (their elements keep a scale of 1), or a capsule end
-when the radius fills a side. The element paints the largest circular radius
-that contains the curve and its clip-path removes only the slivers between that
-circle and the curve, so shadows, focus rings, and contents keep painting
-normally. A CSS border stays and is also stroked along the curve as a background
+In browsers without native `corner-shape` (Safari today), continuous corners
+come from `src/components/ui/continuous-corners/`: `useContinuousCorners` for
+the tab bar and lens, the Budget and Income summary cards, the hold menu, and
+every sheet's surface, and `ContinuousControls`, mounted once in
+`providers.tsx`, which attaches to every element matching its button selector
+list (primary and soft buttons, the Expense/Income segmented control and its
+thumb, filter tabs, the icon, tone, and organizer action buttons, the sheet
+header submit, the month picker control and its month cells, and the toast
+action) as they enter the DOM. Add a class to that list when a new button style
+needs continuous corners. The tab bar and lens pass `outline: true` and keep the
+script even where corners are native, because `ContinuousStroke` draws their rim
+from its computed outline. Both apply the same superellipse and extent (their
+elements keep a scale of 1), or a capsule end when the radius fills a side. The
+element paints the largest circular radius that contains the curve and its
+clip-path removes only the slivers between that circle and the curve, so
+shadows, focus rings, and contents keep painting normally. Each sliver reaches
+0.5 px past the painted circle (`sliverOverreach` in `geometry.ts`): stopping
+exactly on it left the circle's antialiased edge half-covered, a faint line
+along each corner when zoomed in. The cost is the first half pixel of the
+element's shadow just outside that circle, where a soft shadow is at its
+faintest. A CSS border stays and is also stroked along the curve as a background
 layer, re-read whenever a state attribute, hover, or border transition changes
 it. That layer is `!important`, because component state rules restyle with the
 `background` shorthand, which would reset it at any specificity. The border
@@ -113,7 +124,9 @@ longer edge and then holds as a circular arc; every other corner is the
 `superellipse(K)` curve with exponent 2^K, exactly what `corner-shape` draws.
 `attach.ts` sizes from the ResizeObserver border-box size, which is fractional
 and ignores transforms: `offsetWidth` rounds, and the half-pixel error was
-visible at the tab bar's 4 px gaps. `useContinuousCorners` returns a callback
+visible at the tab bar's 4 px gaps. The script applies to Safari only, so check
+script-path changes in Chromium by making `CSS.supports` report no
+`corner-shape` before the page loads. `useContinuousCorners` returns a callback
 ref, so an element that remounts (the lens replays its stretch by remounting) is
 re-attached, and `ContinuousControls` skips elements a hook already manages.
 `ContinuousStroke` draws a gradient rim inside the outline for surfaces that
@@ -134,6 +147,28 @@ about 85% of half the element's shorter side, which is why the 46 px filter
 button, sized to match the search input's height, uses 12 px rather than the
 input's 14 px. Circles and pills keep `corner-shape: round`: add any new one to
 the opt-out list in `tokens.css`, or the native superellipse will square it off.
+
+### Sheet surface
+
+A sheet is the one continuous element with a large shadow, and the sliver clip
+removes the shadow along with everything else between the curve and the painted
+circle, which left a light crescent against the dim at each top corner when
+zoomed in. So `sheet.tsx` attaches the corners to `.sheet-surface`, an
+`aria-hidden`, `z-index: -1` first child that paints the white, not to
+`.sheet-content` itself, with `clipToCurve` (only on the script path; natively
+both draw the same curve in CSS): having no shadow and nothing overhanging it,
+the surface clips to the curve itself instead of painting the enclosing circle
+and clipping the slivers, because there the circle's antialiased edge and the
+sliver clip's edge overlap and leave a faint line along the circle.
+`.sheet-content` keeps the shadow with a plain radius of the full curve
+(`--sheet-radius-top` or `--sheet-radius-bottom` times `--corner-extent`), a
+circle that lies wholly inside the superellipse, so the shadow runs right up to
+the curve and the surface covers the rest. That only works with
+`overflow: visible` on `.sheet-content`, since a clipping radius would cut the
+surface back to the circle; on desktop, where all four corners round, its last
+child (the body or footer) takes the same bottom radius so scrolled content and
+the footer's fill stay inside the curve. Set a variant's corners through those
+two custom properties, never `border-radius` on `.sheet-content`.
 
 ## Status bar and safe area
 

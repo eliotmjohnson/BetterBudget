@@ -19,7 +19,7 @@ import type { TranscriptEntry } from './use-assistant';
 const suggestions = [
     'How much is left to budget?',
     'Where am I overspending?',
-    'Add a $12 coffee to Dining out today'
+    'Add a $12 coffee to Groceries and eating out'
 ];
 
 /**
