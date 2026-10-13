@@ -444,7 +444,10 @@ surfaces. It contains expense and refund records only, labels refunds as
 **Income**, and does not duplicate received-income or paycheck receipts from the
 Income page.
 
-Search matches the merchant, budget-item subtitle, and note. The All, Expenses,
+Search matches the merchant, budget-item subtitle, and note, and text that
+reads as a dollar amount also matches transactions whose total or any split
+part falls in it, at the precision typed: `12` or `$12` finds $12.00–$12.99,
+`12.5` finds $12.50–$12.59, and `12.34` is exact. The All, Expenses,
 and Income pills apply immediately, while the sliders button opens a filter
 sheet whose changes stay drafts until **Apply filters** is pressed.
 `docs/agents/design/budget-and-inputs.md` holds the precise filter, badge, and

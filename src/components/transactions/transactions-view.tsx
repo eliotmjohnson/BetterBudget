@@ -5,7 +5,7 @@ import { useMemo, useRef, useState } from 'react';
 import { Sheet } from '@/components/ui/sheet';
 import { StillInput } from '@/components/ui/still-focus';
 import { useScrolledPast } from '@/components/ui/use-scrolled-past';
-import { formatCurrency } from '@/domain/money';
+import { formatCurrency, parseAmountSearch } from '@/domain/money';
 import type { ActivityEntry, MonthSnapshot } from '@/domain/types';
 import type { Mutate } from '@/components/shared/budget-view-helpers';
 import { FloatingAddButton } from '@/components/shared/floating-add-button';
@@ -151,6 +151,16 @@ export function TransactionsView({
         Number(splitFilter !== 'all');
     const filtered = useMemo(() => {
         const query = search.trim().toLocaleLowerCase();
+        const amountRange = parseAmountSearch(query);
+        const inAmountRange = (value: string) => {
+            const amount = BigInt(value);
+
+            return (
+                amountRange !== null &&
+                amount >= amountRange.minCents &&
+                amount <= amountRange.maxCents
+            );
+        };
 
         return snapshot.activity.filter(
             (entry): entry is TransactionActivityEntry => {
@@ -174,7 +184,12 @@ export function TransactionsView({
                     (!query ||
                         `${entry.title} ${entry.subtitle} ${entry.note ?? ''}`
                             .toLocaleLowerCase()
-                            .includes(query))
+                            .includes(query) ||
+                        inAmountRange(entry.amountCents) ||
+                        (entry.allocations?.some((allocation) =>
+                            inAmountRange(allocation.amountCents)
+                        ) ??
+                            false))
                 );
             }
         );
