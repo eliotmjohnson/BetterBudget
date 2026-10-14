@@ -24,7 +24,11 @@ import {
     continuousMask,
     useContinuousCorners
 } from '@/components/ui/continuous-corners';
-import { scrollToTopOnHeaderTap } from '@/components/ui/scroll-to-top';
+import {
+    scrollToTop,
+    scrollToTopOnHeaderTap
+} from '@/components/ui/scroll-to-top';
+import { announceTabReselect } from '@/components/ui/tab-reselect';
 import { shiftMonth, type MonthKey } from '@/domain/money';
 import { MonthPicker } from './month-picker';
 import { PullRefreshDial, PullToRefresh } from './pull-to-refresh';
@@ -110,7 +114,13 @@ export function AppShell({
         )
             return;
         event.preventDefault();
-        onViewChange(nextView);
+        if (nextView !== view) {
+            onViewChange(nextView);
+
+            return;
+        }
+        announceTabReselect();
+        scrollToTop(contentRef.current);
     };
 
     return (

@@ -322,21 +322,30 @@ Settings and Organize suppress the entrance animation entirely for month
 changes, however the month was chosen, and every tab change keeps the
 blur-to-sharp motion.
 
-## Tap the header to scroll to top
+## Scroll to top: header tap and current-tab tap
 
-Tapping the mobile header anywhere that is not one of its controls (the logo,
-the gaps, or the status-bar band its top padding covers) scrolls `.app-content`
-back to the top, and tapping a pushed detail's header does the same for its
-body. iOS's own status-bar tap only scrolls the page, and every route here
-scrolls inside its own container while the page stays pinned at zero, so the
-system gesture has nothing to move. `scrollToTopOnHeaderTap` in
+Tapping the mobile header anywhere that is not one of its controls (the logo or
+the gaps around it) scrolls `.app-content` back to the top, and tapping a pushed
+detail's header does the same for its body. Tapping the tab that is already
+selected, in the bottom navigation or the desktop sidebar, also scrolls
+`.app-content` to the top instead of navigating; Settings while Organize is open
+still navigates to Settings. Before scrolling, the re-tap calls
+`announceTabReselect` (`src/components/ui/tab-reselect.ts`), and a page showing
+a secondary view in place of its list listens with `useTabReselect` and returns
+to the list, the way re-tapping an iOS tab returns to its root: Transactions
+closes Recently deleted and clears its checked rows, exactly as the trash tile
+does. Both stand in for iOS's status-bar and Dynamic Island tap, which cannot
+work here: iOS keeps those taps for itself and never delivers them to the page,
+and it only scrolls a page to the top when no other scroll view is on screen,
+while every route here scrolls inside `.app-content`. Do not try to recover the
+system gesture by leaving the page scrolled by an offset; the history file
+records why it fails. `scrollToTopOnHeaderTap` in
 `src/components/ui/scroll-to-top.ts` ignores taps on links, buttons, fields,
 labels, and the month picker popover (`role="dialog"`) only when they sit inside
 the tapped header, because the pushed detail's whole header is itself inside a
 Radix dialog. A click the month picker swallowed while dismissing never reaches
-it. The scroll is smooth, and instant under reduced motion. Do not try to
-recover the system gesture by leaving the page scrollable by a pixel: it fights
-the pinned page that `still-focus` and the viewport-height rules depend on.
+it. The scroll is smooth, and instant under reduced motion, through the shared
+`scrollToTop`.
 
 ## Pull-to-refresh
 
@@ -372,8 +381,21 @@ a container that actually overflows, coarse-pointer view roots inside
 `.app-content` are at least `100% + 1px` tall. The pull never starts while a
 sheet, a pushed detail, or a list drag is active. The arc starts filling at 29
 px of overscroll (`pullFillStart`, half of `--pull-band-height`, where the dial
-clears the header; keep the two in step) and completes at the 115 px release
-threshold, and release past it refreshes; a shorter release just bounces back.
+clears the header; keep the two in step) and completes at the 145 px refresh
+threshold (115 px before 6.11.0, raised so a casual pull does not refresh; the
+rubber band resists ever harder, so a long pull tops out near 180 px). Reaching
+the threshold refreshes at once, with the finger still down, as UIRefreshControl
+does; a pull released short of it just bounces back. A release past it that no
+frame observed first still refreshes from the touch-end handler. One pull
+refreshes at most once (`triggeredRef`, cleared when a new first finger lands):
+a refresh that finishes while the finger still holds the content does not
+restart, and the band dial stays hidden until the finger lifts. Triggering at
+release instead looked laggy, because iOS paints the hand-off several frames
+after the script switches state (about 70 ms in the Simulator and up to 300 ms
+measured on device, with the script itself done in about 10 ms), so the dial
+rode back with the bouncing content as a still, full ring until the spinner
+appeared. Handing off under a held finger keeps the content still through that
+gap.
 
 ### Refreshing without holding the content
 
@@ -384,19 +406,23 @@ holding the content failed on device. Summing a CSS `translate` with the native
 bounce-back stutters however the curve is tuned. Swapping the bounce for a
 `translate` by zeroing `scrollTop` still jitters and flashes. Toggling the
 scroller's `overflow` makes WebKit rebuild the scroll layer, which flashes.
-Per-frame script compensation lags a frame and twitches. So on a refreshing
-release nothing touches the scroller and the content bounces back natively.
-Instead `markRelease` writes the release overscroll to `--pull-release` and
-enters the `releasing` state, which hides the in-scroller band and shows
-`.pull-refresh-float`, a 44 px white chip carrying the same dial, exactly where
-the band's dial was. The `refreshing` state then glides the chip on
-`--pull-hold-motion` to `--pull-float-top` below the header, where it floats
-over the content and spins. The chip's `z-index` keeps it above `.app-content`
-and below the header. At the end of a refresh the chip fades and shrinks on
-`--pull-settle-motion`; keep `settleDuration` in `pull-gesture.ts` equal to its
-duration, since it clears the state attribute once that transition ends. The
-spinner holds for at least 1,080 ms and at most 5 s, and the outcome is
-announced in a polite live region rather than a toast.
+Per-frame script compensation lags a frame and twitches. So when a refresh
+starts nothing touches the scroller, and the content bounces back natively once
+the finger lifts. Instead `handOffDial` writes the overscroll at that moment to
+`--pull-handoff` and enters the `releasing` state, which hides the in-scroller
+band and shows `.pull-refresh-float`, a 44 px white chip carrying the same dial,
+exactly where the band's dial was. While the finger still holds the content, the
+surface carries `data-pull-held` and the chip stays parked at that hand-off
+height (`--pull-handoff-offset`), spinning in the gap the pull opened; a refresh
+that finishes during the hold fades it out there. Once the finger lifts, or at
+once for a refresh started by the release, the `refreshing` state glides the
+chip on `--pull-hold-motion` to `--pull-float-top` below the header, where it
+floats over the content and spins. The chip's `z-index` keeps it above
+`.app-content` and below the header. At the end of a refresh the chip fades and
+shrinks on `--pull-settle-motion`; keep `settleDuration` in `pull-gesture.ts`
+equal to its duration, since it clears the state attribute once that transition
+ends. The spinner holds for at least 1,080 ms and at most 5 s, and the outcome
+is announced in a polite live region rather than a toast.
 
 ## Page entrance
 

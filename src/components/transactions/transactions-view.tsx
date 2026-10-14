@@ -4,6 +4,7 @@ import { Plus, RotateCcw, Search, SlidersHorizontal, X } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
 import { Sheet } from '@/components/ui/sheet';
 import { StillInput } from '@/components/ui/still-focus';
+import { useTabReselect } from '@/components/ui/tab-reselect';
 import { useScrolledPast } from '@/components/ui/use-scrolled-past';
 import { formatCurrency } from '@/domain/money';
 import type { ActivityEntry, MonthSnapshot } from '@/domain/types';
@@ -187,6 +188,15 @@ export function TransactionsView({
         visible: filteredDeleted,
         onEmptied: () => setShowingDeleted(false)
     });
+    const toggleDeleted = () => {
+        deletedRestore.clearSelection();
+        setShowingDeleted((showing) => !showing);
+    };
+
+    useTabReselect(() => {
+        if (showingDeleted) toggleDeleted();
+    });
+
     const groups = useMemo(
         () => Map.groupBy(filtered, (entry) => entry.occurredOn),
         [filtered]
@@ -314,10 +324,7 @@ export function TransactionsView({
                     count={snapshot.deletedTransactions.length}
                     selectedCount={deletedRestore.selectedCount}
                     active={showingDeleted}
-                    onToggle={() => {
-                        deletedRestore.clearSelection();
-                        setShowingDeleted((showing) => !showing);
-                    }}
+                    onToggle={toggleDeleted}
                 />
             </div>
             {showingDeleted ? (

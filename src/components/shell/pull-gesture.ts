@@ -9,11 +9,12 @@ export interface PullContext {
     settleTimerRef: RefObject<ReturnType<typeof setTimeout> | null>;
     surface: HTMLDivElement;
     touchingRef: RefObject<boolean>;
+    triggeredRef: RefObject<boolean>;
     triggerRefresh: () => void;
 }
 
 const pullFillStart = 29;
-const pullTriggerDistance = 115;
+const pullTriggerDistance = 145;
 const settleDuration = 440;
 const blockingSelector =
     '.sheet-content, [data-drag-active], [data-long-press-active], [data-long-press-pending]';
@@ -46,12 +47,18 @@ function readOverscroll(ctx: PullContext) {
 }
 
 function trackOverscroll(ctx: PullContext, overscroll: number) {
-    const { surface, touchingRef } = ctx;
+    const { surface, touchingRef, triggeredRef } = ctx;
     const state = surface.dataset.pullState;
 
     if (state === 'refreshing') return;
+    if (touchingRef.current && triggeredRef.current) return;
     if (touchingRef.current && overscroll > 0 && !pullBlocked()) {
         clearSettleTimer(ctx);
+        if (overscroll >= pullTriggerDistance && !ctx.refreshingRef.current) {
+            beginRefresh(ctx, overscroll);
+
+            return;
+        }
         surface.dataset.pullState = 'pulling';
         writePullProgress(surface, overscroll);
 
@@ -88,10 +95,17 @@ export function cancelOverscrollObserver(ctx: PullContext) {
     ctx.frameRef.current = null;
 }
 
-function markRelease(surface: HTMLDivElement, overscroll: number) {
-    surface.style.setProperty('--pull-release', `${overscroll}px`);
+function handOffDial(surface: HTMLDivElement, overscroll: number) {
+    surface.style.setProperty('--pull-handoff', `${overscroll}px`);
     surface.dataset.pullState = 'releasing';
     void surface.offsetHeight;
+}
+
+function beginRefresh(ctx: PullContext, overscroll: number) {
+    ctx.triggeredRef.current = true;
+    ctx.surface.toggleAttribute('data-pull-held', ctx.touchingRef.current);
+    handOffDial(ctx.surface, overscroll);
+    ctx.triggerRefresh();
 }
 
 export function holdPullAtRest(ctx: PullContext) {
@@ -116,6 +130,7 @@ export function settlePull(ctx: PullContext) {
 }
 
 export function startPullTouch(ctx: PullContext, event: TouchEvent) {
+    if (event.touches.length === 1) ctx.triggeredRef.current = false;
     ctx.touchingRef.current = event.touches.length > 0;
     observeOverscroll(ctx);
 }
@@ -125,6 +140,7 @@ export function endPullTouch(ctx: PullContext, event: TouchEvent) {
 
     touchingRef.current = event.touches.length > 0;
     if (touchingRef.current) return;
+    surface.removeAttribute('data-pull-held');
 
     const overscroll = readOverscroll(ctx);
 
@@ -134,8 +150,7 @@ export function endPullTouch(ctx: PullContext, event: TouchEvent) {
             !refreshingRef.current &&
             !pullBlocked()
         ) {
-            markRelease(surface, overscroll);
-            ctx.triggerRefresh();
+            beginRefresh(ctx, overscroll);
 
             return;
         }

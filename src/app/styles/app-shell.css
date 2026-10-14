@@ -98,6 +98,10 @@
 }
 .pull-refresh-float {
     --pull-float-size: 44px;
+    --pull-handoff-offset: calc(
+        var(--pull-handoff) - var(--pull-band-height) / 2 -
+            var(--pull-float-top) - var(--pull-float-size) / 2
+    );
     position: absolute;
     z-index: 2;
     top: var(--pull-float-top);
@@ -128,17 +132,17 @@
 .app-scroll[data-pull-state='releasing'] .pull-refresh-float {
     opacity: 1;
     scale: 1;
-    translate: 0
-        calc(
-            var(--pull-release) - var(--pull-band-height) / 2 -
-                var(--pull-float-top) - var(--pull-float-size) / 2
-        );
+    translate: 0 var(--pull-handoff-offset);
 }
 .app-scroll[data-pull-state='refreshing'] .pull-refresh-float {
     opacity: 1;
     scale: 1;
     translate: 0 0;
     transition: translate var(--pull-hold-motion);
+}
+.app-scroll[data-pull-held][data-pull-state='refreshing'] .pull-refresh-float,
+.app-scroll[data-pull-held][data-pull-state='settling'] .pull-refresh-float {
+    translate: 0 var(--pull-handoff-offset);
 }
 .app-scroll[data-pull-state='settling'] .pull-refresh-float {
     transition:

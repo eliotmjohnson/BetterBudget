@@ -69,6 +69,7 @@ export function PullToRefresh({
     const refreshingRef = useRef(false);
     const settleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const touchingRef = useRef(false);
+    const triggeredRef = useRef(false);
     const triggerRef = useRef(() => {});
     const runRefresh = async () => {
         const context = contextRef.current;
@@ -104,6 +105,7 @@ export function PullToRefresh({
             settleTimerRef,
             surface,
             touchingRef,
+            triggeredRef,
             triggerRefresh: () => triggerRef.current()
         };
         const start = (event: TouchEvent) => startPullTouch(context, event);
@@ -131,6 +133,7 @@ export function PullToRefresh({
             refreshingRef.current = false;
             contextRef.current = null;
             delete surface.dataset.pullState;
+            surface.removeAttribute('data-pull-held');
             writePullProgress(surface, 0);
         };
     }, [scrollRef, surfaceRef]);

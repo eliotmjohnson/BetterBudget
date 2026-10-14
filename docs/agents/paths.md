@@ -157,8 +157,10 @@ moved, renamed, or takes on a new responsibility.
   that lets the drawn header bar take pointers.
   `src/components/ui/docked-summary.ts` is the scroll tracking both docked
   strips share.
-- `src/components/ui/scroll-to-top.ts` — the header tap that scrolls the tab or
-  pushed detail back to the top.
+- `src/components/ui/scroll-to-top.ts` — the header tap and the current-tab tap
+  that scroll the tab or pushed detail back to the top;
+  `src/components/ui/tab-reselect.ts` tells the open page its tab was re-tapped,
+  so Transactions can leave Recently deleted.
 - `src/components/ui/left-edge-gesture-guard.tsx` — global Safari left-edge
   history-gesture suppression.
 - `src/components/ui/still-focus/` — focus without the iOS page slide, for every
