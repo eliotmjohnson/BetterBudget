@@ -20,6 +20,30 @@ export type PushTarget = Pick<
 export type PushOutcome = 'sent' | 'expired' | 'failed';
 
 const PUSH_TTL_SECONDS = 24 * 60 * 60;
+const DECLARATIVE_PUSH_MARKER = 8030;
+
+function appOrigin(): string {
+    return process.env.BETTER_AUTH_URL ?? 'http://localhost:3000';
+}
+
+/**
+ * A Declarative Web Push message. Browsers that support it show the
+ * notification and navigate to `navigate` on a tap without involving the
+ * service worker; others deliver it to the worker's push handler, which shows
+ * the same notification itself.
+ */
+function declarativeMessage(payload: PushPayload) {
+    return {
+        web_push: DECLARATIVE_PUSH_MARKER,
+        notification: {
+            title: payload.title,
+            body: payload.body,
+            tag: payload.tag,
+            navigate: new URL(payload.url, appOrigin()).href,
+            silent: false
+        }
+    };
+}
 
 /**
  * Sends one notification to one device. A subscription the push service
@@ -38,7 +62,7 @@ export async function sendPush(
                 endpoint: target.endpoint,
                 keys: { p256dh: target.p256dh, auth: target.auth }
             },
-            JSON.stringify(payload),
+            JSON.stringify(declarativeMessage(payload)),
             {
                 vapidDetails: await getVapidDetails(),
                 TTL: PUSH_TTL_SECONDS,

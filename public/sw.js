@@ -11,16 +11,20 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('push', (event) => {
-    const payload = event.data ? event.data.json() : {};
+    const message = event.data ? event.data.json() : {};
+    const notification = message.notification ?? message;
 
     event.waitUntil(
-        self.registration.showNotification(payload.title ?? 'Better Budget', {
-            body: payload.body ?? '',
-            tag: payload.tag,
-            icon: '/better-budget-icon-192-v3.png',
-            badge: '/better-budget-icon-192-v3.png',
-            data: { url: payload.url ?? '/' }
-        })
+        self.registration.showNotification(
+            notification.title ?? 'Better Budget',
+            {
+                body: notification.body ?? '',
+                tag: notification.tag,
+                icon: '/better-budget-icon-192-v3.png',
+                badge: '/better-budget-icon-192-v3.png',
+                data: { url: notification.navigate ?? notification.url ?? '/' }
+            }
+        )
     );
 });
 
@@ -53,8 +57,11 @@ async function openTarget(target) {
 
         return;
     }
-    open.postMessage({ type: TARGET_MESSAGE });
-    await open.focus();
+    try {
+        await open.focus();
+    } finally {
+        open.postMessage({ type: TARGET_MESSAGE });
+    }
 }
 
 self.addEventListener('notificationclick', (event) => {

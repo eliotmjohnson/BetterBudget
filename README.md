@@ -1072,10 +1072,14 @@ to the Home Screen first. Desktop Chrome works on `http://localhost`, but a
 phone opening the dev server at a plain-HTTP LAN address cannot subscribe, so
 test the phone against a deployed HTTPS origin.
 
-Tapping a notification works the same whether the app was open, in the
-background, or closed: the service worker records the target, and the app
-routes to it on launch, on returning to the foreground, or on the worker's
-message. Chrome on macOS sometimes only brings Chrome forward when a
+Pushes are sent as Declarative Web Push messages, so iOS 18.4 and later show
+them and open the item on a tap without the service worker. That matters
+because WebKit does not run the worker's `notificationclick` for a push tapped
+while the home-screen app is already open. Other browsers, and earlier iOS,
+hand the message to the worker, which shows it, records the tapped target, and
+lets the app route there on launch, on returning to the foreground, or on the
+worker's message; on iOS before 18.4 a tap while the app is open only brings it
+forward. Chrome on macOS sometimes only brings Chrome forward when a
 notification is clicked, without dispatching the click to the page, notably
 for notifications grouped in Notification Center; that is outside the app.
 

@@ -58,11 +58,12 @@ moved, renamed, or takes on a new responsibility.
   loop that `src/instrumentation.ts` starts. The rules themselves are pure, in
   `src/domain/bill-reminders.ts`.
 - `src/server/push/` — Web Push. `vapid.ts` generates and reads the
-  database-held key pair, `send.ts` sends one notification and deletes
-  subscriptions the push service reports gone, `subscriptions.ts` stores
-  devices. Routes live under `src/app/api/push/`: `subscriptions` (public key,
-  subscribe, unsubscribe), `test` (one notification to the caller's own device),
-  and `run` (development-only scheduler run with `now` and `dryRun`).
+  database-held key pair, `send.ts` sends one notification as a Declarative Web
+  Push message and deletes subscriptions the push service reports gone,
+  `subscriptions.ts` stores devices. Routes live under `src/app/api/push/`:
+  `subscriptions` (public key, subscribe, unsubscribe), `test` (one notification
+  to the caller's own device), and `run` (development-only scheduler run with
+  `now` and `dryRun`).
 - `src/server/household-lock.ts` — `lockHouseholdWrites`, the per-household row
   lock every budget write and backup import takes first.
 - `src/server/mutation-failures.ts` — mutation-failure class, not-found/conflict
