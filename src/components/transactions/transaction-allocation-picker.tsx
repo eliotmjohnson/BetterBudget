@@ -3,7 +3,11 @@
 import { Search, X } from 'lucide-react';
 import { useMemo, useState, type RefObject } from 'react';
 import { Sheet } from '@/components/ui/sheet';
-import { StillInput } from '@/components/ui/still-focus';
+import {
+    StillInput,
+    focusKeepingPress,
+    focusKeepingTap
+} from '@/components/ui/still-focus';
 import { formatCurrency, type Cents } from '@/domain/money';
 import type { BudgetCategoryView } from '@/domain/types';
 
@@ -12,23 +16,50 @@ const money = (value: Cents | string) =>
     formatCurrency(value).replace('.00', '');
 
 /**
+ * A name or search reduced to its lowercase letters and digits, without
+ * accents, so punctuation and spacing never decide a match: `kids` finds
+ * "Kid's" and `dr` finds "Dr.".
+ */
+function searchable(text: string) {
+    return text
+        .normalize('NFKD')
+        .replace(/[^\p{L}\p{N}]/gu, '')
+        .toLocaleLowerCase();
+}
+
+/**
  * The categories and items a picker search shows: a category whose name
  * matches keeps all its items, otherwise only its matching items, and
  * categories left without items are hidden.
  */
 function matchingCategories(categories: BudgetCategoryView[], search: string) {
-    const query = search.trim().toLocaleLowerCase();
+    const query = searchable(search);
 
     return categories.flatMap((category) => {
         const items =
-            !query || category.name.toLocaleLowerCase().includes(query)
+            !query || searchable(category.name).includes(query)
                 ? category.items
                 : category.items.filter((item) =>
-                      item.name.toLocaleLowerCase().includes(query)
+                      searchable(item.name).includes(query)
                   );
 
         return items.length > 0 || !query ? [{ category, items }] : [];
     });
+}
+
+/**
+ * Puts the picker's list back at its top, as an iOS search list does when its
+ * query changes, first stopping any momentum scroll by switching the body's
+ * overflow off for a frame: the filtered list otherwise drew at the old
+ * offset, past its new, shorter end, while the fling kept running.
+ */
+function scrollListToTop(list: HTMLElement | null) {
+    const scroller = list?.closest<HTMLElement>('.sheet-body');
+
+    if (!scroller || scroller.scrollTop === 0) return;
+    scroller.style.overflowY = 'hidden';
+    scroller.scrollTop = 0;
+    requestAnimationFrame(() => scroller.style.removeProperty('overflow-y'));
 }
 
 export function TransactionAllocationPicker({
@@ -63,10 +94,28 @@ export function TransactionAllocationPicker({
         () => new Set(initialSelectedIds)
     );
     const [search, setSearch] = useState('');
+    const [openingFocusId, setOpeningFocusId] = useState<string | null>(
+        () => initialSelectedIds[0] ?? categories[0]?.items[0]?.id ?? null
+    );
+    const [list, setList] = useState<HTMLDivElement | null>(null);
+    const changeSearch = (nextSearch: string) => {
+        scrollListToTop(list);
+        setOpeningFocusId(null);
+        setSearch(nextSearch);
+    };
     const visibleCategories = useMemo(
         () => matchingCategories(categories, search),
         [categories, search]
     );
+    const setItemSelected = (itemId: string, nextChecked: boolean) =>
+        setSelectedIds((currentIds) => {
+            const nextIds = new Set(currentIds);
+
+            if (nextChecked) nextIds.add(itemId);
+            else nextIds.delete(itemId);
+
+            return nextIds;
+        });
     const selectedCount = selectedIds.size;
     const selectedAmounts = useMemo(
         () =>
@@ -88,7 +137,6 @@ export function TransactionAllocationPicker({
             variant='full-screen-mobile'
             layer='nested'
             showHandle={false}
-            fitKeyboard={false}
             restoreFocusRef={restoreFocusRef}
             headerAccessory={
                 <div className='search-box'>
@@ -101,14 +149,14 @@ export function TransactionAllocationPicker({
                         aria-label='Search budget items'
                         placeholder='Search budget items'
                         value={search}
-                        onChange={(event) => setSearch(event.target.value)}
+                        onChange={(event) => changeSearch(event.target.value)}
                     />
                     {search ? (
                         <button
                             className='search-clear-button'
                             type='button'
                             aria-label='Clear budget item search'
-                            onClick={() => setSearch('')}
+                            {...focusKeepingPress(() => changeSearch(''))}
                         >
                             <X size={17} strokeWidth={2.2} />
                         </button>
@@ -139,14 +187,14 @@ export function TransactionAllocationPicker({
                 </button>
             }
         >
-            {visibleCategories.length === 0 && search.trim() ? (
+            {visibleCategories.length === 0 && searchable(search) ? (
                 <div className='empty-state'>
                     <Search size={28} />
                     <h2>No matching budget items</h2>
                     <p>Try a different search.</p>
                 </div>
             ) : null}
-            <div className='allocation-picker-list'>
+            <div className='allocation-picker-list' ref={setList}>
                 {visibleCategories.map(({ category, items }) => {
                     const categoryRemaining = movingToAnotherMonth
                         ? null
@@ -189,7 +237,7 @@ export function TransactionAllocationPicker({
                                 </span>
                             </div>
                             <div className='allocation-picker-items'>
-                                {items.map((item, itemIndex) => {
+                                {items.map((item) => {
                                     const checked = selectedIds.has(item.id);
                                     const disabled =
                                         !checked &&
@@ -212,47 +260,29 @@ export function TransactionAllocationPicker({
                                                 disabled ? 'true' : 'false'
                                             }
                                             key={item.id}
+                                            {...focusKeepingTap(() => {
+                                                if (!disabled)
+                                                    setItemSelected(
+                                                        item.id,
+                                                        !checked
+                                                    );
+                                            })}
                                         >
                                             <input
                                                 autoFocus={
-                                                    (checked &&
-                                                        initialSelectedIds[0] ===
-                                                            item.id) ||
-                                                    (initialSelectedIds.length ===
-                                                        0 &&
-                                                        category ===
-                                                            categories[0] &&
-                                                        itemIndex === 0)
+                                                    openingFocusId === item.id
                                                 }
                                                 type='checkbox'
                                                 checked={checked}
                                                 disabled={disabled}
                                                 aria-label={`${item.name}, ${category.name}`}
-                                                onChange={(event) => {
-                                                    const nextChecked =
+                                                onChange={(event) =>
+                                                    setItemSelected(
+                                                        item.id,
                                                         event.currentTarget
-                                                            .checked;
-
-                                                    setSelectedIds(
-                                                        (currentIds) => {
-                                                            const nextIds =
-                                                                new Set(
-                                                                    currentIds
-                                                                );
-
-                                                            if (nextChecked)
-                                                                nextIds.add(
-                                                                    item.id
-                                                                );
-                                                            else
-                                                                nextIds.delete(
-                                                                    item.id
-                                                                );
-
-                                                            return nextIds;
-                                                        }
-                                                    );
-                                                }}
+                                                            .checked
+                                                    )
+                                                }
                                             />
                                             <span className='allocation-picker-item-copy'>
                                                 <strong>{item.name}</strong>

@@ -140,7 +140,6 @@ export function Sheet({
     headerAccessory,
     showHandle = true,
     followKeyboard = false,
-    fitKeyboard = true,
     restoreFocusRef,
     restoreFocusVisible,
     interactionDisabled = false,
@@ -161,7 +160,6 @@ export function Sheet({
     headerAccessory?: ReactNode;
     showHandle?: boolean;
     followKeyboard?: boolean;
-    fitKeyboard?: boolean;
     restoreFocusRef?: RefObject<HTMLElement | null>;
     restoreFocusVisible?: boolean;
     interactionDisabled?: boolean;
@@ -179,7 +177,7 @@ export function Sheet({
     const settleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    useKeyboardFit(contentRef, open && fitKeyboard, followKeyboard);
+    useKeyboardFit(contentRef, open, followKeyboard);
 
     useEffect(
         () => () => {

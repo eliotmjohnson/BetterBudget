@@ -127,18 +127,35 @@ disable saving while the date falls outside the month.
 ### Keyboard fit
 
 Every sheet makes room for the on-screen keyboard without moving
-(`useKeyboardFit` in `src/components/ui/keyboard-fit/`, which every sheet uses),
-except one that passes `fitKeyboard={false}`. The allocation picker does,
-because its only text field is the search in its fixed header: fitted, its old
-footer **Done** bar rode up on the keyboard too high and sometimes did not
-settle back, so the keyboard now simply covers the bottom of the list, as an iOS
-search list does. Its **Done** (`.sheet-header-submit`) sits in the header
-action instead of a footer and carries the selected count as a blue number badge
+(`useKeyboardFit` in `src/components/ui/keyboard-fit/`, which every sheet uses).
+Their fields use still focus (`budget-and-inputs.md`), which holds the page
+still, so iOS no longer carries a sheet up by scrolling the page.
+
+The allocation picker fits it too, though its only text field is the search in
+its fixed header: left unfitted, its list ran on behind the keyboard and its
+last items could not be scrolled into view while searching. It once opted out
+because its old footer **Done** bar rode up on the keyboard too high and
+sometimes did not settle back. Its **Done** (`.sheet-header-submit`) now sits in
+the header action instead and carries the selected count as a blue number badge
 (hidden at zero; the button's label and a polite live region say the count, and
 when the 20-item maximum is reached), and above 760 px the sheet keeps the
 dialog's full `min(92dvh, 850px)` height so a search that shortens the list
-never shrinks it. Their fields use still focus (`budget-and-inputs.md`), which
-holds the page still, so iOS no longer carries a sheet up by scrolling the page.
+never shrinks it. Each change to the search scrolls the list back to its top
+(`scrollListToTop`), turning the body's `overflow-y` off for one frame so iOS
+drops a fling still running: typing mid-scroll otherwise drew the shorter
+filtered list at the old offset, past its end, while the momentum kept going.
+The picker opens with its first selected item's checkbox, or else the first
+item's, focused through React's `autoFocus`, and the first search change clears
+that target: filtering remounts rows, and a remounted row still marked
+`autoFocus` took focus from the search and closed the keyboard. A tap on a row
+toggles it through `focusKeepingTap` and the search's clear button uses
+`focusKeepingPress` (`still-focus/press.ts`), so with the search focused,
+checking items or clearing the search keeps the keyboard up, as an iOS search
+list does; otherwise the tapped checkbox took focus. Mouse, keyboard, and
+VoiceOver activation still go through the checkbox's own click. Its rows clear
+`-webkit-tap-highlight-color` and keep their hover fill behind
+`(hover: hover) and (pointer: fine)`, as Settings and Income rows do, because on
+a phone both flashed under a finger that was only scrolling the list.
 
 **The inset.** While a field inside the sheet has focus and the keyboard is up,
 the sheet's bottom padding (`--sheet-keyboard-inset`, part of `.sheet-content`'s

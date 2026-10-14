@@ -216,7 +216,9 @@ moved, renamed, or takes on a new responsibility.
   container that clears the keyboard, after any transition moving it has
   finished). `stand-in.ts` holds the shared stand-in state, and `press.ts`
   (`focusKeepingPress`) the press handlers for a button that acts without taking
-  focus from the field, used by the operator bar and the chat's send button.
+  focus from the field, used by the operator bar, the chat's send button, and
+  the allocation picker's search clear, plus `focusKeepingTap`, its touch half,
+  for a control that keeps its own click, such as the picker's checkbox rows.
   `src/components/ui/on-screen-keyboard.ts` is the keyboard-up test it shares
   with `keyboard-fit/`. `docs/agents/design/budget-and-inputs.md` holds the
   contract.

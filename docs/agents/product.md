@@ -86,9 +86,11 @@ The implemented product supports:
   the database keeps no entry order for them; only the instant optimistic row
   shows them in the order they were entered. The item picker for a split has a
   search field fixed under its title that narrows the list by item or category
-  name; checked items stay selected while hidden, and each category's remaining
-  total still covers all of its items. Done sits at the top right of the
-  picker's header with the selected count as a badge.
+  name, ignoring case, accents, punctuation, and spaces (`kids` finds "Kid's");
+  each change to it returns the list to its top, and checking items or clearing
+  it keeps the keyboard up; checked items stay selected while hidden, and each
+  category's remaining total still covers all of its items. Done sits at the top
+  right of the picker's header with the selected count as a badge.
 - Adding transactions globally or from a line-item detail with that item
   preselected (Add transaction opens with Amount focused and the number pad up),
   editing transactions, duplicating them into the same date and allocations,

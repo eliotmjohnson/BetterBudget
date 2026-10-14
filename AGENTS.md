@@ -276,6 +276,10 @@ trusting a local result.
   in-memory state back over the fresh seed. Stop every dev server first.
 - **`npm run build` rewrites `next-env.d.ts`** to its production form. Run
   `git checkout -- next-env.d.ts` afterward instead of committing the flip.
+- **A reloaded dev page can still run an old module.** After edits, even a full
+  reload of an open page has served a stale module, which crashed on a missing
+  export or hid a bug that was really there. Restart `next dev` before trusting
+  an on-device or simulator check of a change.
 
 ## Verification
 

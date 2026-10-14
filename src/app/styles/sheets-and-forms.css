@@ -602,9 +602,12 @@
     border-bottom: 1px solid var(--line);
     cursor: pointer;
     transition: background 160ms ease;
+    -webkit-tap-highlight-color: transparent;
 }
-.allocation-picker-item:hover {
-    background: #f8fbff;
+@media (hover: hover) and (pointer: fine) {
+    .allocation-picker-item:hover {
+        background: #f8fbff;
+    }
 }
 .allocation-picker-item[data-disabled='true'] {
     cursor: not-allowed;
