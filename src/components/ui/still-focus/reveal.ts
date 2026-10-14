@@ -43,22 +43,19 @@ function nextFieldOverlap(
 }
 
 /**
- * How far `field`'s top edge sits above the part of `scroller` it can be
- * seen in, plus the usual clearance: the scroller's own top edge, below a
- * sheet's title, moved down by its `scroll-padding-top`, which each scroller
- * sets to whatever covers its top, such as the page's pull band or a pushed
- * detail's header.
+ * How far `field`'s top edge sits below the top of the part of `scroller` it
+ * can be seen in, less the usual clearance, negative when it sits above it:
+ * the scroller's own top edge, below a sheet's title, moved down by its
+ * `scroll-padding-top`, which each scroller sets to whatever covers its top,
+ * such as the page's pull band or a pushed detail's header.
  */
-function topOverlap(field: HTMLElement, scroller: HTMLElement) {
+function topRoom(field: HTMLElement, scroller: HTMLElement) {
     const covered =
         Number.parseFloat(getComputedStyle(scroller).scrollPaddingTop) || 0;
 
-    return Math.max(
-        0,
-        scroller.getBoundingClientRect().top +
-            covered +
-            FIELD_CLEARANCE_PX -
-            field.getBoundingClientRect().top
+    return (
+        field.getBoundingClientRect().top -
+        (scroller.getBoundingClientRect().top + covered + FIELD_CLEARANCE_PX)
     );
 }
 
@@ -119,9 +116,11 @@ function movingAncestors(element: HTMLElement) {
  * scroller itself where that comes first, such as above a sheet's footer, and
  * that the next
  * field's center is not left under the bar, where the keyboard's next arrow
- * would skip it. A field partly hidden at the top instead, such as under a
- * sheet's title, is scrolled down just clear of the scroller's covered top
- * (`topOverlap`). It measures against the visual viewport, so a field iOS
+ * would skip it, but never so far that the field's own top leaves the
+ * scroller's covered top (`topRoom`): with little room above the keyboard,
+ * clearing the next field scrolled the focused one out of view. A field
+ * partly hidden at the top instead, such as under a sheet's title, is
+ * scrolled down just clear of that covered top. It measures against the visual viewport, so a field iOS
  * already revealed by panning the page is left where it is. Also checks once
  * on the next frame, for a field focused while the keyboard is already up.
  * While the scroller or an ancestor is still transitioning it waits for that
@@ -180,15 +179,18 @@ export function revealAboveKeyboard(
             : fieldOverlap;
 
         if (!isKeyboardUp(viewport)) return;
+        const room = topRoom(shown, scroller);
+
         if (overlap > 0) {
-            lendScrollRoom(scroller, overlap);
-            scroller.scrollBy({ top: overlap, behavior: 'smooth' });
+            const scroll = Math.min(overlap, Math.max(0, room));
+
+            if (scroll <= 0) return;
+            lendScrollRoom(scroller, scroll);
+            scroller.scrollBy({ top: scroll, behavior: 'smooth' });
 
             return;
         }
-        const hidden = topOverlap(shown, scroller);
-
-        if (hidden > 0) scroller.scrollBy({ top: -hidden, behavior: 'smooth' });
+        if (room < 0) scroller.scrollBy({ top: room, behavior: 'smooth' });
     };
     let frame = 0;
     const schedule = () => {

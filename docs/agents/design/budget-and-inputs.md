@@ -680,16 +680,20 @@ that the next field's center does not sit under the bar (it stops 16 px above
 it): the keyboard's next arrow skips any field whose center another element
 covers, and within a category the next row, 79 px down, otherwise lands right
 under the bar. A field behind the keyboard is still reachable, because the
-keyboard is not page content. The up arrow can still stop at the first item of a
-category, because iOS decides whether an arrow works when a field takes focus,
-before the smooth scroll moves the list, and the item above is then off-screen;
-snapping the list instead of gliding would fix it, and was declined. It also
-checks once on the next frame, for a field focused while the keyboard is already
-up. Rows near the end of the list could never scroll that far, so
-`lendScrollRoom` gives `.app-content` an inline bottom padding for the shortfall
-and grows it for later fields, easing it back out once the keyboard has closed
-(`easeRoomBack`, above). A touch that moves more than 10 px is a scroll or swipe
-and keeps the native behavior.
+keyboard is not page content. Neither scroll ever moves the focused field's own
+top above the scroller's covered top (`topRoom` in `reveal.ts`): in a phone's
+Safari tab, Add transaction's half sheet has so little room above the keyboard
+that clearing Merchant from under the bar scrolled the just-focused Amount out
+of view. The up arrow can still stop at the first item of a category, because
+iOS decides whether an arrow works when a field takes focus, before the smooth
+scroll moves the list, and the item above is then off-screen; snapping the list
+instead of gliding would fix it, and was declined. It also checks once on the
+next frame, for a field focused while the keyboard is already up. Rows near the
+end of the list could never scroll that far, so `lendScrollRoom` gives
+`.app-content` an inline bottom padding for the shortfall and grows it for later
+fields, easing it back out once the keyboard has closed (`easeRoomBack`, above).
+A touch that moves more than 10 px is a scroll or swipe and keeps the native
+behavior.
 
 The up and down arrows above the keyboard move focus natively, where no
 `preventScroll` can be passed. For those, the focus handler calls
