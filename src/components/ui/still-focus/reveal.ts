@@ -5,6 +5,7 @@ import {
     settledClientHeight
 } from '@/components/ui/keyboard-fit';
 import { isKeyboardUp } from '@/components/ui/on-screen-keyboard';
+import { isRunningFiniteAnimation } from '@/components/ui/running-animation';
 import { lendScrollRoom } from './scroll-room';
 import { shownField } from './stand-in';
 
@@ -64,8 +65,8 @@ function topOverlap(field: HTMLElement, scroller: HTMLElement) {
 /**
  * Where `scroller`'s visible part will end once a sheet around it has
  * finished fitting the keyboard, on the same footing as the field, which
- * rises with the sheet: a sheet's footer, such as the allocation picker's
- * **Done** button, stays above the keyboard and ends the body there, above the line
+ * rises with the sheet: a sheet's footer, such as Add transaction's submit
+ * button, stays above the keyboard and ends the body there, above the line
  * the keyboard and calculator bar draw.
  */
 function settledBottom(scroller: HTMLElement) {
@@ -77,11 +78,25 @@ function settledBottom(scroller: HTMLElement) {
 }
 
 /**
- * The transitions running on `element` or any ancestor, such as a pushed
- * detail sliding in, since a field measured while one runs would be scrolled
- * for where it was, not where it ends. A sheet's keyboard inset is left out:
- * where it ends is known (`pendingSheetRise`), so the reveal runs alongside
- * it, as it does alongside the keyboard, rather than after it.
+ * Whether `animation` moves an ancestor for a while and then stops: a
+ * transition, such as a pushed detail sliding in, other than a sheet's
+ * keyboard inset, or a running finite CSS animation
+ * (`isRunningFiniteAnimation`), such as a sheet's entrance when a field is
+ * focused as it opens.
+ */
+function isSettlingMotion(animation: Animation) {
+    if (animation instanceof CSSTransition)
+        return !isKeyboardFitMotion(animation);
+
+    return isRunningFiniteAnimation(animation);
+}
+
+/**
+ * The motions running on `element` or any ancestor (`isSettlingMotion`),
+ * since a field measured while one runs would be scrolled for where it was,
+ * not where it ends. A sheet's keyboard inset is left out: where it ends is
+ * known (`pendingSheetRise`), so the reveal runs alongside it, as it does
+ * alongside the keyboard, rather than after it.
  */
 function movingAncestors(element: HTMLElement) {
     const moving: Promise<unknown>[] = [];
@@ -92,11 +107,7 @@ function movingAncestors(element: HTMLElement) {
         node = node.parentElement
     )
         for (const animation of node.getAnimations())
-            if (
-                animation instanceof CSSTransition &&
-                !isKeyboardFitMotion(animation)
-            )
-                moving.push(animation.finished);
+            if (isSettlingMotion(animation)) moving.push(animation.finished);
 
     return moving;
 }

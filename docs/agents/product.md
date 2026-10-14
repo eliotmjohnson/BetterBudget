@@ -84,17 +84,22 @@ The implemented product supports:
   splits. Once saved, a split's parts, its item names, and its color (taken from
   the first part's category) follow budget order, category then item, because
   the database keeps no entry order for them; only the instant optimistic row
-  shows them in the order they were entered.
+  shows them in the order they were entered. The item picker for a split has a
+  search field fixed under its title that narrows the list by item or category
+  name; checked items stay selected while hidden, and each category's remaining
+  total still covers all of its items. Done sits at the top right of the
+  picker's header with the selected count as a badge.
 - Adding transactions globally or from a line-item detail with that item
-  preselected, editing transactions, duplicating them into the same date and
-  allocations, soft deleting, and undoing transaction deletion. A deleted
-  transaction can be restored later from **Recently deleted**: a trash tile
-  right-aligned in the Transactions type-pill row, under the filters button,
-  carrying a count badge while the viewed month has deleted expenses or refunds.
-  Tapping it switches the page's own list to the month's deleted transactions,
-  titled Recently deleted and grouped by date like the normal list, with search,
-  the type pills, and the filter sheet still applying; tapping it again returns
-  to the transactions. Each row has a checkbox; the heading's Add button becomes
+  preselected (Add transaction opens with Amount focused and the number pad up),
+  editing transactions, duplicating them into the same date and allocations,
+  soft deleting, and undoing transaction deletion. A deleted transaction can be
+  restored later from **Recently deleted**: a trash tile right-aligned in the
+  Transactions type-pill row, under the filters button, carrying a count badge
+  while the viewed month has deleted expenses or refunds. Tapping it switches
+  the page's own list to the month's deleted transactions, titled Recently
+  deleted and grouped by date like the normal list, with search, the type pills,
+  and the filter sheet still applying; tapping it again returns to the
+  transactions. Each row has a checkbox; the heading's Add button becomes
   **Restore**, which puts every checked transaction back in its budget items in
   one step, the trash tile's badge turns blue and counts the checked rows, and
   **Select all** checks every visible restorable row; once the heading scrolls

@@ -1,13 +1,35 @@
 'use client';
 
+import { Search, X } from 'lucide-react';
 import { useMemo, useState, type RefObject } from 'react';
 import { Sheet } from '@/components/ui/sheet';
+import { StillInput } from '@/components/ui/still-focus';
 import { formatCurrency, type Cents } from '@/domain/money';
 import type { BudgetCategoryView } from '@/domain/types';
 
 const maximumAllocations = 20;
 const money = (value: Cents | string) =>
     formatCurrency(value).replace('.00', '');
+
+/**
+ * The categories and items a picker search shows: a category whose name
+ * matches keeps all its items, otherwise only its matching items, and
+ * categories left without items are hidden.
+ */
+function matchingCategories(categories: BudgetCategoryView[], search: string) {
+    const query = search.trim().toLocaleLowerCase();
+
+    return categories.flatMap((category) => {
+        const items =
+            !query || category.name.toLocaleLowerCase().includes(query)
+                ? category.items
+                : category.items.filter((item) =>
+                      item.name.toLocaleLowerCase().includes(query)
+                  );
+
+        return items.length > 0 || !query ? [{ category, items }] : [];
+    });
+}
 
 export function TransactionAllocationPicker({
     categories,
@@ -40,6 +62,11 @@ export function TransactionAllocationPicker({
     const [selectedIds, setSelectedIds] = useState(
         () => new Set(initialSelectedIds)
     );
+    const [search, setSearch] = useState('');
+    const visibleCategories = useMemo(
+        () => matchingCategories(categories, search),
+        [categories, search]
+    );
     const selectedCount = selectedIds.size;
     const selectedAmounts = useMemo(
         () =>
@@ -61,26 +88,66 @@ export function TransactionAllocationPicker({
             variant='full-screen-mobile'
             layer='nested'
             showHandle={false}
+            fitKeyboard={false}
             restoreFocusRef={restoreFocusRef}
-            footer={
-                <div className='allocation-picker-footer-content'>
-                    <span aria-live='polite'>
-                        {selectedCount === maximumAllocations
-                            ? `${selectedCount} selected · Maximum reached`
-                            : `${selectedCount} selected`}
-                    </span>
-                    <button
-                        className='primary-button primary-button--wide'
-                        type='button'
-                        onClick={() => onApply(selectedIds)}
-                    >
-                        Done
-                    </button>
+            headerAccessory={
+                <div className='search-box'>
+                    <Search
+                        className='search-box-icon'
+                        size={18}
+                        aria-hidden='true'
+                    />
+                    <StillInput
+                        aria-label='Search budget items'
+                        placeholder='Search budget items'
+                        value={search}
+                        onChange={(event) => setSearch(event.target.value)}
+                    />
+                    {search ? (
+                        <button
+                            className='search-clear-button'
+                            type='button'
+                            aria-label='Clear budget item search'
+                            onClick={() => setSearch('')}
+                        >
+                            <X size={17} strokeWidth={2.2} />
+                        </button>
+                    ) : null}
                 </div>
             }
+            headerAction={
+                <button
+                    className='sheet-header-submit allocation-picker-done'
+                    type='button'
+                    aria-label={`Done, ${selectedCount} selected`}
+                    onClick={() => onApply(selectedIds)}
+                >
+                    Done
+                    {selectedCount > 0 ? (
+                        <span
+                            className='allocation-picker-count'
+                            aria-hidden='true'
+                        >
+                            {selectedCount}
+                        </span>
+                    ) : null}
+                    <span className='sr-only' aria-live='polite'>
+                        {selectedCount === maximumAllocations
+                            ? `${selectedCount} selected, maximum reached`
+                            : `${selectedCount} selected`}
+                    </span>
+                </button>
+            }
         >
+            {visibleCategories.length === 0 && search.trim() ? (
+                <div className='empty-state'>
+                    <Search size={28} />
+                    <h2>No matching budget items</h2>
+                    <p>Try a different search.</p>
+                </div>
+            ) : null}
             <div className='allocation-picker-list'>
-                {categories.map((category) => {
+                {visibleCategories.map(({ category, items }) => {
                     const categoryRemaining = movingToAnotherMonth
                         ? null
                         : category.items
@@ -122,7 +189,7 @@ export function TransactionAllocationPicker({
                                 </span>
                             </div>
                             <div className='allocation-picker-items'>
-                                {category.items.map((item, itemIndex) => {
+                                {items.map((item, itemIndex) => {
                                     const checked = selectedIds.has(item.id);
                                     const disabled =
                                         !checked &&

@@ -4,6 +4,7 @@ import * as Dialog from '@radix-ui/react-dialog';
 import { useContinuousCorners } from './continuous-corners';
 import { isCalculatorBarTarget } from './currency-input/operator-bar';
 import { useKeyboardFit } from './keyboard-fit';
+import { focusStill, isStillField } from './still-focus';
 import { isToastTarget } from './toast-provider';
 import {
     useEffect,
@@ -139,6 +140,7 @@ export function Sheet({
     headerAccessory,
     showHandle = true,
     followKeyboard = false,
+    fitKeyboard = true,
     restoreFocusRef,
     restoreFocusVisible,
     interactionDisabled = false,
@@ -159,6 +161,7 @@ export function Sheet({
     headerAccessory?: ReactNode;
     showHandle?: boolean;
     followKeyboard?: boolean;
+    fitKeyboard?: boolean;
     restoreFocusRef?: RefObject<HTMLElement | null>;
     restoreFocusVisible?: boolean;
     interactionDisabled?: boolean;
@@ -176,7 +179,7 @@ export function Sheet({
     const settleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    useKeyboardFit(contentRef, open, followKeyboard);
+    useKeyboardFit(contentRef, open && fitKeyboard, followKeyboard);
 
     useEffect(
         () => () => {
@@ -411,7 +414,13 @@ export function Sheet({
                             )?.matches(':focus-visible') ??
                             true;
                         event.preventDefault();
-                        contentRef.current?.focus();
+                        const field = contentRef.current?.querySelector(
+                            '[data-sheet-autofocus]'
+                        );
+
+                        if (field && isStillField(field))
+                            focusStill(field, true);
+                        else contentRef.current?.focus();
                     }}
                     onPointerDownOutside={(event) => {
                         if (

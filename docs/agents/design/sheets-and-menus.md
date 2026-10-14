@@ -79,7 +79,9 @@ below them, which is why the compact control keeps `overflow: visible`. Income
 turns the selector's thumb, track, and both submit buttons green (`--green`,
 `#1eb574`); the buttons carry the selected kind as `data-kind`. White text on
 that green is about 2.7:1, below the 4.5:1 AA bar for 14 px text, a trade-off
-the user chose for a brighter green.
+the user chose for a brighter green. Its segments use `focusKeepingPress`
+(`still-focus/press.ts`), so switching kind while typing an amount or merchant
+leaves that field focused and the keyboard up.
 
 Desktop sheets use the same timing as centered modals without drag dismissal.
 Below 760 px a sheet sizes to its content up to `min(92dvh, 850px)`; the
@@ -125,9 +127,18 @@ disable saving while the date falls outside the month.
 ### Keyboard fit
 
 Every sheet makes room for the on-screen keyboard without moving
-(`useKeyboardFit` in `src/components/ui/keyboard-fit/`, which every sheet uses).
-Their fields use still focus (`budget-and-inputs.md`), which holds the page
-still, so iOS no longer carries a sheet up by scrolling the page.
+(`useKeyboardFit` in `src/components/ui/keyboard-fit/`, which every sheet uses),
+except one that passes `fitKeyboard={false}`. The allocation picker does,
+because its only text field is the search in its fixed header: fitted, its old
+footer **Done** bar rode up on the keyboard too high and sometimes did not
+settle back, so the keyboard now simply covers the bottom of the list, as an iOS
+search list does. Its **Done** (`.sheet-header-submit`) sits in the header
+action instead of a footer and carries the selected count as a blue number badge
+(hidden at zero; the button's label and a polite live region say the count, and
+when the 20-item maximum is reached), and above 760 px the sheet keeps the
+dialog's full `min(92dvh, 850px)` height so a search that shortens the list
+never shrinks it. Their fields use still focus (`budget-and-inputs.md`), which
+holds the page still, so iOS no longer carries a sheet up by scrolling the page.
 
 **The inset.** While a field inside the sheet has focus and the keyboard is up,
 the sheet's bottom padding (`--sheet-keyboard-inset`, part of `.sheet-content`'s
@@ -142,7 +153,11 @@ and their `.sheet-body` and footer end at the keyboard's top edge instead.
 `.sheet-body` is the scroll container a focused field scrolls within to clear
 the keyboard and calculator bar. The cover is measured rather than taken as the
 keyboard's height, so if iOS has already moved the layout viewport to meet the
-keyboard, the inset shrinks to match.
+keyboard, the inset shrinks to match. It is measured from where the sheet rests,
+less its current `transform`: Add transaction focuses Amount as it opens, so the
+keyboard comes up while the entrance still has the sheet partway below the
+screen, and counting that stretch as covered collapsed the body to a blank white
+sheet and scrolled Amount out of view.
 
 **Following and holding.** The inset follows the keyboard while it comes up,
 because iOS can report the keyboard without its suggestions row and add the row
@@ -166,7 +181,11 @@ category) moves as a whole; it rises on the same curve from the frame after the
 keyboard over 440 ms, slightly behind the keyboard, as asked for on Add line
 item. A sheet that reaches its `max-height` partway eases in only the growth it
 has room for, over the same 440 ms, then takes the rest of the inset from its
-body, behind the keyboard, in 100 ms.
+body, behind the keyboard, in 100 ms. A sheet still running its entrance when
+the keyboard comes up, as Add transaction is when it focuses Amount on open,
+takes its whole inset at once (`snap`): its bottom is still below the screen or
+behind the keyboard, so the motion would not show, and easing `padding-bottom`
+relaid the sheet out on every frame of the entrance, which dropped frames.
 
 **Closing.** When the keyboard closes, the part of the inset that only shortens
 the body is dropped at once (`insetInHeight` in `pending.ts`) and only the part
@@ -252,7 +271,15 @@ labelled Close with Tailwind's `sr-only` and `tabIndex={-1}`, so VoiceOver,
 which can neither drag nor tap outside, can find and activate it, while Tab
 never lands on an invisible button. `.sheet-header` keeps a 44 px `min-height`,
 the height the close button used to give it, so titles did not move when it
-went. Sheets focus their content container on open. When a pointer-opened sheet
+went. Sheets focus their content container on open, unless a field inside is
+marked `data-sheet-autofocus`: then that field takes focus through `focusStill`
+instead, after `focusOpener` has recorded the opener. Add transaction marks its
+Amount field (Edit does not), so it opens with Amount focused and the number pad
+up. It works only because Radix's open focus runs in a passive effect that React
+flushes synchronously for the discrete tap that opened the sheet, so the focus
+still happens inside that tap, the only time iOS raises the keyboard for a
+programmatic `focus()`; an opener that defers setting `open` (a timer, a frame,
+an await) gets a focused field with no keyboard. When a pointer-opened sheet
 closes, restore focus without a visible ring; keyboard-opened sheets must
 preserve visible keyboard focus on restoration. Focus returns to
 `restoreFocusRef` when the caller passes one, and otherwise to whatever had

@@ -11,6 +11,7 @@ import { followKeyboard, holdHeight } from './follow';
 import { FITTED, INSET, insetInHeight, sheetGrowth } from './pending';
 import { settleBodyScroll, sheetBody } from './scroll-settle';
 import { clearShield, moveShield, shieldRaised } from './shield';
+import { isRunningFiniteAnimation } from '@/components/ui/running-animation';
 
 const MOBILE_QUERY = '(width < 760px)';
 const SETTLE_MARGIN_MS = 40;
@@ -52,6 +53,14 @@ const SWITCH_HOLD_MS = 600;
  */
 function insetMotion(kind: KeyboardMotion) {
     return keyboardTransition(['padding-bottom'], kind);
+}
+
+/**
+ * Whether `sheet` is still running its entrance, as it is when a field is
+ * focused as the sheet opens.
+ */
+function entering(sheet: HTMLElement) {
+    return sheet.getAnimations().some(isRunningFiniteAnimation);
 }
 
 function clearFit(sheet: HTMLElement) {
@@ -130,7 +139,7 @@ export function useKeyboardFit(
 
             window.clearTimeout(settleTimer);
             fitted = sheet;
-            if (follow && kind !== 'grow')
+            if (follow && kind !== 'grow' && kind !== 'snap')
                 settle = followKeyboard(sheet, inset, kind);
             else {
                 const motion = insetMotion(kind);
@@ -158,7 +167,8 @@ export function useKeyboardFit(
             if (follow) holdHeight(sheet);
             sheet.toggleAttribute(FITTED, true);
             moveShield(sheet, inset, 'raise');
-            if (follow || growth < 1) apply(sheet, inset, 'raise');
+            if (!follow && entering(sheet)) apply(sheet, inset, 'snap');
+            else if (follow || growth < 1) apply(sheet, inset, 'raise');
             else if (padding + growth >= inset - 1) apply(sheet, inset, 'grow');
             else {
                 staged = true;

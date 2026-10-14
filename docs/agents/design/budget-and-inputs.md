@@ -376,9 +376,16 @@ never comes. The sign-in form is left native too. Sheet bodies are
 `data-still-scroller` containers, and sheets pad their bottom by the keyboard's
 cover so their bodies end above it (`sheets-and-menus.md`, Keyboard fit).
 
-`reveal.ts` waits for any CSS transition running on the scroll container or an
-ancestor before it measures, such as a pushed detail sliding in, because a field
-measured mid-transition would be scrolled for where it was rather than where it
+`reveal.ts` waits for any CSS transition, or finite CSS animation, running on
+the scroll container or an ancestor before it measures, such as a pushed detail
+sliding in or a sheet's entrance when a field is focused as the sheet opens (Add
+transaction's Amount), because a field measured mid-motion would be scrolled for
+where it was rather than where it ends. Only an animation still playing on the
+document timeline counts (`isRunningFiniteAnimation` in
+`src/components/ui/running-animation.ts`, which `keyboard-fit` also uses to tell
+a sheet is entering): `.app-content--enter > *` keeps its finished `page-enter`
+applied with a `both` fill, so counting finished, endless, or scroll-driven
+animations would leave the reveal waiting on, or looping over, motion that never
 ends. Only one wait is pending at a time. A sheet's keyboard inset is the
 exception (`isKeyboardFitMotion`), since waiting for it holds the reveal back
 until the keyboard has finished opening: the reveal asks `pendingSheetRise` in
@@ -388,11 +395,11 @@ sheet's header, footer, full body content, and target inset up to its
 scrolls alongside the keyboard as the Budget page does. The line a field clears
 is the keyboard's (or the calculator bar's) top or the end of the scroll
 container, whichever comes first once the sheet has fitted
-(`settledClientHeight`), because a sheet's footer, such as the allocation
-picker's **Done**, stays above the keyboard and ends the body there. A body
-whose content exactly fills a `full-screen-mobile` sheet (`inSetHeightSheet`) is
-not treated as sizing to its content, so its loan is plain scroll room applied
-at once: easing it in left the smooth scroll clamped to no room when it started.
+(`settledClientHeight`), because a sheet's footer, such as Add transaction's
+submit button, stays above the keyboard and ends the body there. A body whose
+content exactly fills a `full-screen-mobile` sheet (`inSetHeightSheet`) is not
+treated as sizing to its content, so its loan is plain scroll room applied at
+once: easing it in left the smooth scroll clamped to no room when it started.
 The reveal also measures on the animation frame after each viewport resize
 rather than in the event: iOS reports the keyboard's full size the moment a
 field takes focus, and a sheet makes room only in that next frame (the keyboard

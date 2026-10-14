@@ -1,6 +1,10 @@
 'use client';
 
-import { StillInput, StillTextarea } from '@/components/ui/still-focus';
+import {
+    focusKeepingPress,
+    StillInput,
+    StillTextarea
+} from '@/components/ui/still-focus';
 import { CalendarDays, Minus, Plus } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
 import { CurrencyInput } from '@/components/ui/currency-input';
@@ -254,7 +258,7 @@ export function TransactionSheet({
                         type='button'
                         aria-pressed={kind === 'expense'}
                         className={`segment ${kind === 'expense' ? 'active' : ''}`}
-                        onClick={() => setKind('expense')}
+                        {...focusKeepingPress(() => setKind('expense'))}
                     >
                         Expense
                     </button>
@@ -262,7 +266,7 @@ export function TransactionSheet({
                         type='button'
                         aria-pressed={kind === 'refund'}
                         className={`segment ${kind === 'refund' ? 'active' : ''}`}
-                        onClick={() => setKind('refund')}
+                        {...focusKeepingPress(() => setKind('refund'))}
                     >
                         Income
                     </button>
@@ -276,6 +280,7 @@ export function TransactionSheet({
                     </label>
                     <CurrencyInput
                         id='transaction-amount'
+                        data-sheet-autofocus={transaction ? undefined : ''}
                         value={amount}
                         onValueChange={(valueCents) => {
                             setAmount(valueCents);
