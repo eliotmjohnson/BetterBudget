@@ -171,9 +171,15 @@ moved, renamed, or takes on a new responsibility.
   switch.
 - `src/components/shared/use-push-notifications.ts` — this device's push state
   (unsupported, install to Home Screen, denied, off, on), subscribe,
-  unsubscribe, and test send. With `sync` it re-sends an existing subscription
-  and drops one signed by a replaced key pair. It requests notification
-  permission before any other await, because iOS only grants it inside the tap.
+  unsubscribe, and test send. Every caller shares one module-level store whose
+  last on/off answer is kept in the per-device `better-budget-push-v1`
+  `localStorage` entry, so the controls render settled instead of checking on
+  every visit. Once per app launch it checks the subscription in the background,
+  re-sends it, and drops one signed by a replaced key pair; a failed network
+  check keeps it on. Each return to the foreground re-reads the permission and
+  subscription on the device, so a change made in the system settings shows
+  without a relaunch. It requests notification permission before any other
+  await, because iOS only grants it inside the tap.
   `src/components/settings/settings-notifications-section.tsx` is the Settings
   section, and `public/sw.js` the push-only service worker.
   `src/components/shell/use-notification-target.ts` is the app-shell hook that

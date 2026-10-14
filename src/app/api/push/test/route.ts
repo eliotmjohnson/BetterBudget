@@ -36,7 +36,7 @@ export async function POST(request: Request) {
         );
     const outcome = await sendPush(target, {
         title: 'Notifications are on',
-        body: 'Bill reminders will arrive here at 9 AM.',
+        body: 'Bill reminders will arrive on this device.',
         url: '/settings',
         tag: 'better-budget-test'
     });

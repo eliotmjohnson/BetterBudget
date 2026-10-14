@@ -1,11 +1,12 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useSyncExternalStore } from 'react';
 
 export type PushState =
     'loading' | 'unsupported' | 'install' | 'denied' | 'off' | 'on';
 
 const SERVICE_WORKER_URL = '/sw.js';
+const STORAGE_KEY = 'better-budget-push-v1';
 
 function isAppleMobile(): boolean {
     return (
@@ -68,53 +69,135 @@ async function currentSubscription(): Promise<PushSubscription | null> {
     return (await registration?.pushManager.getSubscription()) ?? null;
 }
 
-async function readPushState(sync: boolean): Promise<PushState> {
+function deviceState(): PushState | null {
     if (!pushSupported())
         return isAppleMobile() && !isStandalone() ? 'install' : 'unsupported';
     if (Notification.permission === 'denied') return 'denied';
+
+    return null;
+}
+
+function rememberedState(): PushState {
+    try {
+        const value = localStorage.getItem(STORAGE_KEY);
+
+        return value === 'on' || value === 'off' ? value : 'loading';
+    } catch {
+        return 'loading';
+    }
+}
+
+async function checkSubscription(): Promise<PushState> {
+    const device = deviceState();
+
+    if (device) return device;
     const subscription = await currentSubscription();
 
     if (!subscription) return 'off';
-    if (!sync) return 'on';
-    const publicKey = await fetchPublicKey();
+    try {
+        const publicKey = await fetchPublicKey();
 
-    if (!sameKey(subscription.options.applicationServerKey, publicKey)) {
-        await subscription.unsubscribe();
+        if (!sameKey(subscription.options.applicationServerKey, publicKey)) {
+            await subscription.unsubscribe();
 
-        return 'off';
+            return 'off';
+        }
+        await postJson(
+            '/api/push/subscriptions',
+            'POST',
+            subscription.toJSON()
+        );
+    } catch {
+        return 'on';
     }
-    await postJson('/api/push/subscriptions', 'POST', subscription.toJSON());
 
     return 'on';
 }
 
+const listeners = new Set<() => void>();
+let current: PushState | null = null;
+let changes = 0;
+let checked = false;
+
+function remember(next: PushState): void {
+    if (next !== 'on' && next !== 'off') return;
+    try {
+        localStorage.setItem(STORAGE_KEY, next);
+    } catch {
+        return;
+    }
+}
+
+function publish(next: PushState): void {
+    current = next;
+    remember(next);
+    listeners.forEach((listener) => listener());
+}
+
+function change(next: PushState): void {
+    changes += 1;
+    publish(next);
+}
+
+function subscribe(listener: () => void): () => void {
+    listeners.add(listener);
+
+    return () => listeners.delete(listener);
+}
+
+function snapshot(): PushState {
+    current ??= deviceState() ?? rememberedState();
+
+    return current;
+}
+
+function settle(check: Promise<PushState>): void {
+    const startedAt = changes;
+
+    void check.then(
+        (next) => {
+            if (changes === startedAt) publish(next);
+        },
+        () => {
+            if (changes === startedAt && current === 'loading') publish('off');
+        }
+    );
+}
+
+async function localState(): Promise<PushState> {
+    return deviceState() ?? ((await currentSubscription()) ? 'on' : 'off');
+}
+
+function checkOnce(): void {
+    if (checked) return;
+    checked = true;
+    settle(checkSubscription());
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') settle(localState());
+    });
+}
+
 /**
- * This device's bill-reminder subscription. With `sync`, an existing
- * subscription is re-sent to the server, and one signed by a replaced key
- * pair is dropped so the switch shows it is off.
+ * This device's bill-reminder subscription. The last known state is kept per
+ * device so the controls render settled; once per app launch the
+ * subscription is checked in the background, re-sent to the server, and
+ * dropped when it was signed by a replaced key pair, and each return to the
+ * foreground re-reads the permission and subscription on the device.
  */
-export function usePushNotifications({ sync = false } = {}) {
-    const [state, setState] = useState<PushState>('loading');
+export function usePushNotifications() {
+    const state = useSyncExternalStore(
+        subscribe,
+        snapshot,
+        () => 'loading' as const
+    );
 
-    useEffect(() => {
-        let cancelled = false;
-
-        readPushState(sync)
-            .catch(() => 'off' as const)
-            .then((next) => {
-                if (!cancelled) setState(next);
-            });
-
-        return () => {
-            cancelled = true;
-        };
-    }, [sync]);
+    useEffect(checkOnce, []);
 
     const enable = useCallback(async (): Promise<boolean> => {
         const permission = await Notification.requestPermission();
 
         if (permission !== 'granted') {
-            setState(permission === 'denied' ? 'denied' : 'off');
+            change(permission === 'denied' ? 'denied' : 'off');
 
             return false;
         }
@@ -136,11 +219,11 @@ export function usePushNotifications({ sync = false } = {}) {
 
         if (!saved.ok) {
             await subscription.unsubscribe();
-            setState('off');
+            change('off');
 
             return false;
         }
-        setState('on');
+        change('on');
 
         return true;
     }, []);
@@ -153,7 +236,7 @@ export function usePushNotifications({ sync = false } = {}) {
             });
             await subscription.unsubscribe();
         }
-        setState('off');
+        change('off');
     }, []);
     const sendTest = useCallback(async (): Promise<boolean> => {
         const subscription = await currentSubscription();

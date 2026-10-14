@@ -9,7 +9,7 @@ import {
 import { AppSwitch } from '@/components/ui/app-switch';
 
 const STATE_DETAIL: Record<PushState, string> = {
-    loading: 'Checking this device…',
+    loading: 'Get bill alerts on this device',
     unsupported: 'This browser can’t show notifications',
     install: 'Add Better Budget to your Home Screen to turn these on',
     denied: 'Blocked. Allow notifications for Better Budget in Settings',
@@ -22,9 +22,7 @@ export function SettingsNotificationsSection({
 }: {
     onMessage: (message: string) => void;
 }) {
-    const { state, enable, disable, sendTest } = usePushNotifications({
-        sync: true
-    });
+    const { state, enable, disable, sendTest } = usePushNotifications();
     const [busy, setBusy] = useState(false);
     const switchable = state === 'off' || state === 'on';
     const run = async (action: () => Promise<void>) => {
