@@ -114,16 +114,20 @@ export async function runBillReminders({
         return { today, hour, skipped: 'before_send_hour', reminders: [] };
     const db = await getDatabase();
 
-    await db
-        .delete(billReminderDeliveries)
-        .where(
-            lt(
-                billReminderDeliveries.month,
-                monthDate(
-                    shiftMonth(today.slice(0, 7), -DELIVERY_RETENTION_MONTHS)
+    if (!dryRun)
+        await db
+            .delete(billReminderDeliveries)
+            .where(
+                lt(
+                    billReminderDeliveries.month,
+                    monthDate(
+                        shiftMonth(
+                            today.slice(0, 7),
+                            -DELIVERY_RETENTION_MONTHS
+                        )
+                    )
                 )
-            )
-        );
+            );
     const candidates = await loadBillReminderCandidates(db, today);
     const householdIds = [...new Set(candidates.map((c) => c.householdId))];
     const subscriptions =

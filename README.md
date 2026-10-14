@@ -1084,8 +1084,8 @@ notification is clicked, without dispatching the click to the page, notably
 for notifications grouped in Notification Center; that is outside the app.
 
 In development, `POST /api/push/run` with `{ "now": "2026-10-22T15:00:00Z", "dryRun": true }`
-reports which reminders would go out at that moment without sending; omit
-`dryRun` to send and record them. The route answers 404 in production. If a
+reports which reminders would go out at that moment without sending or
+changing anything; omit `dryRun` to send and record them. The route answers 404 in production. If a
 notification is sent but never appears on a Mac, check System Settings →
 Notifications → Google Chrome and any active Focus mode.
 
