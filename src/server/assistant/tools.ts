@@ -163,7 +163,7 @@ export const ASSISTANT_TOOLS: Anthropic.Tool[] = [
     ),
     tool(
         'delete_transaction',
-        "Delete one expense or income transaction. You cannot restore it yourself, but the person can, from Recently deleted at the bottom of that month's Transactions page; after deleting, tell them so in one short clause.",
+        "Delete one expense or income transaction. You cannot restore it yourself, but the person can, from Recently deleted, the trash button on that month's Transactions page; after deleting, tell them so in one short clause.",
         { month, ref },
         ['ref']
     ),

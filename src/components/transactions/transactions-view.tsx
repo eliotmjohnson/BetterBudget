@@ -1,24 +1,31 @@
 'use client';
 
-import { Plus, Search, SlidersHorizontal, X } from 'lucide-react';
+import { Plus, Search, SlidersHorizontal, Trash2, X } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
 import { Sheet } from '@/components/ui/sheet';
 import { StillInput } from '@/components/ui/still-focus';
 import { useScrolledPast } from '@/components/ui/use-scrolled-past';
-import { formatCurrency, parseAmountSearch } from '@/domain/money';
+import { formatCurrency } from '@/domain/money';
 import type { ActivityEntry, MonthSnapshot } from '@/domain/types';
 import type { Mutate } from '@/components/shared/budget-view-helpers';
 import { FloatingAddButton } from '@/components/shared/floating-add-button';
 import { useTransactionHoldMenu } from '@/components/shared/transaction-hold-menu';
 import { TransactionRow } from '@/components/shared/transaction-row';
-import { RecentlyDeleted } from './recently-deleted';
+import {
+    DeletedTransactionRow,
+    DeletedTransactionsToggle,
+    useDeletedTransactionRestore
+} from './recently-deleted';
+import {
+    filterTransactions,
+    type SplitFilter,
+    type TransactionEntry,
+    type TypeFilter
+} from './transaction-filters';
 import { TransactionSheet } from './transaction-sheet';
 
-type Filter = 'all' | 'expense' | 'refund';
-type SplitFilter = 'all' | 'split' | 'single';
-type TransactionActivityEntry = ActivityEntry & {
-    type: Exclude<ActivityEntry['type'], 'income'>;
-};
+type Filter = TypeFilter;
+type TransactionActivityEntry = TransactionEntry;
 
 const filterTabs: Array<{ value: Filter; label: string }> = [
     { value: 'all', label: 'All' },
@@ -112,6 +119,12 @@ export function TransactionsView({
     const [draftSplitFilter, setDraftSplitFilter] =
         useState<SplitFilter>('all');
     const [filtersOpen, setFiltersOpen] = useState(false);
+    const [showingDeleted, setShowingDeleted] = useState(false);
+    const deletedRestore = useDeletedTransactionRestore({
+        snapshot,
+        mutate,
+        onEmptied: () => setShowingDeleted(false)
+    });
     const [adding, setAdding] = useState(false);
     const addButtonRef = useRef<HTMLButtonElement>(null);
     const addButtonPassed = useScrolledPast(addButtonRef);
@@ -150,54 +163,36 @@ export function TransactionsView({
         Number(filter !== 'all') +
         Number(effectiveItemFilter !== 'all') +
         Number(splitFilter !== 'all');
-    const filtered = useMemo(() => {
-        const query = search.trim().toLocaleLowerCase();
-        const amountRange = parseAmountSearch(query);
-        const inAmountRange = (value: string) => {
-            const amount = BigInt(value);
-
-            return (
-                amountRange !== null &&
-                amount >= amountRange.minCents &&
-                amount <= amountRange.maxCents
-            );
-        };
-
-        return snapshot.activity.filter(
-            (entry): entry is TransactionActivityEntry => {
-                if (entry.type === 'income') return false;
-                const matchesFilter = filter === 'all' || entry.type === filter;
-                const matchesItem =
-                    effectiveItemFilter === 'all' ||
-                    (entry.allocations?.some(
-                        (allocation) =>
-                            allocation.monthlyItemId === effectiveItemFilter
-                    ) ??
-                        false);
-                const matchesSplit =
-                    splitFilter === 'all' ||
-                    (splitFilter === 'split' ? entry.split : !entry.split);
-
-                return (
-                    matchesFilter &&
-                    matchesItem &&
-                    matchesSplit &&
-                    (!query ||
-                        `${entry.title} ${entry.subtitle} ${entry.note ?? ''}`
-                            .toLocaleLowerCase()
-                            .includes(query) ||
-                        inAmountRange(entry.amountCents) ||
-                        (entry.allocations?.some((allocation) =>
-                            inAmountRange(allocation.amountCents)
-                        ) ??
-                            false))
-                );
-            }
-        );
-    }, [effectiveItemFilter, filter, search, snapshot.activity, splitFilter]);
+    const criteria = useMemo(
+        () => ({
+            search,
+            type: filter,
+            itemId: effectiveItemFilter,
+            split: splitFilter
+        }),
+        [effectiveItemFilter, filter, search, splitFilter]
+    );
+    const filtered = useMemo(
+        () => filterTransactions(snapshot.activity, criteria),
+        [criteria, snapshot.activity]
+    );
+    const filteredDeleted = useMemo(
+        () =>
+            filterTransactions(
+                snapshot.deletedTransactions.toSorted((a, b) =>
+                    b.occurredOn.localeCompare(a.occurredOn)
+                ),
+                criteria
+            ),
+        [criteria, snapshot.deletedTransactions]
+    );
     const groups = useMemo(
         () => Map.groupBy(filtered, (entry) => entry.occurredOn),
         [filtered]
+    );
+    const deletedGroups = useMemo(
+        () => Map.groupBy(filteredDeleted, (entry) => entry.occurredOn),
+        [filteredDeleted]
     );
     const clearFilters = () => {
         setFilter('all');
@@ -216,7 +211,9 @@ export function TransactionsView({
             <div className='screen-heading-row'>
                 <div>
                     <p className='eyebrow'>{snapshot.label}</p>
-                    <h1 className='screen-heading'>Transactions</h1>
+                    <h1 className='screen-heading'>
+                        {showingDeleted ? 'Recently deleted' : 'Transactions'}
+                    </h1>
                 </div>
                 <button
                     ref={addButtonRef}
@@ -295,8 +292,52 @@ export function TransactionsView({
                         Clear
                     </button>
                 ) : null}
+                <DeletedTransactionsToggle
+                    count={snapshot.deletedTransactions.length}
+                    active={showingDeleted}
+                    onToggle={() => setShowingDeleted((showing) => !showing)}
+                />
             </div>
-            {filtered.length === 0 ? (
+            {showingDeleted ? (
+                <p className='deleted-transactions-caption'>
+                    Deleted from {snapshot.label}. Restore puts a transaction
+                    back where it was.
+                </p>
+            ) : null}
+            {showingDeleted ? (
+                filteredDeleted.length === 0 ? (
+                    <div className='empty-state'>
+                        <Trash2 size={28} />
+                        <h2>
+                            {snapshot.deletedTransactions.length === 0
+                                ? 'Nothing deleted'
+                                : 'No matching deleted transactions'}
+                        </h2>
+                        <p>
+                            {snapshot.deletedTransactions.length === 0
+                                ? `Transactions you delete from ${snapshot.label} show up here.`
+                                : 'Try a different search or filter.'}
+                        </p>
+                    </div>
+                ) : (
+                    [...deletedGroups.entries()].map(([date, entries]) => (
+                        <section key={date}>
+                            <h2 className='activity-date'>{dayLabel(date)}</h2>
+                            <div className='activity-list'>
+                                {entries.map((entry) => (
+                                    <DeletedTransactionRow
+                                        key={entry.id}
+                                        entry={entry}
+                                        onRestore={() =>
+                                            deletedRestore.restore(entry)
+                                        }
+                                    />
+                                ))}
+                            </div>
+                        </section>
+                    ))
+                )
+            ) : filtered.length === 0 ? (
                 <div className='empty-state'>
                     <Search size={28} />
                     <h2>No matching transactions</h2>
@@ -320,7 +361,7 @@ export function TransactionsView({
                     </section>
                 ))
             )}
-            <RecentlyDeleted snapshot={snapshot} mutate={mutate} />
+            {deletedRestore.destinationSheet}
             {holdMenu.menu}
             <FloatingAddButton
                 visible={addButtonPassed}

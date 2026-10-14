@@ -168,28 +168,34 @@ clear control that empties the query without returning focus to the input.
 
 ## Recently deleted
 
-Recently deleted sits after the last Transactions group, or after the empty
-state, as a bordered row with a trash icon, a count pill, and a chevron, the iOS
-Photos and Notes convention for recovering deletions, so it needs no explaining.
-It is absent while the month has nothing deleted, and it ignores search and
-filters, because a deleted transaction is never in the filtered list. Its sheet
-lists entries newest deletion first, since the one the person is looking for is
-usually the one they just deleted. Each row reuses the activity row's icon,
-title, and amount, with the item names and the transaction's own date as the
-subtitle, and a Restore button in place of the chevron; the row itself is not a
-button, so a stray tap restores nothing. Restore is optimistic, shows a toast
-naming the transaction, and closes the sheet when it restores the last entry,
-leaving the person on the list with the transaction back in place.
+Recently deleted is a trash tile the size and style of the filters button,
+pushed to the right end of the type-pill row so it sits directly under the
+filters button. It is always present, so its place is learned before it is
+needed, and shows a muted gray count badge (blue means applied filters) while
+the month has deleted transactions. Tapping it toggles the page's own list into
+a deleted view rather than opening a sheet, so deleted transactions read exactly
+like the rest: the heading becomes Recently deleted, the tile takes the applied
+blue treatment with `aria-pressed`, a caption names the month, and entries group
+under the same date headings, newest date first. Search, the type pills, and the
+filter sheet keep applying, and an empty view says whether nothing was deleted
+or nothing matches. Each row reuses the activity row's icon, title, item names,
+Split tag, and amount, with a Restore button in place of the chevron; the row
+itself is not a button, so a stray tap restores nothing. Restore is optimistic,
+shows a toast naming the transaction, and returns to the normal list when it
+restores the last entry.
+
+On phones the tile made the pill row 12 px too wide at 390 px once Clear
+appears, clipping the Income pill, so below 760 px that row's gaps are 6 px, its
+pills' side padding 11 px, and Clear's 8 px, which fits a 375 px screen.
 
 When a transaction's item was deleted for its month, the subtitle reads "Item
-deleted" with the date, and the button still reads Restore, because a wider
-"Restore to…" label truncated the date on a 390 px phone. It opens a nested
-**Restore to** sheet: a sentence naming how much moves (for a split, only the
-orphaned part, and it says the rest stays), then the month's budget items
-grouped by category in the allocation picker's styling, each with its available
-amount and a chevron. One tap restores there and closes both sheets once nothing
-is left, so the choice needs no separate confirm; a wrong pick is fixed by
-editing the transaction.
+deleted", and the button still reads Restore, because a wider "Restore to…"
+label crowded the row on a 390 px phone. It opens a **Restore to** sheet: a
+sentence naming how much moves (for a split, only the orphaned part, and it says
+the rest stays), then the month's budget items grouped by category in the
+allocation picker's styling, each with its available amount and a chevron. One
+tap restores there and closes the sheet, so the choice needs no separate
+confirm; a wrong pick is fixed by editing the transaction.
 
 ## Money inputs
 

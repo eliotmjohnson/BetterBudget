@@ -115,8 +115,10 @@ moved, renamed, or takes on a new responsibility.
 - `src/components/transactions/transactions-view.tsx` — activity scoping,
   search, inline filters, filter-sheet drafts, applied-filter clearing;
   `transaction-sheet.tsx` and `transaction-allocation-picker.tsx` are the
-  add/edit flow. `recently-deleted.tsx` is the Recently deleted row and its
-  restore sheet.
+  add/edit flow. `transaction-filters.ts` holds the search and filter matching
+  that both the transaction list and the deleted view use;
+  `recently-deleted.tsx` is the Recently deleted tile, deleted rows, restore
+  hook, and Restore to sheet.
 - `src/components/shared/detail-history.ts` — the shared URL-plus-history-state
   contract behind every pushed detail view; Budget and Income both build one
   with `createDetailHistory`. `delete-definition-sheet.tsx` is the Budget-page

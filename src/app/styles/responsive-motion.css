@@ -161,6 +161,16 @@
     body[data-navigation-detail-settling] .app-frame {
         transition: transform 0.5s var(--navigation-detail-push-curve);
     }
+    .transaction-filter-summary-row,
+    .transaction-filter-quick-tabs {
+        gap: 6px;
+    }
+    .transaction-filter-quick-tabs .filter-tab {
+        padding: 0 11px;
+    }
+    .transaction-filter-clear {
+        padding: 0 8px;
+    }
 }
 
 @media (min-width: 760px) {

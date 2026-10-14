@@ -32,14 +32,14 @@ const orphanedCents = (entry: DeletedTransactionEntry) =>
         0n
     );
 
-function DeletedTransactionRow({
+export function DeletedTransactionRow({
     entry,
     onRestore
 }: {
     entry: DeletedTransactionEntry;
     onRestore: () => void;
 }) {
-    const detail = `${entry.needsDestination ? 'Item deleted' : entry.subtitle} · ${shortDay(entry.occurredOn)}`;
+    const detail = entry.needsDestination ? 'Item deleted' : entry.subtitle;
 
     return (
         <div
@@ -50,6 +50,7 @@ function DeletedTransactionRow({
             <span className='activity-copy'>
                 <strong>{entry.title}</strong>
                 <span title={detail}>{detail}</span>
+                {entry.split ? <span className='split-tag'>Split</span> : null}
             </span>
             <span className={`activity-amount ${entry.type}`}>
                 {signedAmount(entry)}
@@ -92,9 +93,8 @@ function RestoreDestinationSheet({
             onOpenChange={onOpenChange}
             onExitComplete={onExitComplete}
             title='Restore to'
-            layer='nested'
         >
-            <div className='recently-deleted-sheet'>
+            <div className='restore-destination-sheet'>
                 <p className='confirmation-copy'>
                     {partial
                         ? `${orphaned} of ${entry.title} was in a budget item that has been deleted. Choose where that part goes; the rest stays where it was.`
@@ -148,7 +148,7 @@ function RestoreDestinationSheet({
                             ))}
                     </div>
                 ) : (
-                    <p className='recently-deleted-empty'>
+                    <p className='restore-destination-empty'>
                         {snapshotEmptyCopy}
                     </p>
                 )}
@@ -157,21 +157,59 @@ function RestoreDestinationSheet({
     );
 }
 
-export function RecentlyDeleted({
+export function DeletedTransactionsToggle({
+    count,
+    active,
+    onToggle
+}: {
+    count: number;
+    active: boolean;
+    onToggle: () => void;
+}) {
+    return (
+        <span className='transaction-filter-control deleted-transactions-control'>
+            <button
+                className='icon-button bordered-icon'
+                type='button'
+                data-filtered={active ? 'true' : 'false'}
+                aria-pressed={active}
+                aria-label={`Recently deleted, ${count} ${count === 1 ? 'transaction' : 'transactions'}`}
+                onClick={onToggle}
+            >
+                <Trash2 size={19} />
+            </button>
+            {count > 0 && !active ? (
+                <span
+                    className='transaction-filter-count'
+                    data-tone='muted'
+                    aria-hidden='true'
+                >
+                    {count}
+                </span>
+            ) : null}
+        </span>
+    );
+}
+
+/**
+ * Restores deleted transactions, opening Restore to for one whose item was
+ * deleted, and calls `onEmptied` when the last one is restored.
+ */
+export function useDeletedTransactionRestore({
     snapshot,
-    mutate
+    mutate,
+    onEmptied
 }: {
     snapshot: MonthSnapshot;
     mutate: Mutate;
+    onEmptied: () => void;
 }) {
-    const [open, setOpen] = useState(false);
     const [choosing, setChoosing] = useState<DeletedTransactionEntry | null>(
         null
     );
     const [choosingOpen, setChoosingOpen] = useState(false);
     const showToast = useToast();
-    const deleted = snapshot.deletedTransactions;
-    const restore = (
+    const commit = (
         entry: DeletedTransactionEntry,
         destination?: { id: string; name: string }
     ) => {
@@ -186,82 +224,38 @@ export function RecentlyDeleted({
 
         if (!sent) return;
         setChoosingOpen(false);
-        if (deleted.length === 1) setOpen(false);
+        if (snapshot.deletedTransactions.length === 1) onEmptied();
         showToast({
             message: destination
                 ? `${entry.title} restored to ${destination.name}.`
                 : `${entry.title} restored.`
         });
     };
+    const restore = (entry: DeletedTransactionEntry) => {
+        if (!entry.needsDestination) return commit(entry);
+        setChoosing(entry);
+        setChoosingOpen(true);
+    };
     const itemName = (monthlyItemId: string) =>
         snapshot.categories
             .flatMap((category) => category.items)
             .find((item) => item.id === monthlyItemId)?.name ?? 'budget item';
+    const destinationSheet = choosing ? (
+        <RestoreDestinationSheet
+            key={choosing.id}
+            entry={choosing}
+            categories={snapshot.categories}
+            open={choosingOpen}
+            onOpenChange={setChoosingOpen}
+            onExitComplete={() => setChoosing(null)}
+            onChoose={(monthlyItemId) =>
+                commit(choosing, {
+                    id: monthlyItemId,
+                    name: itemName(monthlyItemId)
+                })
+            }
+        />
+    ) : null;
 
-    return (
-        <>
-            {deleted.length > 0 ? (
-                <button
-                    className='recently-deleted-link'
-                    type='button'
-                    aria-haspopup='dialog'
-                    aria-expanded={open}
-                    aria-label={`Recently deleted, ${deleted.length} ${deleted.length === 1 ? 'transaction' : 'transactions'}`}
-                    onClick={() => setOpen(true)}
-                >
-                    <Trash2 size={18} aria-hidden='true' />
-                    <span>Recently deleted</span>
-                    <span className='recently-deleted-count' aria-hidden='true'>
-                        {deleted.length}
-                    </span>
-                    <ChevronRight size={17} aria-hidden='true' />
-                </button>
-            ) : null}
-            <Sheet open={open} onOpenChange={setOpen} title='Recently deleted'>
-                <div className='recently-deleted-sheet'>
-                    <p className='confirmation-copy'>
-                        Transactions deleted from {snapshot.label}. Restoring
-                        one puts it back in its budget items, or one you choose
-                        if its item was deleted.
-                    </p>
-                    {deleted.length > 0 ? (
-                        <div className='activity-list'>
-                            {deleted.map((entry) => (
-                                <DeletedTransactionRow
-                                    key={entry.id}
-                                    entry={entry}
-                                    onRestore={() => {
-                                        if (!entry.needsDestination)
-                                            return restore(entry);
-                                        setChoosing(entry);
-                                        setChoosingOpen(true);
-                                    }}
-                                />
-                            ))}
-                        </div>
-                    ) : (
-                        <p className='recently-deleted-empty'>
-                            Nothing left to restore.
-                        </p>
-                    )}
-                </div>
-                {choosing ? (
-                    <RestoreDestinationSheet
-                        key={choosing.id}
-                        entry={choosing}
-                        categories={snapshot.categories}
-                        open={choosingOpen}
-                        onOpenChange={setChoosingOpen}
-                        onExitComplete={() => setChoosing(null)}
-                        onChoose={(monthlyItemId) =>
-                            restore(choosing, {
-                                id: monthlyItemId,
-                                name: itemName(monthlyItemId)
-                            })
-                        }
-                    />
-                ) : null}
-            </Sheet>
-        </>
-    );
+    return { restore, destinationSheet };
 }
