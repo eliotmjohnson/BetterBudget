@@ -1,8 +1,8 @@
 # Better Buddy
 
 Read this before changing the Better Buddy launcher, its throw, fall, and
-spaceship, or the chat sheet. `AGENTS.md` owns the assistant's server and
-prompt-caching rules.
+spaceship, or the chat sheet. `docs/agents/better-buddy.md` owns the assistant's
+server and prompt-caching rules.
 
 ## Launcher
 

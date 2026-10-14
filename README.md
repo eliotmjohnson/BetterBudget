@@ -18,6 +18,8 @@ changing application code, and it names these on-demand references:
 | Implemented product capabilities             | `docs/agents/product.md`               |
 | Layout, motion, gesture, and sheet contracts | `docs/agents/design.md`                |
 | Mutation lifecycle and optimistic rules      | `docs/agents/persistence.md`           |
+| Better Buddy server and prompt rules         | `docs/agents/better-buddy.md`          |
+| Bill reminders, push, and the service worker | `docs/agents/bill-reminders.md`        |
 | Deployment model and host contracts          | `docs/agents/deployment.md`            |
 | Formatting, size budgets, and major releases | `docs/agents/conventions.md`           |
 | Live AWS resources, operations, and rollback | `docs/aws/ec2-cloudfront-migration.md` |
@@ -836,7 +838,7 @@ set takes the highest applicable bump. `package.json` is canonical and the root
 versions in `package-lock.json` must stay synchronized. Changes limited to
 documentation, comments, formatting, or read-only investigation do not bump.
 
-`AGENTS.md` holds the full classification guide and the requirement that every
+`AGENTS.md` summarizes the classification, `/handoff` applies it, and every
 major release adds a version section here and to `docs/agents/releases.md`, with
 its load-bearing rules summarized under **Release guardrails** in `AGENTS.md`.
 The Version 2 sections are the worked example.
