@@ -104,11 +104,11 @@ html[data-safe-area-pending] ::after {
 .assistant-suggestion,
 .assistant-typing span,
 .hold-menu-item,
-.move-money-swap,
-.segmented--compact,
-.segmented--compact .segmented-thumb,
-.segmented--compact .segment {
+.move-money-swap {
     corner-shape: round;
+}
+.icon-button.bordered-icon {
+    corner-shape: superellipse(var(--corner-superellipse));
 }
 [data-continuous-border] {
     background-image: var(--continuous-border-image) !important;

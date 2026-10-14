@@ -56,7 +56,25 @@ Safe optimistic operations currently include:
   Like a receipt edit, an `updateTransaction` that omits the note clears it;
   both the transaction sheet and Better Buddy send the existing note when it is
   unchanged.
-- Soft transaction deletion with Undo.
+- Soft transaction deletion, and restoring it (`undoDeleteTransaction`) from the
+  Undo toast or Recently deleted. The month snapshot carries the month's
+  soft-deleted expenses and refunds in `deletedTransactions`, so the delete
+  patch moves the entry there and the restore patch moves it back into the
+  activity and re-applies its allocations. An entry's `needsDestination` flag is
+  true once any allocation's item is deleted for the month; its `allocations`
+  then list only the live parts, and the restore must carry a
+  `destinationItemId` from the month's live items. The patch adds the
+  transaction total less the live parts to that item, merging into an existing
+  part, which is exactly what the server moves; without a destination the patch
+  does nothing and the server answers `validation`. Recently deleted's bulk
+  Restore sends one `restoreTransactions` mutation listing each checked
+  transaction and its version, never a destination, so it only covers entries
+  without `needsDestination`. The server restores them in one database
+  transaction and refuses all of them if any one needs a destination or changed
+  elsewhere. It is one mutation rather than several `undoDeleteTransaction`s
+  because each mutation's success writes its server snapshot over the cache, and
+  the snapshot from the first of several queued restores would briefly put the
+  rest back in the deleted list.
 - Local collapse, filter, draft, and navigation state.
 
 Server-confirmed operations currently include:

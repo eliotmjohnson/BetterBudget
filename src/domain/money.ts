@@ -62,6 +62,28 @@ export function parseDollarsToCents(value: string): Cents | null {
     return cents(whole * 100n + fraction);
 }
 
+/**
+ * Reads search text such as `12`, `$12.5`, or `-1,234.56` as an inclusive
+ * cents range at the precision typed: `12` spans $12.00–$12.99, `12.5` spans
+ * $12.50–$12.59, and `12.34` is exact. Returns null for non-amount text.
+ */
+export function parseAmountSearch(
+    value: string
+): { minCents: bigint; maxCents: bigint } | null {
+    const match =
+        /^[-+−]?\s*\$?\s*(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{0,2}))?$/.exec(
+            value.trim()
+        );
+
+    if (!match) return null;
+    const whole = BigInt((match[1] ?? '0').replaceAll(',', '')) * 100n;
+    const fractionDigits = match[2] ?? '';
+    const minCents = whole + BigInt(fractionDigits.padEnd(2, '0'));
+    const span = [99n, 9n, 0n][fractionDigits.length] ?? 0n;
+
+    return { minCents, maxCents: minCents + span };
+}
+
 export function monthLabel(monthKey: MonthKey | string): string {
     const [year, month] = monthKey.split('-').map(Number);
 

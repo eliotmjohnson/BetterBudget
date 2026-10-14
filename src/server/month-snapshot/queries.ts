@@ -7,6 +7,7 @@ import {
     gt,
     gte,
     inArray,
+    isNotNull,
     isNull,
     lt,
     or,
@@ -322,6 +323,55 @@ export async function loadSplitRows(
 }
 
 /**
+ * The month's soft-deleted transactions, newest deletion first, with every
+ * allocation whatever item it points at.
+ */
+export async function loadDeletedTransactions(
+    db: AppDb,
+    targetMonthId: string
+) {
+    const deletedTransactionRows = await db
+        .select({
+            id: transactions.id,
+            kind: transactions.kind,
+            merchant: transactions.merchant,
+            occurredOn: transactions.occurredOn,
+            totalCents: transactions.totalCents,
+            note: transactions.note,
+            version: transactions.version,
+            deletedAt: transactions.deletedAt
+        })
+        .from(transactions)
+        .where(
+            and(
+                eq(transactions.monthId, targetMonthId),
+                isNotNull(transactions.deletedAt)
+            )
+        )
+        .orderBy(desc(transactions.deletedAt));
+    const deletedSplitRows =
+        deletedTransactionRows.length > 0
+            ? await db
+                  .select({
+                      monthlyItemId: transactionSplits.monthlyItemId,
+                      transactionId: transactionSplits.transactionId,
+                      amountCents: transactionSplits.amountCents
+                  })
+                  .from(transactionSplits)
+                  .where(
+                      inArray(
+                          transactionSplits.transactionId,
+                          deletedTransactionRows.map(
+                              (transaction) => transaction.id
+                          )
+                      )
+                  )
+            : [];
+
+    return { deletedTransactionRows, deletedSplitRows };
+}
+
+/**
  * Net spending per monthly item of the given definitions in months from
  * `fromDate` up to but excluding `beforeDate`, with refunds subtracted, summed
  * by the database so carryover history never sends individual allocations to
@@ -383,6 +433,9 @@ export type ReceiptRow = Awaited<
 export type TransactionRow = Awaited<
     ReturnType<typeof loadTargetMonthRows>
 >['currentTransactionRows'][number];
+export type DeletedTransactions = Awaited<
+    ReturnType<typeof loadDeletedTransactions>
+>;
 export type IncomePlanRow = Awaited<
     ReturnType<typeof loadTargetMonthRows>
 >['currentIncomeRows'][number];

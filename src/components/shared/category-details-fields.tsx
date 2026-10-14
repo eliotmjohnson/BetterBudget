@@ -1,6 +1,7 @@
 import type { CategoryTone } from '@/domain/types';
 import { StillInput } from '@/components/ui/still-focus';
 import { CategoryIcon, categoryIconOptions } from './category-icon';
+import { FieldRequirement } from '@/components/ui/field-requirement';
 
 export type CategoryIconValue = (typeof categoryIconOptions)[number]['value'];
 
@@ -41,7 +42,9 @@ export function CategoryDetailsFields({
                 </div>
             </div>
             <div className='field'>
-                <label htmlFor={`${idPrefix}-name`}>Name</label>
+                <label htmlFor={`${idPrefix}-name`}>
+                    Name <FieldRequirement />
+                </label>
                 <StillInput
                     id={`${idPrefix}-name`}
                     placeholder={placeholder}

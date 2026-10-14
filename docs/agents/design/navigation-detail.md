@@ -334,24 +334,26 @@ the budget-item detail's floating add button. The Budget page watches its Add
 transaction button past the header and the 44 px strip (`useScrolledPast` with
 `budgetBalanceStripHeight`); the Transactions page watches its heading's Add
 button past the header alone. Either way it opens the same Add transaction sheet
-as the inline button. It is portaled into `.app-frame`, not rendered in the
-page, because `position: fixed` inside the transformed `.app-content` would
-scroll with the page; inside the frame it stays pinned like the bottom
-navigation (the frame is exactly the viewport) and still shifts with the frame's
-parallax, both the push transition and the inline transforms the edge-swipe drag
-writes, so it slides left with the Budget page as a detail pushes in. It sits at
-`z-index: 35`, above the bottom navigation (30) and below Better Buddy (40) and
-sheets (70+). It mounts the first time it is needed and then stays mounted,
-toggling `data-visible` so it can animate out; while hidden it is `inert` and
-ignores pointers. On the Budget page it is hidden on an empty month. It stays
-shown while a budget-item detail is open: it parallaxes with the page, and the
-detail (`z-index: 71`) slides over it with its own item-scoped plus, and Radix's
-modal handling hides it from focus and assistive technology, so returning to
-Budget uncovers it in place instead of replaying the entrance. Both pages carry
-`.screen--floating-add`, which below 760 px raises the screen's bottom padding
-from the bottom navigation plus 28 px to the bottom navigation plus 86 px (the
-button's 14 px offset, its 56 px, and 16 px of clearance), so the last row can
-scroll clear of it.
+as the inline button. In the Transactions page's Recently deleted view,
+`restoreCount` turns it into a Restore button (a `RotateCcw` icon) that restores
+the checked rows, shown only while at least one is checked. It is portaled into
+`.app-frame`, not rendered in the page, because `position: fixed` inside the
+transformed `.app-content` would scroll with the page; inside the frame it stays
+pinned like the bottom navigation (the frame is exactly the viewport) and still
+shifts with the frame's parallax, both the push transition and the inline
+transforms the edge-swipe drag writes, so it slides left with the Budget page as
+a detail pushes in. It sits at `z-index: 35`, above the bottom navigation (30)
+and below Better Buddy (40) and sheets (70+). It mounts the first time it is
+needed and then stays mounted, toggling `data-visible` so it can animate out;
+while hidden it is `inert` and ignores pointers. On the Budget page it is hidden
+on an empty month. It stays shown while a budget-item detail is open: it
+parallaxes with the page, and the detail (`z-index: 71`) slides over it with its
+own item-scoped plus, and Radix's modal handling hides it from focus and
+assistive technology, so returning to Budget uncovers it in place instead of
+replaying the entrance. Both pages carry `.screen--floating-add`, which below
+760 px raises the screen's bottom padding from the bottom navigation plus 28 px
+to the bottom navigation plus 86 px (the button's 14 px offset, its 56 px, and
+16 px of clearance), so the last row can scroll clear of it.
 
 The entrance is a spring: `floating-add-button-enter` scales it from 0.2 and
 lifts it 36 px over 720 ms while the plus spins in from -135°, both on
@@ -363,11 +365,10 @@ instead; the fallback is chosen by `@supports`, because a custom property
 holding an unsupported `linear()` would invalidate the whole `animation` rather
 than fall back. It leaves in 220 ms, shrinking to 0.4 and dropping 18 px. It
 follows the bottom navigation off screen while a planned amount is being edited
-and springs back afterwards. While a toast is showing,
-`:root:has([data-app-toast])` raises it by 66 px over 0.42 s so the undo toast
-after an add never covers it. Press feedback uses `transform: scale(0.94)`,
-which composes with the animated `scale` and `translate` properties instead of
-fighting them.
+and springs back afterwards. It stays put while a toast is showing; the toast
+(`z-index: 80`) covers it until it dismisses. Press feedback uses
+`transform: scale(0.94)`, which composes with the animated `scale` and
+`translate` properties instead of fighting them.
 
 ### Header shadow
 

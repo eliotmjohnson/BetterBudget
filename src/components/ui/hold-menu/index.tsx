@@ -11,7 +11,12 @@ import {
 } from 'react';
 import { restoreSheetFocus } from '../sheet';
 import { beginHoldPress, followHeldPointer, type HoldStart } from './press';
-import { HoldMenuSurface, type HoldMenuAction, type OpenMenu } from './surface';
+import {
+    HoldMenuSurface,
+    type HoldMenuAction,
+    type HoldMenuExit,
+    type OpenMenu
+} from './surface';
 
 export type { HoldMenuAction } from './surface';
 
@@ -53,7 +58,7 @@ export function useHoldMenu(): {
     const [menu, setMenu] = useState<OpenMenu | null>(null);
     const [open, setOpen] = useState(false);
     const [highlighted, setHighlighted] = useState<string | null>(null);
-    const [exitForAction, setExitForAction] = useState(false);
+    const [exit, setExit] = useState<HoldMenuExit>(null);
     const openRef = useRef(false);
     const menuRef = useRef<OpenMenu | null>(null);
     const panelRef = useRef<HTMLDivElement | null>(null);
@@ -78,7 +83,7 @@ export function useHoldMenu(): {
 
             if (!trigger || !openRef.current) return;
             pendingActionRef.current = () => action.onSelect(trigger);
-            setExitForAction(true);
+            setExit(action.removesTrigger ? 'remove' : 'action');
             close();
         },
         [close]
@@ -120,7 +125,7 @@ export function useHoldMenu(): {
         menuRef.current = next;
         setMenu(next);
         setHighlighted(null);
-        setExitForAction(false);
+        setExit(null);
         setOpen(true);
         if (held === null) return;
         stopFollowingRef.current = followHeldPointer(held, {
@@ -185,7 +190,7 @@ export function useHoldMenu(): {
         getTriggerProps,
         menu: menu ? (
             <HoldMenuSurface
-                exitForAction={exitForAction}
+                exit={exit}
                 highlighted={highlighted}
                 menu={menu}
                 open={open}

@@ -42,14 +42,14 @@ moved, renamed, or takes on a new responsibility.
 - `src/server/month-snapshot/` — canonical month snapshot read path. `index.ts`
   is orchestration only; `queries.ts` holds every database read, `carryover.ts`
   the chronological carryover chains and balance derivation, `assemble.ts` the
-  category, activity, and receipt view assembly. Only the viewed month loads
-  plan rows with display columns and individual splits; earlier months load just
-  the five columns carryover reads (`loadHistoricalPlanRows`) and spending
-  already summed per monthly item by the database (`loadSpendTotals`), so a long
-  carryover history never sends its transactions to Node. Verify any change here
-  by comparing whole snapshots for every month before and after on a multi-year
-  history with refunds, deleted and split transactions, carryover breaks, gap
-  months, and negative balances.
+  category, activity, deleted-transaction, and receipt view assembly. Only the
+  viewed month loads plan rows with display columns and individual splits;
+  earlier months load just the five columns carryover reads
+  (`loadHistoricalPlanRows`) and spending already summed per monthly item by the
+  database (`loadSpendTotals`), so a long carryover history never sends its
+  transactions to Node. Verify any change here by comparing whole snapshots for
+  every month before and after on a multi-year history with refunds, deleted and
+  split transactions, carryover breaks, gap months, and negative balances.
 - `src/server/household-lock.ts` — `lockHouseholdWrites`, the per-household row
   lock every budget write and backup import takes first.
 - `src/server/mutation-failures.ts` — mutation-failure class, not-found/conflict
@@ -115,13 +115,17 @@ moved, renamed, or takes on a new responsibility.
 - `src/components/transactions/transactions-view.tsx` — activity scoping,
   search, inline filters, filter-sheet drafts, applied-filter clearing;
   `transaction-sheet.tsx` and `transaction-allocation-picker.tsx` are the
-  add/edit flow.
+  add/edit flow. `transaction-filters.ts` holds the search and filter matching
+  that both the transaction list and the deleted view use;
+  `recently-deleted.tsx` is the Recently deleted tile, the checkable deleted
+  list, the selection and restore hook, and the Restore to sheet.
 - `src/components/shared/detail-history.ts` — the shared URL-plus-history-state
   contract behind every pushed detail view; Budget and Income both build one
   with `createDetailHistory`. `delete-definition-sheet.tsx` is the Budget-page
   and organizer delete flow that moves a definition's activity and plan to
   another item. `floating-add-button.tsx` is the mobile floating plus the Budget
-  and Transactions pages spring in once their own add button scrolls away.
+  and Transactions pages spring in once their own add button scrolls away, which
+  `restoreCount` turns into the Recently deleted view's floating Restore.
   `use-versioned-draft.ts` keeps inline amount edits and their `expectedVersion`
   stable across background refetches. `category-icon.tsx`,
   `category-details-fields.tsx`, `transaction-icon.tsx`, and

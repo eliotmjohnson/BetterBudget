@@ -26,6 +26,7 @@ import {
     type IncomeIconValue
 } from './income-fields';
 import { incomeRemainingFill } from './income-remaining-fill';
+import { FieldRequirement } from '@/components/ui/field-requirement';
 
 export function AddIncomeSource({
     open,
@@ -85,7 +86,9 @@ export function AddIncomeSource({
                     </div>
                 </div>
                 <div className='field'>
-                    <label htmlFor='income-name'>Source name</label>
+                    <label htmlFor='income-name'>
+                        Source name <FieldRequirement />
+                    </label>
                     <StillInput
                         id='income-name'
                         placeholder='Paycheck'
@@ -94,7 +97,9 @@ export function AddIncomeSource({
                     />
                 </div>
                 <div className='field'>
-                    <label htmlFor='income-expected'>Expected this month</label>
+                    <label htmlFor='income-expected'>
+                        Expected this month <FieldRequirement />
+                    </label>
                     <CurrencyInput
                         id='income-expected'
                         value={expected}
@@ -234,7 +239,9 @@ function ReceiptFields({
     return (
         <>
             <div className='field'>
-                <label htmlFor='receipt-amount'>Amount received</label>
+                <label htmlFor='receipt-amount'>
+                    Amount received <FieldRequirement />
+                </label>
                 <CurrencyInput
                     id='receipt-amount'
                     value={amount}
@@ -274,7 +281,9 @@ function ReceiptFields({
                 ) : null}
             </div>
             <div className='field'>
-                <label htmlFor='receipt-note'>Note (optional)</label>
+                <label htmlFor='receipt-note'>
+                    Note <FieldRequirement optional />
+                </label>
                 <StillTextarea
                     id='receipt-note'
                     value={note}

@@ -64,7 +64,8 @@ const ids = {
     insurance: '40000000-0000-4000-8000-000000000007',
     transport: '40000000-0000-4000-8000-000000000008',
     personal: '40000000-0000-4000-8000-000000000009',
-    debt: '40000000-0000-4000-8000-000000000010'
+    debt: '40000000-0000-4000-8000-000000000010',
+    retiredGym: '40000000-0000-4000-8000-000000000011'
 };
 const monthlyPlans = [
     [ids.charity, 35_000n, false],
@@ -182,6 +183,59 @@ const seedBudgetItems: Array<typeof budgetItems.$inferInsert> = [
         sortOrder: 40
     }
 ];
+const recentlyDeleted: Array<[string, string, bigint, number]> = [
+    ['Corner Cafe', ids.restaurants, 875n, 3],
+    ['Bookstore', ids.personal, 2_450n, 8],
+    ['Iron Temple Gym', ids.retiredGym, 4_500n, 2]
+];
+
+/**
+ * Seeds Recently deleted: two transactions that restore in place and one on
+ * an item deleted from the current month, which needs Choose item.
+ */
+async function seedRecentlyDeleted(
+    db: AppDb,
+    currentMonthPlanIds: Map<string, string>
+) {
+    const retiredPlanId = crypto.randomUUID();
+
+    await db.insert(budgetItems).values({
+        id: ids.retiredGym,
+        categoryId: ids.lifestyle,
+        name: 'Old gym membership',
+        sortOrder: 50,
+        version: 2,
+        archivedAt: new Date(),
+        archivedFromMonth: dayOfMonth(seedMonths.current, 1)
+    });
+    await db.insert(monthlyBudgetItems).values({
+        id: retiredPlanId,
+        monthId: ids.currentMonth,
+        budgetItemId: ids.retiredGym,
+        plannedCents: 0n,
+        carryoverEnabled: false
+    });
+    currentMonthPlanIds.set(ids.retiredGym, retiredPlanId);
+    for (const [merchant, itemId, amount, day] of recentlyDeleted) {
+        const transactionId = crypto.randomUUID();
+
+        await db.insert(transactions).values({
+            id: transactionId,
+            monthId: ids.currentMonth,
+            kind: 'expense',
+            merchant,
+            occurredOn: dayOfMonth(seedMonths.current, day),
+            totalCents: amount,
+            version: 2,
+            deletedAt: new Date()
+        });
+        await db.insert(transactionSplits).values({
+            transactionId,
+            monthlyItemId: currentMonthPlanIds.get(itemId)!,
+            amountCents: amount
+        });
+    }
+}
 const incomeOne = '50000000-0000-4000-8000-000000000001';
 const incomeTwo = '50000000-0000-4000-8000-000000000002';
 const sideWork = '50000000-0000-4000-8000-000000000003';
@@ -351,4 +405,5 @@ export async function seedDatabase(db: AppDb): Promise<void> {
             amountCents: amount
         });
     }
+    await seedRecentlyDeleted(db, currentMonthPlanIds);
 }

@@ -22,6 +22,7 @@ import {
     addTransaction,
     deleteTransaction,
     transferBetweenItems,
+    restoreTransactions,
     undoDeleteTransaction,
     updateTransaction
 } from '@/server/budget-mutations/transactions';
@@ -116,6 +117,8 @@ async function dispatch(
             return deleteTransaction(context(input));
         case 'undoDeleteTransaction':
             return undoDeleteTransaction(context(input));
+        case 'restoreTransactions':
+            return restoreTransactions(context(input));
         case 'addIncomePlan':
             return addIncomePlan(context(input));
         case 'updateIncomePlan':

@@ -89,7 +89,7 @@ release rather than an incompatibility.
   outside, or press Escape. They dim the page slightly, close smoothly, and
   return focus to whatever opened them.
 - On Add and Edit transaction, the Expense/Income selector is a compact
-  capsule fixed in the header, and Income turns it and the submit buttons
+  rounded-square bar fixed in the header, and Income turns it and the submit buttons
   green.
 - The Add transaction sheet starts a fresh draft each time it opens.
 - The Record income date field stays inside its sheet on iPhone.
@@ -444,11 +444,23 @@ surfaces. It contains expense and refund records only, labels refunds as
 **Income**, and does not duplicate received-income or paycheck receipts from the
 Income page.
 
-Search matches the merchant, budget-item subtitle, and note. The All, Expenses,
+Search matches the merchant, budget-item subtitle, and note, and text that
+reads as a dollar amount also matches transactions whose total or any split
+part falls in it, at the precision typed: `12` or `$12` finds $12.00–$12.99,
+`12.5` finds $12.50–$12.59, and `12.34` is exact. The All, Expenses,
 and Income pills apply immediately, while the sliders button opens a filter
 sheet whose changes stay drafts until **Apply filters** is pressed.
 `docs/agents/design/budget-and-inputs.md` holds the precise filter, badge, and
 clear-control contract.
+
+Deleted expenses and refunds stay in **Recently deleted**, the trash tile under
+the sliders button, which switches the list to the month's deleted transactions
+with search and filters still applying. Check transactions and press
+**Restore** to put them all back in their budget items in one step; the server
+restores them together or refuses them all if one changed elsewhere. A
+transaction whose budget item was later deleted has no checkbox but a **Choose
+item** button, which opens a sheet of the month's live items; for a split, only
+the part on the deleted item moves, merging into the chosen item's part.
 
 ## Seeded development data
 
@@ -459,6 +471,7 @@ The local seed builds a household scenario in the current month, with the previo
 - Carryover-enabled items and prior-month history.
 - Expected-income rows and received-income receipts.
 - Expenses, refunds, and received-income activity. The Transactions view omits received-income receipts and labels refunds as Income.
+- Recently deleted entries: Corner Cafe and Bookstore, which restore in place, and Iron Temple Gym, whose Old gym membership item is deleted from the current month, so restoring it needs **Choose item**.
 
 The seed is idempotent: repeated application does not intentionally duplicate the deterministic scenario. It exists for local development and verification, is never invoked by production database initialization, and refuses to run when `NODE_ENV=production`.
 
@@ -1033,7 +1046,9 @@ in `src/app/styles/tokens.css`. Chromium draws them natively for every rounded
 element through CSS `corner-shape`; Safari does not support it yet, so on iOS
 the tab bar, summary cards, sheets, and button-style controls get the same
 curve from `src/components/ui/continuous-corners/`, and everything else keeps
-plain rounded corners until WebKit ships `corner-shape`. Setting
+plain rounded corners until WebKit ships `corner-shape`. The one exception is
+the mobile tab bar and its lens, which use the script everywhere because their
+light-catching rim is drawn from its outline. Setting
 `--corner-superellipse: 1`, `--corner-extent: 1`, and `--capsule-smoothing: 0`
 turns the effect off everywhere without a code change.
 

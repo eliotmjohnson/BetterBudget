@@ -41,6 +41,8 @@ export function optimisticSnapshot(
         case 'transferBetweenItems':
         case 'updateTransaction':
         case 'deleteTransaction':
+        case 'undoDeleteTransaction':
+        case 'restoreTransactions':
             applyTransactionPatch(next, input, adjustAllocation);
             break;
         case 'addIncomePlan':
@@ -67,7 +69,6 @@ export function optimisticSnapshot(
         case 'clearPlannedAmounts':
         case 'copyPreviousMonth':
         case 'resetBudget':
-        case 'undoDeleteTransaction':
             applyMonthPatch(next, input);
             break;
     }

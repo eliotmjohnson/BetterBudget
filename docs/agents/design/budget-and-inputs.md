@@ -166,6 +166,71 @@ to the far edge of the row. That action resets the applied type, item, and split
 filters without clearing search. A populated search field exposes an accessible
 clear control that empties the query without returning focus to the input.
 
+## Recently deleted
+
+Recently deleted is a trash tile the size and style of the filters button,
+pushed to the right end of the type-pill row so it sits directly under the
+filters button. It is always present, so its place is learned before it is
+needed, and shows a muted gray count badge (blue means applied filters) while
+the month has deleted transactions. In the deleted view the badge turns blue and
+counts the checked rows instead, so the header button can stay a plain Restore.
+Tapping it toggles the page's own list into a deleted view rather than opening a
+sheet, so deleted transactions read exactly like the rest: the heading becomes
+Recently deleted, the tile takes the applied blue treatment with `aria-pressed`,
+a caption reads "Select transactions to put them back.", and entries group under
+the same date headings, newest date first. Search, the type pills, and the
+filter sheet keep applying, and an empty view says whether nothing was deleted
+or nothing matches. Each row reuses the activity row's icon, title, item names,
+Split tag, and amount, with a checkbox to the right of the amount, styled like
+the allocation picker's but 28 px instead of 24, 16 px from the amount (the
+row's 10 px gap plus a 34 px column with the box at its end), and 12 px of right
+padding so the box clears the edge; Choose item rows keep the list's flush right
+edge. The whole row is the checkbox's label, so tapping anywhere on it checks it
+and nothing restores until the person confirms. The heading's Add button becomes
+**Restore** (disabled until something is checked) and restores every checked row
+in one `restoreTransactions` mutation; the floating plus, once the heading
+scrolls away, becomes a floating Restore while anything is checked and hides
+otherwise. Only checked rows still visible under the current search and filters
+count, a **Select all** / **Deselect all** text button beside the caption covers
+the visible restorable rows (its 44 px target overhangs the 20 px caption line
+by negative block margins, so the caption sits about 28 px below the pills and
+12 px above the first date heading), and leaving the view clears the selection.
+Restore is optimistic, shows a toast naming the transaction or the count, and
+returns to the normal list when it restores the last entry.
+
+The tile is 38 px square with the pills' 10 px radius, so it matches their
+height rather than the 46 px filter button above it; a transparent `::after`
+reaching 4 px past each edge keeps its target at 46 px. Its `Trash2` icon is
+raised 1 px (`translate: 0 -1px`): geometrically centered, its thin handle
+leaves the lid and bin, the part the eye reads, about 1.6 px low.
+
+On phones the tile made the pill row 12 px too wide at 390 px once Clear
+appears, clipping the Income pill, so below 760 px that row's gaps are 6 px, its
+pills' side padding 11 px, and Clear's 8 px, which fits a 375 px screen.
+
+When a transaction's item was deleted for its month, the row shows only its
+title (no item line, which would name a deleted item) and has no checkbox,
+because a bulk restore cannot choose a destination for it; a **Choose item**
+button sits in the checkbox's place instead (no icon, which keeps it about as
+narrow as the old icon-and-Restore button; it says what the person must do,
+where "Restore to" only named the destination). At 390 px the button and a
+four-digit amount leave about 104 px for the title, so a name like "Gym smoothie
+bar" ends in an ellipsis. It opens a **Restore to** sheet: one short sentence
+naming the transaction and how much moves (for a split, only the orphaned part,
+and that the rest stays put), in the sheet's `headerAccessory` so it sits 12 px
+under the title (the shared header's 20 px margin made it read as detached) and
+stays put while the items scroll, then the month's budget items grouped by
+category. The sheet is `full-screen-mobile` without a grabber, like the
+allocation picker, and is dismissed by dragging its header down or with Escape.
+Categories and items are styled apart, as an iOS grouped list: each category is
+a small uppercase muted label led by its 26 px icon medallion in its tone, and
+its items sit in one rounded `--soft` card below it, each row 58 px with a 15 px
+name, its available amount, and a blue `RotateCcw` restore icon saying what the
+tap does (the user preferred it to a chevron), separated by hairlines inset 16
+px. Rows have no pressed tint, because a scroll that starts on a row would light
+it up. One tap restores there and closes the sheet, so the choice needs no
+separate confirm; a wrong pick is fixed by editing the transaction.
+
 ## Money inputs
 
 ### Calculator entry

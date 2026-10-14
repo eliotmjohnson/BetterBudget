@@ -1,5 +1,5 @@
 import 'server-only';
-import { and, eq, inArray, isNotNull, isNull, not } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull, isNull, not, sql } from 'drizzle-orm';
 import type { MonthKey } from '@/domain/money';
 import { splitsMatchTotal } from '@/domain/budget-calculations';
 import { monthDate } from '@/domain/calendar';
@@ -237,40 +237,40 @@ export async function deleteTransaction({
         await throwTransactionMutationFailure(tx, monthId, input.transactionId);
 }
 
+type Restore = Pick<
+    MutationContext<'undoDeleteTransaction'>['input'],
+    'monthKey' | 'transactionId' | 'expectedVersion' | 'destinationItemId'
+>;
+
 export async function undoDeleteTransaction({
     tx,
     monthId,
     input
 }: MutationContext<'undoDeleteTransaction'>): Promise<void> {
-    const [retiredAllocation] = await tx
-        .select({ id: transactionSplits.id })
-        .from(transactionSplits)
-        .innerJoin(
-            monthlyBudgetItems,
-            eq(transactionSplits.monthlyItemId, monthlyBudgetItems.id)
-        )
-        .innerJoin(
-            budgetMonths,
-            eq(monthlyBudgetItems.monthId, budgetMonths.id)
-        )
-        .innerJoin(
-            budgetItems,
-            eq(monthlyBudgetItems.budgetItemId, budgetItems.id)
-        )
-        .innerJoin(categories, eq(budgetItems.categoryId, categories.id))
-        .where(
-            and(
-                eq(transactionSplits.transactionId, input.transactionId),
-                not(definitionActiveIn(budgetMonths.month)!)
-            )
-        )
-        .limit(1);
+    await restoreDeletedTransaction(tx, monthId, input);
+}
 
-    if (retiredAllocation)
-        throw new MutationFailure(
-            'validation',
-            'A budget item on this transaction was deleted, so it can’t be restored.'
-        );
+/**
+ * Restores several deleted transactions in one database transaction; any one
+ * that needs a destination item, or changed elsewhere, refuses them all.
+ */
+export async function restoreTransactions({
+    tx,
+    monthId,
+    input
+}: MutationContext<'restoreTransactions'>): Promise<void> {
+    for (const entry of input.transactions)
+        await restoreDeletedTransaction(tx, monthId, {
+            monthKey: input.monthKey,
+            ...entry
+        });
+}
+
+async function restoreDeletedTransaction(
+    tx: MutationContext<'undoDeleteTransaction'>['tx'],
+    monthId: string,
+    input: Restore
+) {
     const updated = await tx
         .update(transactions)
         .set({
@@ -290,4 +290,89 @@ export async function undoDeleteTransaction({
 
     if (!updated[0])
         await throwTransactionMutationFailure(tx, monthId, input.transactionId);
+    await moveRetiredAllocations(tx, monthId, input);
+}
+
+/**
+ * Moves a restored transaction's allocations to items deleted for its month
+ * onto the chosen live destination, merging into an existing allocation there.
+ */
+async function moveRetiredAllocations(
+    tx: MutationContext<'undoDeleteTransaction'>['tx'],
+    monthId: string,
+    input: Restore
+) {
+    const retired = await tx
+        .select({
+            id: transactionSplits.id,
+            amountCents: transactionSplits.amountCents
+        })
+        .from(transactionSplits)
+        .innerJoin(
+            monthlyBudgetItems,
+            eq(transactionSplits.monthlyItemId, monthlyBudgetItems.id)
+        )
+        .innerJoin(
+            budgetMonths,
+            eq(monthlyBudgetItems.monthId, budgetMonths.id)
+        )
+        .innerJoin(
+            budgetItems,
+            eq(monthlyBudgetItems.budgetItemId, budgetItems.id)
+        )
+        .innerJoin(categories, eq(budgetItems.categoryId, categories.id))
+        .where(
+            and(
+                eq(transactionSplits.transactionId, input.transactionId),
+                not(definitionActiveIn(budgetMonths.month)!)
+            )
+        );
+
+    if (retired.length === 0) return;
+    if (!input.destinationItemId)
+        throw new MutationFailure(
+            'validation',
+            'A budget item on this transaction was deleted. Choose where to restore it.'
+        );
+    const [destination] = await activeMonthlyItems(
+        tx,
+        monthDate(input.monthKey),
+        and(
+            eq(monthlyBudgetItems.id, input.destinationItemId),
+            eq(monthlyBudgetItems.monthId, monthId)
+        )!
+    );
+
+    if (!destination)
+        throw new MutationFailure(
+            'validation',
+            'Choose a budget item from this month.'
+        );
+    const movedCents = retired.reduce(
+        (total, split) => total + split.amountCents,
+        0n
+    );
+
+    await tx.delete(transactionSplits).where(
+        inArray(
+            transactionSplits.id,
+            retired.map((split) => split.id)
+        )
+    );
+    await tx
+        .insert(transactionSplits)
+        .values({
+            transactionId: input.transactionId,
+            monthlyItemId: destination.id,
+            amountCents: movedCents
+        })
+        .onConflictDoUpdate({
+            target: [
+                transactionSplits.transactionId,
+                transactionSplits.monthlyItemId
+            ],
+            set: {
+                amountCents: sql`${transactionSplits.amountCents} + excluded.amount_cents`
+            }
+        });
 }

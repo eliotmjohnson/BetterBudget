@@ -239,8 +239,12 @@ function BottomNav({
         ({ view: itemView }) => itemView === contentView
     );
     const [lens, setLens] = useState({ index: activeIndex, moves: 0 });
-    const [surfaceRef, surfaceShape] = useContinuousCorners<HTMLSpanElement>();
-    const [lensRef, lensShape] = useContinuousCorners<HTMLSpanElement>();
+    const [surfaceRef, surfaceShape] = useContinuousCorners<HTMLSpanElement>({
+        outline: true
+    });
+    const [lensRef, lensShape] = useContinuousCorners<HTMLSpanElement>({
+        outline: true
+    });
 
     if (lens.index !== activeIndex)
         setLens({ index: activeIndex, moves: lens.moves + 1 });

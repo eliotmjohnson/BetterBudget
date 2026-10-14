@@ -9,6 +9,7 @@ import type { MonthSnapshot } from '@/domain/types';
 import { createUuid } from '@/domain/uuid';
 import type { Mutate } from '@/components/shared/budget-view-helpers';
 import type { BudgetMutation } from '@/server/mutation-schema';
+import { FieldRequirement } from '@/components/ui/field-requirement';
 
 export function MonthActionsSheet({
     open,
@@ -102,7 +103,8 @@ export function MonthActionsSheet({
                     {confirm === 'note' ? (
                         <div className='field'>
                             <label htmlFor='month-note'>
-                                Note for {snapshot.label}
+                                Note for {snapshot.label}{' '}
+                                <FieldRequirement optional />
                             </label>
                             <StillTextarea
                                 id='month-note'

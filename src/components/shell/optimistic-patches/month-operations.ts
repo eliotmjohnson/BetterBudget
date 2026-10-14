@@ -6,7 +6,6 @@ type Input = PatchOf<
     | 'clearPlannedAmounts'
     | 'copyPreviousMonth'
     | 'resetBudget'
-    | 'undoDeleteTransaction'
 >;
 
 export function applyMonthPatch(next: MonthSnapshot, input: Input): void {
@@ -18,7 +17,6 @@ export function applyMonthPatch(next: MonthSnapshot, input: Input): void {
         case 'clearPlannedAmounts':
         case 'copyPreviousMonth':
         case 'resetBudget':
-        case 'undoDeleteTransaction':
             break;
     }
 }
