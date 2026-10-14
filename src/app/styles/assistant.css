@@ -555,7 +555,8 @@
 }
 @media (min-width: 760px) {
     .app-frame:has(.assistant-launcher)
-        .standard-screen:not(.screen--floating-add) {
+        .standard-screen:not(.screen--floating-add),
+    .app-frame:has(.assistant-launcher) .screen--floating-add {
         padding-bottom: 96px;
     }
     .assistant-launcher {

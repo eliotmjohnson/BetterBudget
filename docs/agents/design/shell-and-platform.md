@@ -150,6 +150,12 @@ about 85% of half the element's shorter side, which is why the 46 px filter
 button, sized to match the search input's height, uses 12 px rather than the
 input's 14 px. Circles and pills keep `corner-shape: round`: add any new one to
 the opt-out list in `tokens.css`, or the native superellipse will square it off.
+`.icon-button` is on that list because icon buttons are circles, so the
+square-cornered `.icon-button.bordered-icon` tiles (the Transactions filter and
+Recently deleted buttons) get the superellipse back in a rule right after it;
+without it they drew plain rounded corners in Chrome beside the squircle pills,
+while Safari's script, which lists `.bordered-icon`, already drew them
+continuous.
 
 ### Sheet surface
 

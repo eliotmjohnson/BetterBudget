@@ -27,8 +27,12 @@ room at the end of their scroll while he is shown: the
 bottom padding to the bottom navigation plus 80 px below 760 px (his 12 px lift,
 his 64 px, and 4 px of air) and to 96 px on desktop (his 24 px reserve, his 64
 px, and 8 px), so the last row can always scroll just above him. The user found
-16 px and 24 px of air too much. Screens with `.screen--floating-add` keep their
-own clearance. Change these together with the launcher's size or bottom reserve.
+16 px and 24 px of air too much, because the taller empty end looked strange on
+Settings; keep the air this tight. Screens with `.screen--floating-add` (Budget
+and Transactions) keep their own clearance below 760 px, where it already covers
+him, but take the same 96 px from 760 px up, desktop and landscape phone, where
+the floating add button and its padding are gone and the last row otherwise sat
+under him. Change these together with the launcher's size or bottom reserve.
 
 ### Drag and throw
 

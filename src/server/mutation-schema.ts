@@ -118,6 +118,24 @@ export const mutationSchema = z.discriminatedUnion('type', [
         destinationItemId: z.string().uuid().optional()
     }),
     base.extend({
+        type: z.literal('restoreTransactions'),
+        transactions: z
+            .array(
+                z.object({
+                    transactionId: z.string().uuid(),
+                    expectedVersion: z.number().int().positive()
+                })
+            )
+            .min(1)
+            .max(500)
+            .refine(
+                (entries) =>
+                    new Set(entries.map((entry) => entry.transactionId))
+                        .size === entries.length,
+                { message: 'Restore each transaction only once.' }
+            )
+    }),
+    base.extend({
         type: z.literal('addIncomePlan'),
         name: z.string().trim().min(1).max(80),
         icon: categoryIconSchema,

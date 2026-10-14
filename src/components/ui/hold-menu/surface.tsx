@@ -16,8 +16,11 @@ export type HoldMenuAction = {
     label: string;
     icon: ReactNode;
     destructive?: boolean;
+    removesTrigger?: boolean;
     onSelect: (trigger: HTMLElement) => void;
 };
+
+export type HoldMenuExit = 'action' | 'remove' | null;
 
 export type OpenMenu = {
     focusVisible: boolean;
@@ -91,7 +94,7 @@ function placeMenu(layer: HTMLElement, panel: HTMLElement, trigger: DOMRect) {
 }
 
 export function HoldMenuSurface({
-    exitForAction,
+    exit,
     highlighted,
     menu,
     onClose,
@@ -100,7 +103,7 @@ export function HoldMenuSurface({
     open,
     panelRef
 }: {
-    exitForAction: boolean;
+    exit: HoldMenuExit;
     highlighted: string | null;
     menu: OpenMenu;
     onClose: () => void;
@@ -150,12 +153,12 @@ export function HoldMenuSurface({
             <Dialog.Portal>
                 <Dialog.Overlay
                     className='hold-menu-overlay'
-                    data-exit={exitForAction ? 'action' : undefined}
+                    data-exit={exit ?? undefined}
                 />
                 <Dialog.Content
                     key={menu.id}
                     className='hold-menu-layer'
-                    data-exit={exitForAction ? 'action' : undefined}
+                    data-exit={exit ?? undefined}
                     data-held={menu.held ? 'true' : undefined}
                     data-context={menu.inDialog ? 'dialog' : 'page'}
                     aria-describedby={undefined}

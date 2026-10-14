@@ -18,45 +18,56 @@ const budgetMutationKey = ['budget-mutation'] as const;
 
 export type MutationFailure = { message: string; retryable: boolean };
 
-function carryoverInvalidationStart(input: BudgetMutation): MonthKey | null {
-    switch (input.type) {
-        case 'updatePlan':
-        case 'movePlannedAmount':
-        case 'toggleCarryover':
-        case 'addTransaction':
-        case 'transferBetweenItems':
-        case 'deleteTransaction':
-        case 'undoDeleteTransaction':
-        case 'archiveCategory':
-        case 'archiveItem':
-        case 'copyPreviousMonth':
-        case 'clearPlannedAmounts':
-        case 'resetBudget':
-            return shiftMonth(input.monthKey, 1);
-        case 'updateTransaction': {
-            const destinationMonth = input.occurredOn.slice(0, 7) as MonthKey;
+/**
+ * Whether a mutation can change the months after its own through carryover.
+ * A `Record` rather than a switch, so a new mutation type must declare it.
+ */
+const changesLaterMonths: Record<
+    Exclude<BudgetMutation['type'], 'updateTransaction'>,
+    boolean
+> = {
+    updatePlan: true,
+    movePlannedAmount: true,
+    toggleCarryover: true,
+    addTransaction: true,
+    transferBetweenItems: true,
+    deleteTransaction: true,
+    undoDeleteTransaction: true,
+    restoreTransactions: true,
+    archiveCategory: true,
+    archiveItem: true,
+    copyPreviousMonth: true,
+    clearPlannedAmounts: true,
+    resetBudget: true,
+    addIncomePlan: false,
+    updateIncomePlan: false,
+    addIncomeReceipt: false,
+    updateIncomeReceipt: false,
+    deleteIncomeReceipt: false,
+    deleteIncomePlan: false,
+    addCategory: false,
+    addItem: false,
+    renameCategory: false,
+    renameItem: false,
+    deleteCategory: false,
+    deleteItem: false,
+    reorderCategories: false,
+    reorderItems: false,
+    updateMonthNote: false
+};
 
-            return destinationMonth < input.monthKey
-                ? destinationMonth
-                : shiftMonth(input.monthKey, 1);
-        }
-        case 'addIncomePlan':
-        case 'updateIncomePlan':
-        case 'addIncomeReceipt':
-        case 'updateIncomeReceipt':
-        case 'deleteIncomeReceipt':
-        case 'deleteIncomePlan':
-        case 'addCategory':
-        case 'addItem':
-        case 'renameCategory':
-        case 'renameItem':
-        case 'deleteCategory':
-        case 'deleteItem':
-        case 'reorderCategories':
-        case 'reorderItems':
-        case 'updateMonthNote':
-            return null;
+function carryoverInvalidationStart(input: BudgetMutation): MonthKey | null {
+    if (input.type === 'updateTransaction') {
+        const destinationMonth = input.occurredOn.slice(0, 7) as MonthKey;
+
+        return destinationMonth < input.monthKey
+            ? destinationMonth
+            : shiftMonth(input.monthKey, 1);
     }
+
+    return changesLaterMonths[input.type]
+        ? shiftMonth(input.monthKey, 1)
+        : null;
 }
 
 function budgetMutationsSettled(

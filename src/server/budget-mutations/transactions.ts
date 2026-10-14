@@ -237,11 +237,40 @@ export async function deleteTransaction({
         await throwTransactionMutationFailure(tx, monthId, input.transactionId);
 }
 
+type Restore = Pick<
+    MutationContext<'undoDeleteTransaction'>['input'],
+    'monthKey' | 'transactionId' | 'expectedVersion' | 'destinationItemId'
+>;
+
 export async function undoDeleteTransaction({
     tx,
     monthId,
     input
 }: MutationContext<'undoDeleteTransaction'>): Promise<void> {
+    await restoreDeletedTransaction(tx, monthId, input);
+}
+
+/**
+ * Restores several deleted transactions in one database transaction; any one
+ * that needs a destination item, or changed elsewhere, refuses them all.
+ */
+export async function restoreTransactions({
+    tx,
+    monthId,
+    input
+}: MutationContext<'restoreTransactions'>): Promise<void> {
+    for (const entry of input.transactions)
+        await restoreDeletedTransaction(tx, monthId, {
+            monthKey: input.monthKey,
+            ...entry
+        });
+}
+
+async function restoreDeletedTransaction(
+    tx: MutationContext<'undoDeleteTransaction'>['tx'],
+    monthId: string,
+    input: Restore
+) {
     const updated = await tx
         .update(transactions)
         .set({
@@ -261,18 +290,18 @@ export async function undoDeleteTransaction({
 
     if (!updated[0])
         await throwTransactionMutationFailure(tx, monthId, input.transactionId);
-    await moveRetiredAllocations({ tx, monthId, input });
+    await moveRetiredAllocations(tx, monthId, input);
 }
 
 /**
  * Moves a restored transaction's allocations to items deleted for its month
  * onto the chosen live destination, merging into an existing allocation there.
  */
-async function moveRetiredAllocations({
-    tx,
-    monthId,
-    input
-}: Omit<MutationContext<'undoDeleteTransaction'>, 'householdId'>) {
+async function moveRetiredAllocations(
+    tx: MutationContext<'undoDeleteTransaction'>['tx'],
+    monthId: string,
+    input: Restore
+) {
     const retired = await tx
         .select({
             id: transactionSplits.id,

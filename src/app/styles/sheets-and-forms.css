@@ -603,7 +603,8 @@
     cursor: not-allowed;
     opacity: 0.48;
 }
-.allocation-picker-item input {
+.allocation-picker-item input,
+.deleted-transaction-check {
     width: 24px;
     height: 24px;
     display: grid;
@@ -616,7 +617,8 @@
     appearance: none;
     -webkit-appearance: none;
 }
-.allocation-picker-item input::before {
+.allocation-picker-item input::before,
+.deleted-transaction-check::before {
     content: '';
     width: 6px;
     height: 11px;
@@ -628,15 +630,18 @@
         opacity 140ms ease,
         transform 180ms cubic-bezier(0.29, 1, 0.29, 1);
 }
-.allocation-picker-item input:checked {
+.allocation-picker-item input:checked,
+.deleted-transaction-check:checked {
     border-color: var(--blue);
     background: var(--blue);
 }
-.allocation-picker-item input:checked::before {
+.allocation-picker-item input:checked::before,
+.deleted-transaction-check:checked::before {
     opacity: 1;
     transform: translateY(-1px) rotate(45deg) scale(1);
 }
-.allocation-picker-item input:focus-visible {
+.allocation-picker-item input:focus-visible,
+.deleted-transaction-check:focus-visible {
     outline: 3px solid rgb(23 105 224 / 24%);
     outline-offset: 2px;
 }

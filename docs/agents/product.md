@@ -80,19 +80,24 @@ The implemented product supports:
   Tapping it switches the page's own list to the month's deleted transactions,
   titled Recently deleted and grouped by date like the normal list, with search,
   the type pills, and the filter sheet still applying; tapping it again returns
-  to the transactions. Each row has a **Restore** button that puts it back in
-  its budget items, and restoring the last one returns to the normal list. A
-  transaction whose budget item was later deleted for its month is listed as
-  "Item deleted", and its Restore opens a **Restore to** sheet of the month's
-  live budget items with their available amounts; tapping one restores the
-  transaction there. For a split, only the part that was on the deleted item
-  moves, merging into the chosen item's part if it already has one, and the
-  sheet says how much moves. The toast names the destination. Transactions are
-  never permanently purged from the list. Transaction rows on the Transactions
-  page and in a line-item detail open a hold menu (Edit, Duplicate, Delete) on a
-  touch hold, right-click, or the keyboard context-menu key; a plain tap still
-  opens the edit sheet. The merchant is optional: a blank one saves as `Expense`
-  or `Income`, matching the sheet's type toggle, so the stored merchant is never
+  to the transactions. Each row has a checkbox; the heading's Add button becomes
+  **Restore**, which puts every checked transaction back in its budget items in
+  one step, the trash tile's badge turns blue and counts the checked rows, and
+  **Select all** checks every visible restorable row; once the heading scrolls
+  away, the floating plus becomes a floating Restore while anything is checked,
+  and leaving the view clears the selection. Restoring the last one returns to
+  the normal list. A transaction whose budget item was later deleted for its
+  month is listed by title alone with no checkbox, and its **Choose item**
+  button opens a **Restore to** sheet of the month's live budget items with
+  their available amounts; tapping one restores the transaction there. For a
+  split, only the part that was on the deleted item moves, merging into the
+  chosen item's part if it already has one, and the sheet says how much moves.
+  The toast names the destination. Transactions are never permanently purged
+  from the list. Transaction rows on the Transactions page and in a line-item
+  detail open a hold menu (Edit, Duplicate, Delete) on a touch hold,
+  right-click, or the keyboard context-menu key; a plain tap still opens the
+  edit sheet. The merchant is optional: a blank one saves as `Expense` or
+  `Income`, matching the sheet's type toggle, so the stored merchant is never
   empty.
 - Expected-income sources with editable names, icons, colors, and expected
   amounts plus one or more dated received-income receipts. Each source has a

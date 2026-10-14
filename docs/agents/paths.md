@@ -117,14 +117,15 @@ moved, renamed, or takes on a new responsibility.
   `transaction-sheet.tsx` and `transaction-allocation-picker.tsx` are the
   add/edit flow. `transaction-filters.ts` holds the search and filter matching
   that both the transaction list and the deleted view use;
-  `recently-deleted.tsx` is the Recently deleted tile, deleted rows, restore
-  hook, and Restore to sheet.
+  `recently-deleted.tsx` is the Recently deleted tile, the checkable deleted
+  list, the selection and restore hook, and the Restore to sheet.
 - `src/components/shared/detail-history.ts` — the shared URL-plus-history-state
   contract behind every pushed detail view; Budget and Income both build one
   with `createDetailHistory`. `delete-definition-sheet.tsx` is the Budget-page
   and organizer delete flow that moves a definition's activity and plan to
   another item. `floating-add-button.tsx` is the mobile floating plus the Budget
-  and Transactions pages spring in once their own add button scrolls away.
+  and Transactions pages spring in once their own add button scrolls away, which
+  `restoreCount` turns into the Recently deleted view's floating Restore.
   `use-versioned-draft.ts` keeps inline amount edits and their `expectedVersion`
   stable across background refetches. `category-icon.tsx`,
   `category-details-fields.tsx`, `transaction-icon.tsx`, and

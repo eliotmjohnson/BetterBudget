@@ -66,7 +66,15 @@ Safe optimistic operations currently include:
   `destinationItemId` from the month's live items. The patch adds the
   transaction total less the live parts to that item, merging into an existing
   part, which is exactly what the server moves; without a destination the patch
-  does nothing and the server answers `validation`.
+  does nothing and the server answers `validation`. Recently deleted's bulk
+  Restore sends one `restoreTransactions` mutation listing each checked
+  transaction and its version, never a destination, so it only covers entries
+  without `needsDestination`. The server restores them in one database
+  transaction and refuses all of them if any one needs a destination or changed
+  elsewhere. It is one mutation rather than several `undoDeleteTransaction`s
+  because each mutation's success writes its server snapshot over the cache, and
+  the snapshot from the first of several queued restores would briefly put the
+  rest back in the deleted list.
 - Local collapse, filter, draft, and navigation state.
 
 Server-confirmed operations currently include:

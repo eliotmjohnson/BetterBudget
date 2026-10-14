@@ -107,6 +107,9 @@ html[data-safe-area-pending] ::after {
 .move-money-swap {
     corner-shape: round;
 }
+.icon-button.bordered-icon {
+    corner-shape: superellipse(var(--corner-superellipse));
+}
 [data-continuous-border] {
     background-image: var(--continuous-border-image) !important;
     background-origin: border-box !important;

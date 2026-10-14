@@ -12,6 +12,7 @@ type Input = PatchOf<
     | 'updateTransaction'
     | 'deleteTransaction'
     | 'undoDeleteTransaction'
+    | 'restoreTransactions'
 >;
 
 function applyAllocations(
@@ -78,7 +79,10 @@ function restoredAllocations(
 /** Moves a deleted transaction back into its date's place in the activity. */
 function restoreTransaction(
     next: MonthSnapshot,
-    input: PatchOf<'undoDeleteTransaction'>,
+    input: Pick<
+        PatchOf<'undoDeleteTransaction'>,
+        'transactionId' | 'destinationItemId'
+    >,
     adjustAllocation: AdjustAllocation
 ) {
     const deleted = next.deletedTransactions.find(
@@ -302,6 +306,10 @@ export function applyTransactionPatch(
         }
         case 'undoDeleteTransaction':
             restoreTransaction(next, input, adjustAllocation);
+            break;
+        case 'restoreTransactions':
+            for (const entry of input.transactions)
+                restoreTransaction(next, entry, adjustAllocation);
             break;
     }
 }

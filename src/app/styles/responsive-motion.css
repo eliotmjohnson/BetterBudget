@@ -174,9 +174,12 @@
 }
 
 @media (min-width: 760px) {
+    :root {
+        --desktop-sidebar-width: 190px;
+    }
     .app-frame {
         display: grid;
-        grid-template-columns: 190px minmax(0, 1fr);
+        grid-template-columns: var(--desktop-sidebar-width) minmax(0, 1fr);
     }
     .desktop-sidebar {
         position: sticky;
@@ -567,10 +570,11 @@
         animation: modal-out 0.45s cubic-bezier(0.4, 1, 0.4, 1) forwards;
     }
     .toast {
-        left: auto;
-        right: 24px;
+        left: var(--desktop-sidebar-width);
+        right: 0;
         bottom: 24px;
-        width: min(400px, calc(100vw - 48px));
+        width: min(400px, calc(100vw - var(--desktop-sidebar-width) - 48px));
+        margin-inline: auto;
     }
     .sync-indicator {
         top: 18px;
@@ -610,8 +614,8 @@
 }
 
 @media (min-width: 1100px) {
-    .app-frame {
-        grid-template-columns: 210px minmax(0, 1fr);
+    :root {
+        --desktop-sidebar-width: 210px;
     }
     .screen {
         padding-inline: 34px;
@@ -665,11 +669,11 @@
 }
 
 @media (min-width: 760px) and (max-height: 500px) and (orientation: landscape) and (pointer: coarse) {
+    :root {
+        --desktop-sidebar-width: calc(190px + var(--island-inset-left));
+    }
     .app-frame {
-        grid-template-columns: calc(190px + var(--island-inset-left)) minmax(
-                0,
-                1fr
-            );
+        grid-template-columns: var(--desktop-sidebar-width) minmax(0, 1fr);
         transition: grid-template-columns var(--island-shift-motion);
     }
     .desktop-sidebar {
@@ -726,7 +730,8 @@
     input:focus-visible,
     select:focus-visible,
     textarea:focus-visible,
-    .allocation-picker-item input:focus-visible {
+    .allocation-picker-item input:focus-visible,
+    .deleted-transaction-check:focus-visible {
         outline: none;
     }
     .field input,

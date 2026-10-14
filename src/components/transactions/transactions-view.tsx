@@ -1,6 +1,6 @@
 'use client';
 
-import { Plus, Search, SlidersHorizontal, Trash2, X } from 'lucide-react';
+import { Plus, RotateCcw, Search, SlidersHorizontal, X } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
 import { Sheet } from '@/components/ui/sheet';
 import { StillInput } from '@/components/ui/still-focus';
@@ -12,7 +12,7 @@ import { FloatingAddButton } from '@/components/shared/floating-add-button';
 import { useTransactionHoldMenu } from '@/components/shared/transaction-hold-menu';
 import { TransactionRow } from '@/components/shared/transaction-row';
 import {
-    DeletedTransactionRow,
+    DeletedTransactionsList,
     DeletedTransactionsToggle,
     useDeletedTransactionRestore
 } from './recently-deleted';
@@ -120,11 +120,6 @@ export function TransactionsView({
         useState<SplitFilter>('all');
     const [filtersOpen, setFiltersOpen] = useState(false);
     const [showingDeleted, setShowingDeleted] = useState(false);
-    const deletedRestore = useDeletedTransactionRestore({
-        snapshot,
-        mutate,
-        onEmptied: () => setShowingDeleted(false)
-    });
     const [adding, setAdding] = useState(false);
     const addButtonRef = useRef<HTMLButtonElement>(null);
     const addButtonPassed = useScrolledPast(addButtonRef);
@@ -186,13 +181,15 @@ export function TransactionsView({
             ),
         [criteria, snapshot.deletedTransactions]
     );
+    const deletedRestore = useDeletedTransactionRestore({
+        snapshot,
+        mutate,
+        visible: filteredDeleted,
+        onEmptied: () => setShowingDeleted(false)
+    });
     const groups = useMemo(
         () => Map.groupBy(filtered, (entry) => entry.occurredOn),
         [filtered]
-    );
-    const deletedGroups = useMemo(
-        () => Map.groupBy(filteredDeleted, (entry) => entry.occurredOn),
-        [filteredDeleted]
     );
     const clearFilters = () => {
         setFilter('all');
@@ -219,10 +216,31 @@ export function TransactionsView({
                     ref={addButtonRef}
                     className='primary-button compact-action'
                     type='button'
-                    onClick={() => setAdding(true)}
+                    disabled={
+                        showingDeleted && deletedRestore.selectedCount === 0
+                    }
+                    aria-label={
+                        showingDeleted
+                            ? `Restore ${deletedRestore.selectedCount} selected`
+                            : undefined
+                    }
+                    onClick={
+                        showingDeleted
+                            ? deletedRestore.restoreSelected
+                            : () => setAdding(true)
+                    }
                 >
-                    <Plus size={19} />
-                    Add
+                    {showingDeleted ? (
+                        <>
+                            <RotateCcw size={18} />
+                            Restore
+                        </>
+                    ) : (
+                        <>
+                            <Plus size={19} />
+                            Add
+                        </>
+                    )}
                 </button>
             </div>
             <div className='activity-toolbar'>
@@ -294,49 +312,21 @@ export function TransactionsView({
                 ) : null}
                 <DeletedTransactionsToggle
                     count={snapshot.deletedTransactions.length}
+                    selectedCount={deletedRestore.selectedCount}
                     active={showingDeleted}
-                    onToggle={() => setShowingDeleted((showing) => !showing)}
+                    onToggle={() => {
+                        deletedRestore.clearSelection();
+                        setShowingDeleted((showing) => !showing);
+                    }}
                 />
             </div>
             {showingDeleted ? (
-                <p className='deleted-transactions-caption'>
-                    Deleted from {snapshot.label}. Restore puts a transaction
-                    back where it was.
-                </p>
-            ) : null}
-            {showingDeleted ? (
-                filteredDeleted.length === 0 ? (
-                    <div className='empty-state'>
-                        <Trash2 size={28} />
-                        <h2>
-                            {snapshot.deletedTransactions.length === 0
-                                ? 'Nothing deleted'
-                                : 'No matching deleted transactions'}
-                        </h2>
-                        <p>
-                            {snapshot.deletedTransactions.length === 0
-                                ? `Transactions you delete from ${snapshot.label} show up here.`
-                                : 'Try a different search or filter.'}
-                        </p>
-                    </div>
-                ) : (
-                    [...deletedGroups.entries()].map(([date, entries]) => (
-                        <section key={date}>
-                            <h2 className='activity-date'>{dayLabel(date)}</h2>
-                            <div className='activity-list'>
-                                {entries.map((entry) => (
-                                    <DeletedTransactionRow
-                                        key={entry.id}
-                                        entry={entry}
-                                        onRestore={() =>
-                                            deletedRestore.restore(entry)
-                                        }
-                                    />
-                                ))}
-                            </div>
-                        </section>
-                    ))
-                )
+                <DeletedTransactionsList
+                    snapshot={snapshot}
+                    entries={filteredDeleted}
+                    formatDay={dayLabel}
+                    restore={deletedRestore}
+                />
             ) : filtered.length === 0 ? (
                 <div className='empty-state'>
                     <Search size={28} />
@@ -364,8 +354,18 @@ export function TransactionsView({
             {deletedRestore.destinationSheet}
             {holdMenu.menu}
             <FloatingAddButton
-                visible={addButtonPassed}
-                onAdd={() => setAdding(true)}
+                visible={
+                    addButtonPassed &&
+                    (!showingDeleted || deletedRestore.selectedCount > 0)
+                }
+                restoreCount={
+                    showingDeleted ? deletedRestore.selectedCount : undefined
+                }
+                onAdd={
+                    showingDeleted
+                        ? deletedRestore.restoreSelected
+                        : () => setAdding(true)
+                }
             />
             <TransactionSheet
                 open={adding}

@@ -352,26 +352,37 @@ sheet at once and the settling clone and fading blur otherwise drew over it. At
 71 they tie with sheet and navigation-detail content, so DOM order decides: a
 sheet opened by the action mounts its portal later and draws above the exiting
 menu, while a navigation detail the menu was opened from mounted earlier and
-stays below it. Dismissing without an action keeps 75/76. When a menu opened
-from a page (not inside a dialog such as the line-item detail) closes without an
-action, the layer drops from 76 to 29, below the bottom navigation (30) and
-Better Buddy (40), as soon as the 0.22 s overlay fade has finished, so the
-returning clone slides under those floating controls for the rest of its trip;
-the step sits at 85% of the 0.26 s settle (`hold-menu-layer-drop`) or 53% of the
-0.42 s travelling settle (`hold-menu-layer-drop-travel`), so keep those
-percentages in step with the durations. It cannot drop earlier: while the blur
-is still fading, anything above the clone would render sharp over a blurred
-page. The line-item detail's floating add button cannot sit above the clone at
-all, because it is positioned inside the detail's own `z-index: 71` stacking
-context, which the clone must be above to show over the detail. The overlay must
-finish before that swap, or the row is revealed under a faint residual blur.
+stays below it. An action marked `removesTrigger` (a transaction's Delete, which
+removes the row optimistically) exits with `data-exit='remove'` instead: the
+same 71 stacking, but the clone is hidden at once rather than settling back into
+the gap the removed row leaves. A receipt's Delete is not marked, because it
+asks for confirmation first and its row stays until then. Dismissing without an
+action keeps 75/76. When a menu opened from a page (not inside a dialog such as
+the line-item detail) closes without an action, the layer drops from 76 to 29,
+below the bottom navigation (30) and Better Buddy (40), as soon as the 0.22 s
+overlay fade has finished, so the returning clone slides under those floating
+controls for the rest of its trip; the step sits at 85% of the 0.26 s settle
+(`hold-menu-layer-drop`) or 53% of the 0.42 s travelling settle
+(`hold-menu-layer-drop-travel`), so keep those percentages in step with the
+durations. It cannot drop earlier: while the blur is still fading, anything
+above the clone would render sharp over a blurred page. The line-item detail's
+floating add button cannot sit above the clone at all, because it is positioned
+inside the detail's own `z-index: 71` stacking context, which the clone must be
+above to show over the detail. The overlay must finish before that swap, or the
+row is revealed under a faint residual blur.
 
 ## Toasts
 
-One toast shows at a time, above the bottom navigation on mobile and in the
-bottom-right corner on desktop. It sets `pointer-events: auto` because an open
-Radix modal sets `pointer-events: none` on `body` and the toast lives outside
-every dialog, so without it Undo or Retry would be untappable while a sheet is
-open. Toasts dismiss themselves after 5 s unless they are `persistent`; a
-persistent toast (a failed save's Retry) stays until the person acts on it and
-always carries a dismiss button beside its action.
+One toast shows at a time, above the bottom navigation on mobile and centered 24
+px above the bottom on desktop, over the content column rather than the window:
+from 760 px it spans `left: var(--desktop-sidebar-width)` to `right: 0` with
+auto inline margins and a 400 px width. `--desktop-sidebar-width` (190 px, 210
+px from 1100 px, plus the island inset on a landscape phone) is set in
+`responsive-motion.css` and also drives `.app-frame`'s grid, so the toast stays
+centered over the page whenever the sidebar changes width. It sets
+`pointer-events: auto` because an open Radix modal sets `pointer-events: none`
+on `body` and the toast lives outside every dialog, so without it Undo or Retry
+would be untappable while a sheet is open. Toasts dismiss themselves after 5 s
+unless they are `persistent`; a persistent toast (a failed save's Retry) stays
+until the person acts on it and always carries a dismiss button beside its
+action.

@@ -65,6 +65,7 @@ export function useTransactionHoldMenu<Entry extends TransactionEntry>({
                     label: 'Delete',
                     icon: <Trash2 size={20} />,
                     destructive: true,
+                    removesTrigger: true,
                     onSelect: () => onDelete(entry)
                 }
             ]

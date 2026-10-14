@@ -453,6 +453,15 @@ sheet whose changes stay drafts until **Apply filters** is pressed.
 `docs/agents/design/budget-and-inputs.md` holds the precise filter, badge, and
 clear-control contract.
 
+Deleted expenses and refunds stay in **Recently deleted**, the trash tile under
+the sliders button, which switches the list to the month's deleted transactions
+with search and filters still applying. Check transactions and press
+**Restore** to put them all back in their budget items in one step; the server
+restores them together or refuses them all if one changed elsewhere. A
+transaction whose budget item was later deleted has no checkbox but a **Choose
+item** button, which opens a sheet of the month's live items; for a split, only
+the part on the deleted item moves, merging into the chosen item's part.
+
 ## Seeded development data
 
 The local seed builds a household scenario in the current month, with the previous month seeded as carryover history. Its merchants, amounts, categories, and structure are fixed, so every reset produces the same scenario; only the calendar months follow today's date, which keeps a fresh checkout from opening on an empty month. It includes:
@@ -462,6 +471,7 @@ The local seed builds a household scenario in the current month, with the previo
 - Carryover-enabled items and prior-month history.
 - Expected-income rows and received-income receipts.
 - Expenses, refunds, and received-income activity. The Transactions view omits received-income receipts and labels refunds as Income.
+- Recently deleted entries: Corner Cafe and Bookstore, which restore in place, and Iron Temple Gym, whose Old gym membership item is deleted from the current month, so restoring it needs **Choose item**.
 
 The seed is idempotent: repeated application does not intentionally duplicate the deterministic scenario. It exists for local development and verification, is never invoked by production database initialization, and refuses to run when `NODE_ENV=production`.
 

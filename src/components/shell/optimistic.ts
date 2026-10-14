@@ -42,6 +42,7 @@ export function optimisticSnapshot(
         case 'updateTransaction':
         case 'deleteTransaction':
         case 'undoDeleteTransaction':
+        case 'restoreTransactions':
             applyTransactionPatch(next, input, adjustAllocation);
             break;
         case 'addIncomePlan':
