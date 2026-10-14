@@ -1,4 +1,5 @@
 import 'server-only';
+import { isBillLeadDays } from '@/domain/bill-reminders';
 import { cents, type Cents } from '@/domain/money';
 import type {
     ActivityEntry,
@@ -62,6 +63,12 @@ export function buildCategories(
             availableCents: cents(values.available),
             carryInCents: cents(values.carryIn),
             carryoverEnabled: row.carryoverEnabled,
+            billReminderEnabled: row.billReminderEnabled,
+            billDueDay: row.billDueDay,
+            billLeadDays: isBillLeadDays(row.billLeadDays)
+                ? row.billLeadDays
+                : 3,
+            billDueDayOverride: row.billDueDayOverride,
             version: row.monthlyVersion,
             hasLaterActivity:
                 itemUsage.get(row.itemId)?.hasLaterActivity ?? false,

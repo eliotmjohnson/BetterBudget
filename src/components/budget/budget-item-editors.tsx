@@ -2,11 +2,10 @@
 
 import { Plus } from 'lucide-react';
 import { useEffect, useMemo, useState, type RefObject } from 'react';
-import { AppSwitch } from '@/components/ui/app-switch';
 import { CurrencyInput } from '@/components/ui/currency-input';
 import { NavigationDetail } from '@/components/ui/navigation-detail';
 import { StillInput } from '@/components/ui/still-focus';
-import { formatCurrencyInput, monthLabel, shiftMonth } from '@/domain/money';
+import { formatCurrencyInput } from '@/domain/money';
 import type {
     ActivityEntry,
     BudgetItemView,
@@ -22,6 +21,7 @@ import {
     ItemRemainingStrip
 } from '@/components/budget/item-remaining-summary';
 import { leftToBudgetFill } from '@/components/budget/left-to-budget-fill';
+import { ItemSettings } from '@/components/budget/item-settings';
 import {
     money,
     signedMoney,
@@ -238,47 +238,11 @@ export function EditItemForm({
                     </p>
                 ) : null}
             </div>
-            <div className='switch-row'>
-                <div>
-                    <strong>Carry over</strong>
-                    <span>Add any remaining balance next month</span>
-                </div>
-                <AppSwitch
-                    accessibilityLabel='Carry over remaining balance'
-                    checked={item.carryoverEnabled}
-                    onCheckedChange={(enabled) =>
-                        mutate({
-                            type: 'toggleCarryover',
-                            clientMutationId: createUuid(),
-                            monthKey: snapshot.monthKey,
-                            monthlyItemId: item.id,
-                            enabled,
-                            expectedVersion: item.version
-                        })
-                    }
-                    variant='carryover'
-                />
-            </div>
-            {BigInt(item.carryInCents) !== 0n || item.carryoverEnabled ? (
-                <div className='carryover-callout'>
-                    <div className='carryover-callout-row'>
-                        <span>
-                            Carried over from{' '}
-                            {monthLabel(shiftMonth(snapshot.monthKey, -1))}
-                        </span>
-                        <strong>{money(item.carryInCents)}</strong>
-                    </div>
-                    {item.carryoverEnabled ? (
-                        <div className='carryover-callout-row'>
-                            <span>
-                                Will carry over to{' '}
-                                {monthLabel(shiftMonth(snapshot.monthKey, 1))}
-                            </span>
-                            <strong>{money(item.availableCents)}</strong>
-                        </div>
-                    ) : null}
-                </div>
-            ) : null}
+            <ItemSettings
+                item={item}
+                monthKey={snapshot.monthKey}
+                mutate={mutate}
+            />
             <div className='navigation-detail-activity'>
                 <h3 className='section-title'>Transactions</h3>
                 <div className='navigation-detail-transaction-scroll'>

@@ -42,8 +42,9 @@ navigation, and responsive summary rail; and PGlite, PostgreSQL, and Docker
 development paths.
 
 Version 5 adds Better Buddy, an optional in-app budget assistant driven by Claude.
-Version 6 adds Move money, fill-from-Left-to-budget, calculator math, and a
-long run of mobile and desktop interface polish.
+Version 6 adds Move money, fill-from-Left-to-budget, calculator math, a
+long run of mobile and desktop interface polish, and, in 6.12.0, push bill
+reminders.
 
 `docs/agents/product.md` holds the complete implemented-capability inventory.
 Approved design references live in [`docs/design`](./docs/design).
@@ -66,6 +67,13 @@ release rather than an incompatibility.
   exact cents and an operator bar above the iOS number pad.
 - A **touch-and-hold menu** on transactions with Edit, Duplicate, and Delete.
 - Items with carryover on show the logo coin at the end of their progress bar.
+- **Bill reminders**: turn on **Bill reminder** in a line item's detail, pick
+  the day it's due each month and how early to hear about it, and optionally
+  move this month's due day. Each device that turned on **Settings →
+  Notifications** gets a push the morning the reminder day arrives (the first
+  check after 9 AM Central, usually by 9:30), and another the day after the due
+  date if no expense was recorded on the item. Bill rows show "Due the 15th"
+  after the name.
 
 **Budget page and navigation:**
 
@@ -136,6 +144,10 @@ are unchanged.
   deleting definitions, copying, clearing, or resetting a month, reordering,
   and backups, pointing to where the person can do those
   themselves.
+- Knows which items are bills, their due day, any this-month day, and the
+  reminder timing, so it can answer "when is rent due?". It can't turn
+  reminders on or change them; asked to, it points to the item's **Bill
+  reminder** row and **Settings → Notifications**.
 - Holds context for one conversation only. The conversation lives in the
   browser's memory; **New chat** or a reload starts over, and nothing is stored
   on the server.
@@ -1052,6 +1064,27 @@ light-catching rim is drawn from its outline. Setting
 `--corner-superellipse: 1`, `--corner-extent: 1`, and `--capsule-smoothing: 0`
 turns the effect off everywhere without a code change.
 
+Bill reminders use Web Push through a push-only service worker,
+`public/sw.js`, registered when a device turns on **Settings →
+Notifications**. On iPhone and iPad that works only in the installed
+home-screen app on iOS 16.4 or later; in Safari the row asks you to add the app
+to the Home Screen first. Desktop Chrome works on `http://localhost`, but a
+phone opening the dev server at a plain-HTTP LAN address cannot subscribe, so
+test the phone against a deployed HTTPS origin.
+
+Tapping a notification works the same whether the app was open, in the
+background, or closed: the service worker records the target, and the app
+routes to it on launch, on returning to the foreground, or on the worker's
+message. Chrome on macOS sometimes only brings Chrome forward when a
+notification is clicked, without dispatching the click to the page, notably
+for notifications grouped in Notification Center; that is outside the app.
+
+In development, `POST /api/push/run` with `{ "now": "2026-10-22T15:00:00Z", "dryRun": true }`
+reports which reminders would go out at that moment without sending; omit
+`dryRun` to send and record them. The route answers 404 in production. If a
+notification is sent but never appears on a Mac, check System Settings →
+Notifications → Google Chrome and any active Focus mode.
+
 `docs/agents/design.md` and the topic files it indexes under
 `docs/agents/design/` hold the exact gesture, motion, swipe, reordering, and
 navigation-detail contracts these behaviors must satisfy.
@@ -1171,7 +1204,7 @@ The app validates production configuration, waits for PostgreSQL, runs migration
 
 ## Version 1 non-goals
 
-The current scope intentionally excludes bank syncing, account reconciliation, recurring transactions, multi-currency conversion, imports/exports other than the Settings JSON backup, notifications, realtime WebSockets, queued offline writes, and multi-household/member-role workflows.
+The current scope intentionally excludes bank syncing, account reconciliation, recurring transactions, multi-currency conversion, imports/exports other than the Settings JSON backup, notifications other than bill reminders, realtime WebSockets, queued offline writes, and multi-household/member-role workflows.
 
 Offline form drafts are preserved where practical, but the app never claims offline financial data was saved. Version 1 requires connectivity to persist a write.
 

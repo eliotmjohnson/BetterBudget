@@ -49,6 +49,20 @@ The implemented product supports:
   does not change that month's inbound balance. Budget rows whose carryover is
   on cap the right end of their progress bar with the Better Budget dollar coin
   from the logo, with no text; the bar's accessible value adds "carries over".
+- Bill reminders. The line-item detail groups **Carry over** and **Bill
+  reminder** in one Settings-style card. The Bill reminder row's switch makes
+  the item a bill and, when turned on, slides up the Bill reminder sheet;
+  tapping the row's label opens the same sheet, and its secondary text
+  summarizes the schedule. The sheet sets a due day of the month (1st–31st,
+  clamped to short months), a lead time (on the due date, or 1, 3, or 7 days
+  before), and an optional due day for the viewed month only. Each subscribed
+  device gets one push on the first scheduler check after 9 AM Chicago time
+  (usually by 9:30, later after downtime) when the lead day arrives, and one the
+  day after the due date if no expense has been recorded on the item that month;
+  tapping either opens the item's detail for that month. Budget rows of bills
+  show "Due the 15th" after the name. Settings → Notifications turns push on or
+  off for the current device and sends a test notification; on iOS it asks for
+  the home-screen app first.
 - On phones, the month's Left to budget (or Over budget) amount stays in view:
   once the Budget summary card's amount scrolls under the header, a compact
   strip styled like the card slides down from beneath the header, as the
@@ -227,10 +241,14 @@ The implemented product supports:
   an Undo. It declines unrelated questions and every destructive or structural
   operation it lacks a tool for, and names where the person can do it, including
   restoring a deleted transaction from Recently deleted, which it has no tool
-  for; after deleting a transaction it says it can be restored there. A
-  conversation is held only in the browser's memory; **New chat** or a reload
-  starts over. Assistant writes are server-confirmed and refresh every cached
-  month. Its error replies name Better Buddy, never "the assistant", and when
-  the latest reply is an outage or rate-limit failure it offers **Try again**,
-  which resends the same message.
+  for; after deleting a transaction it says it can be restored there. It reads
+  each bill's due day, this-month override, and reminder timing from the
+  overview (`render.ts` adds "bill reminder on, due the 1st, reminder 3 days
+  before"), and points to the Bill reminder row and Settings → Notifications
+  when asked to set a reminder, which it has no tool for. A conversation is held
+  only in the browser's memory; **New chat** or a reload starts over. Assistant
+  writes are server-confirmed and refresh every cached month. Its error replies
+  name Better Buddy, never "the assistant", and when the latest reply is an
+  outage or rate-limit failure it offers **Try again**, which resends the same
+  message.
 - File-persistent PGlite development, PostgreSQL parity, and Docker packaging.

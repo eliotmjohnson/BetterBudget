@@ -166,6 +166,19 @@ passes only the values that service needs into its container process.
 configuration. Do not persist secret values, add SSH access, or bypass the host
 deployment helper.
 
+Bill reminders (6.12.0) needed no host change. Their VAPID key pair is generated
+into the `push_vapid_keys` table on first use rather than read from the secret;
+that is the one deliberate exception to keeping secrets out of the host's
+storage, because the key can only sign pushes to subscription endpoints stored
+in the same database. It is captured by the daily EBS snapshots, and restoring
+an older snapshot keeps every device's subscription valid, while a fresh
+database means each device turns notifications on again. The sender runs inside
+the application container from `src/instrumentation.ts` rather than as a systemd
+timer, so it ships with the image; it assumes the single application container
+this host runs. Push services (Apple, Google, Mozilla) are reached over the
+existing IPv6 egress, and `web-push` logs a harmless Node `DEP0169`
+`url.parse()` deprecation warning on its first send.
+
 Owner bootstrap is a host command, `better-budget-owner`, not a workstation
 procedure. The workflow publishes the `owner-bootstrap` target to ECR as
 `owner-<commit-sha>` only when its `build_owner_image` input is set, because the

@@ -45,3 +45,26 @@ export function monthDateRange(monthKey: MonthKey | string) {
 
 export const dateInMonth = (date: string, monthKey: MonthKey | string) =>
     date.startsWith(`${monthKey}-`) && date.length === 10;
+
+const appHourFormatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: APP_TIME_ZONE,
+    hour: '2-digit',
+    hourCycle: 'h23'
+});
+
+/** Today's `YYYY-MM-DD` date and 0–23 hour in the app time zone. */
+export function appDateTime(now = new Date()): { date: string; hour: number } {
+    const parts = appDateFormatter.formatToParts(now);
+    const part = (type: Intl.DateTimeFormatPartTypes, fallback: string) =>
+        parts.find((candidate) => candidate.type === type)?.value ?? fallback;
+    const hour = Number(
+        appHourFormatter
+            .formatToParts(now)
+            .find((candidate) => candidate.type === 'hour')?.value ?? '0'
+    );
+
+    return {
+        date: `${part('year', '1970')}-${part('month', '01')}-${part('day', '01')}`,
+        hour
+    };
+}

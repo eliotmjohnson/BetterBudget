@@ -7,23 +7,53 @@ organizer details), its header, or either docked summary strip.
 
 ### Route and structure
 
-Budget-item details are URL-backed and use an iOS-style navigation push below
-760 px. The detail page slides in from the right while the mobile header, Budget
-content, and bottom navigation parallax left; Back, browser history, refresh,
-and an app-controlled left-edge swipe all preserve navigation-stack semantics.
-The global left-edge guard must leave this custom swipe available from x=0 while
-suppressing Safari's cancelable native history gesture. Disable the underlying
-detail swipe while any child sheet is visible or exiting so add/edit transaction
-interactions cannot pop the line-item route. Keep the Budget back control and
-editable item title in a fixed detail header while only the detail body scrolls,
-led by a prominent remaining-this-month summary that docks as a compact strip
-under the collapsed header once scrolled past (below). A floating blue plus
-action remains at the bottom right and opens the add-transaction sheet with the
-current item preselected. Item-scoped add and edit transaction sheets are
-full-screen below 760 px, omit the mobile close control and grabber, and retain
-the header Add/Save action; at 760 px and above, they use the shared centered
-modal treatment. Global transaction sheets retain their established standard
+Budget-item details are URL-backed (`?item=<definitionId>`) and use an iOS-style
+navigation push below 760 px. An `item` the month does not contain is removed
+from the URL only once the snapshot on screen is for the URL's month and that
+month exists: during a month change the previous month's snapshot is still on
+screen for a moment, and a bill reminder can point at a month nobody has created
+yet, whose `item` then opens as soon as the month is copied. Month links never
+carry `item`, so only a deep link keeps it. The detail page slides in from the
+right while the mobile header, Budget content, and bottom navigation parallax
+left; Back, browser history, refresh, and an app-controlled left-edge swipe all
+preserve navigation-stack semantics. The global left-edge guard must leave this
+custom swipe available from x=0 while suppressing Safari's cancelable native
+history gesture. Disable the underlying detail swipe while any child sheet is
+visible or exiting so add/edit transaction interactions cannot pop the line-item
+route. Keep the Budget back control and editable item title in a fixed detail
+header while only the detail body scrolls, led by a prominent
+remaining-this-month summary that docks as a compact strip under the collapsed
+header once scrolled past (below). A floating blue plus action remains at the
+bottom right and opens the add-transaction sheet with the current item
+preselected. Item-scoped add and edit transaction sheets are full-screen below
+760 px, omit the mobile close control and grabber, and retain the header
+Add/Save action; at 760 px and above, they use the shared centered modal
+treatment. Global transaction sheets retain their established standard
 presentation.
+
+Below the planned amount, the detail's switches share one `.settings-list` card
+styled like the Settings page: **Carry over**, then **Bill reminder**. The bill
+row is split because a switch cannot sit inside a button: its icon, label, and a
+22 px chevron are one button (`.item-settings-row-button`, spanning the first
+two grid columns, with the chevron in its own column centered on the row just
+left of the switch) that opens the Bill reminder sheet, and the switch beside it
+toggles the reminder. While the reminder is off the button is disabled and the
+chevron is hidden, so the sheet only opens for a bill. Turning the switch on
+opens the sheet, so the due day is chosen in the same motion, and turning it off
+closes it; closing the sheet returns focus to the row button, with its focus
+ring only when the sheet was opened from the keyboard (`restoreFocusVisible`, as
+on the Settings page; a tap or the row switch restores focus without the ring,
+and the row's own `:focus-visible` style is listed in the
+`[data-sheet-restored-focus]` reset so it cannot win on specificity). The sheet,
+`raised-mobile` so it rises to at least 310 px on phones, holds only the
+schedule: **Due every month on the** day and **Notify me** lead time, then a
+**Different day this month** row (`<month> only` beneath) whose switch reveals
+an 88 px day picker inline beside it, so the sheet's height never changes. The
+row's gaps are tightened so the one-line title still fits beside the picker and
+switch on a 390 px phone; narrower screens truncate the title rather than wrap
+it. The picker opens on "Day", leaves out the usual day, and saves nothing until
+a day is picked; switching the row off clears an existing override. The
+carryover callout follows the card.
 
 ### Push and pop motion
 

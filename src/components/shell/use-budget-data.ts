@@ -49,6 +49,8 @@ const changesLaterMonths: Record<
     addItem: false,
     renameCategory: false,
     renameItem: false,
+    updateBillReminder: false,
+    setBillDueOverride: false,
     deleteCategory: false,
     deleteItem: false,
     reorderCategories: false,

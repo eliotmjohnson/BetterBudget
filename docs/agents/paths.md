@@ -32,8 +32,9 @@ moved, renamed, or takes on a new responsibility.
   archive/delete, reordering), `reassignment.ts` (moving an archived
   definition's activity and plan), `active-items.ts` (the shared
   archived-as-of-month condition), `month-operations.ts` (note, copy, clear,
-  reset), `context.ts` (shared `MutationContext`/`ensureMonth`). Read only the
-  family you are changing.
+  reset), `bill-reminders.ts` (bill settings and the per-month due-day
+  override), `context.ts` (shared `MutationContext`/`ensureMonth`). Read only
+  the family you are changing.
 - `src/server/backup/` — the Settings JSON backup behind `/api/backup`.
   `schema.ts` validates the file (exact split sums, in-month dates, internal
   references), `export.ts` builds it, `import-replace.ts` clears the household's
@@ -50,6 +51,18 @@ moved, renamed, or takes on a new responsibility.
   transactions to Node. Verify any change here by comparing whole snapshots for
   every month before and after on a multi-year history with refunds, deleted and
   split transactions, carryover breaks, gap months, and negative balances.
+- `src/server/bill-reminders/` — the bill reminder sender. `candidates.ts` loads
+  enabled bills, their plan rows for the surrounding months, and which ones
+  already have an expense; `index.ts` (`runBillReminders`) claims each alert in
+  the delivery ledger and sends it; `scheduler.ts` is the 30-minute in-process
+  loop that `src/instrumentation.ts` starts. The rules themselves are pure, in
+  `src/domain/bill-reminders.ts`.
+- `src/server/push/` — Web Push. `vapid.ts` generates and reads the
+  database-held key pair, `send.ts` sends one notification and deletes
+  subscriptions the push service reports gone, `subscriptions.ts` stores
+  devices. Routes live under `src/app/api/push/`: `subscriptions` (public key,
+  subscribe, unsubscribe), `test` (one notification to the caller's own device),
+  and `run` (development-only scheduler run with `now` and `dryRun`).
 - `src/server/household-lock.ts` — `lockHouseholdWrites`, the per-household row
   lock every budget write and backup import takes first.
 - `src/server/mutation-failures.ts` — mutation-failure class, not-found/conflict
@@ -74,8 +87,11 @@ moved, renamed, or takes on a new responsibility.
 - `src/components/shell/use-budget-data.ts` — hydration, retry, reconciliation,
   sync state.
 - `src/components/shell/optimistic.ts` — optimistic cache patches: clones the
-  snapshot and delegates to `optimistic-patches/`, which mirrors
-  `budget-mutations/` one file per mutation family.
+  snapshot and delegates through a per-type `patches` map to
+  `optimistic-patches/`, which mirrors `budget-mutations/` one file per mutation
+  family. `budget-service.ts` dispatches through the matching `handlers` map;
+  both are mapped `Record`s, so a new mutation type must name its handler and
+  patch, and neither grows a switch toward the complexity budget.
 - `src/components/shell/pull-to-refresh.tsx` — the per-tab pull-to-refresh
   indicator, refresh lifecycle, and status announcement; `pull-gesture.ts`
   observes the native elastic overscroll and holds the pull state machine.
@@ -101,9 +117,14 @@ moved, renamed, or takes on a new responsibility.
   (`transferBetweenItems`, in `budget-mutations/transactions.ts`). Both resolve
   their two items through `activeMovePair` in `active-items.ts`.
 - `src/components/budget/budget-item-editors.tsx` — plan input, item edit/detail
-  components; `left-to-budget-fill.ts` the planned amount's Left to budget and
-  Over budget fill chip; `item-remaining-summary.tsx` the remaining-this-month
-  card and the compact strip that docks under the detail header.
+  components; `item-settings.tsx` the detail's Settings-style card of the Carry
+  over and Bill reminder switches plus the carryover callout;
+  `bill-reminder-sheet.tsx` the Bill reminder sheet (due day, lead time, and
+  this-month override) and the row's summary text; `bill-due-tag.tsx` the row's
+  "Due the 15th" tag; `left-to-budget-fill.ts` the planned amount's Left to
+  budget and Over budget fill chip; `item-remaining-summary.tsx` the
+  remaining-this-month card and the compact strip that docks under the detail
+  header.
 - `src/components/income/income-view.tsx` — Income page: expected-income plans
   and received-income receipts. `income-source-details.tsx` is the pushed
   detail, `income-receipt-list.tsx` its receipt rows and their hold menu,
@@ -148,6 +169,16 @@ moved, renamed, or takes on a new responsibility.
   snapshot invalidation. Styles live in `src/app/styles/assistant.css`.
   `src/components/settings/settings-assistant-section.tsx` is the Settings
   switch.
+- `src/components/shared/use-push-notifications.ts` — this device's push state
+  (unsupported, install to Home Screen, denied, off, on), subscribe,
+  unsubscribe, and test send. With `sync` it re-sends an existing subscription
+  and drops one signed by a replaced key pair. It requests notification
+  permission before any other await, because iOS only grants it inside the tap.
+  `src/components/settings/settings-notifications-section.tsx` is the Settings
+  section, and `public/sw.js` the push-only service worker.
+  `src/components/shell/use-notification-target.ts` is the app-shell hook that
+  opens a tapped notification's target, which the worker records in Cache
+  Storage before it focuses or opens the app.
 - `src/components/ui/navigation-detail/` — mobile push navigation, fixed detail
   chrome, modal fallback. `index.tsx` is the component, `edge-drag.ts` the
   edge-swipe dismissal gesture, `title-motion.ts` the collapsing-title

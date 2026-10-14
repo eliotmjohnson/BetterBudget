@@ -18,6 +18,7 @@ import { BudgetView } from '@/components/budget/budget-view';
 import { IncomeView } from '@/components/income/income-view';
 import { MonthActionsSheet } from './month-actions-sheet';
 import { optimisticSnapshot } from './optimistic';
+import { useNotificationTarget } from './use-notification-target';
 import { OrganizerView } from '@/components/organize/organizer-view';
 import { SettingsView } from '@/components/settings/settings-view';
 import { TransactionsView } from '@/components/transactions/transactions-view';
@@ -63,6 +64,8 @@ export function BudgetApp({
     const online = useConnectivity();
     const syncing = useDelayedSyncIndicator();
     const showToast = useToast();
+
+    useNotificationTarget();
     const organizerTriggerRef = useRef<HTMLElement | null>(null);
     const organizerRestoreFocusVisibleRef = useRef(true);
     const [monthActionsOpen, setMonthActionsOpen] = useState(false);

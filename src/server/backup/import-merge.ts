@@ -138,7 +138,10 @@ async function mergeDefinitions(
             name: item.name,
             sortOrder: (offsets.get(categoryId) ?? 0) + item.sortOrder,
             archivedAt: archivedFromMonth ? new Date() : null,
-            archivedFromMonth
+            archivedFromMonth,
+            billReminderEnabled: item.billReminderEnabled,
+            billDueDay: item.billDueDay,
+            billLeadDays: item.billLeadDays
         });
         itemIds.set(item.id, item.id);
         itemArchivedFrom.set(
@@ -189,7 +192,8 @@ async function mergeMonths(
             budgetItemId:
                 definitions.itemIds.get(item.budgetItemId) ?? item.budgetItemId,
             plannedCents: BigInt(item.plannedCents),
-            carryoverEnabled: item.carryoverEnabled
+            carryoverEnabled: item.carryoverEnabled,
+            billDueDayOverride: item.billDueDayOverride
         }));
 
         if (links.length > 0)

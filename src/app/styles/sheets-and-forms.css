@@ -754,6 +754,35 @@
     color: var(--muted);
     font-size: 12px;
 }
+.bill-reminder-fields {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+.bill-override-row {
+    gap: 12px;
+}
+.bill-override-row > div:first-child {
+    min-width: 0;
+}
+.bill-override-row strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.bill-override-controls {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: 8px;
+}
+.bill-override-field select {
+    width: 88px;
+    min-height: 40px;
+    padding: 7px 32px 7px 12px;
+    background-position: right 10px center;
+    background-size: 16px;
+}
 .carryover-callout {
     display: grid;
     gap: 10px;

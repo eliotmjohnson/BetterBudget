@@ -6,6 +6,55 @@ import { applyTransactionPatch } from '@/components/shell/optimistic-patches/tra
 import { applyIncomePatch } from '@/components/shell/optimistic-patches/income';
 import { applyStructurePatch } from '@/components/shell/optimistic-patches/structure';
 import { applyMonthPatch } from '@/components/shell/optimistic-patches/month-operations';
+import { applyBillReminderPatch } from '@/components/shell/optimistic-patches/bill-reminders';
+import type {
+    AdjustAllocation,
+    PatchOf
+} from '@/components/shell/optimistic-patches/context';
+
+type Patch<K extends BudgetMutation['type']> = (
+    next: MonthSnapshot,
+    input: PatchOf<K>,
+    adjustAllocation: AdjustAllocation
+) => void;
+
+/**
+ * The optimistic patch family for each mutation type. A mapped `Record`
+ * rather than a switch, so a new mutation type must name its patch.
+ */
+const patches: { [K in BudgetMutation['type']]: Patch<K> } = {
+    updatePlan: applyPlanPatch,
+    movePlannedAmount: applyPlanPatch,
+    toggleCarryover: applyPlanPatch,
+    addTransaction: applyTransactionPatch,
+    transferBetweenItems: applyTransactionPatch,
+    updateTransaction: applyTransactionPatch,
+    deleteTransaction: applyTransactionPatch,
+    undoDeleteTransaction: applyTransactionPatch,
+    restoreTransactions: applyTransactionPatch,
+    addIncomePlan: applyIncomePatch,
+    updateIncomePlan: applyIncomePatch,
+    addIncomeReceipt: applyIncomePatch,
+    updateIncomeReceipt: applyIncomePatch,
+    deleteIncomeReceipt: applyIncomePatch,
+    deleteIncomePlan: applyIncomePatch,
+    addCategory: applyStructurePatch,
+    addItem: applyStructurePatch,
+    renameCategory: applyStructurePatch,
+    renameItem: applyStructurePatch,
+    archiveCategory: applyStructurePatch,
+    archiveItem: applyStructurePatch,
+    deleteCategory: applyStructurePatch,
+    deleteItem: applyStructurePatch,
+    reorderCategories: applyStructurePatch,
+    reorderItems: applyStructurePatch,
+    updateBillReminder: applyBillReminderPatch,
+    setBillDueOverride: applyBillReminderPatch,
+    updateMonthNote: applyMonthPatch,
+    clearPlannedAmounts: applyMonthPatch,
+    copyPreviousMonth: applyMonthPatch,
+    resetBudget: applyMonthPatch
+};
 
 export function optimisticSnapshot(
     snapshot: MonthSnapshot,
@@ -31,47 +80,11 @@ export function optimisticSnapshot(
         }
     };
 
-    switch (input.type) {
-        case 'updatePlan':
-        case 'movePlannedAmount':
-        case 'toggleCarryover':
-            applyPlanPatch(next, input);
-            break;
-        case 'addTransaction':
-        case 'transferBetweenItems':
-        case 'updateTransaction':
-        case 'deleteTransaction':
-        case 'undoDeleteTransaction':
-        case 'restoreTransactions':
-            applyTransactionPatch(next, input, adjustAllocation);
-            break;
-        case 'addIncomePlan':
-        case 'updateIncomePlan':
-        case 'addIncomeReceipt':
-        case 'updateIncomeReceipt':
-        case 'deleteIncomeReceipt':
-        case 'deleteIncomePlan':
-            applyIncomePatch(next, input);
-            break;
-        case 'addCategory':
-        case 'addItem':
-        case 'renameCategory':
-        case 'renameItem':
-        case 'archiveCategory':
-        case 'archiveItem':
-        case 'deleteCategory':
-        case 'deleteItem':
-        case 'reorderCategories':
-        case 'reorderItems':
-            applyStructurePatch(next, input);
-            break;
-        case 'updateMonthNote':
-        case 'clearPlannedAmounts':
-        case 'copyPreviousMonth':
-        case 'resetBudget':
-            applyMonthPatch(next, input);
-            break;
-    }
+    (patches[input.type] as Patch<BudgetMutation['type']>)(
+        next,
+        input,
+        adjustAllocation
+    );
 
     return next;
 }

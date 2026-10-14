@@ -73,6 +73,15 @@ hide the unselected ones, which keeps the switch free of remounts. The desktop
 Planned cell is the same inline plan input, given a soft hover fill and a blue
 focus ring so it reads as editable.
 
+### Bill due tag
+
+A bill's row shows "Due the 15th" after its name in muted italic text at 0.78 em
+with −0.02 em letter spacing (the small italic otherwise reads loose), inside
+the same item button, so it shares the name's ellipsis and adds no row height.
+It shows this month's override when one is set. The Bill reminder sheet's fields
+are native `.field select` controls: iOS opens its own picker wheel for them,
+and 31 days would not fit a segmented control.
+
 ### Progress bars
 
 A line-item progress bar represents the share of its starting available balance

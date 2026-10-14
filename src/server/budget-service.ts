@@ -47,6 +47,10 @@ import {
     reorderItems
 } from '@/server/budget-mutations/structure';
 import {
+    setBillDueOverride,
+    updateBillReminder
+} from '@/server/budget-mutations/bill-reminders';
+import {
     clearPlannedAmounts,
     copyPreviousMonth,
     resetBudget,
@@ -90,84 +94,59 @@ async function pruneMutationReceipts(
     }
 }
 
-async function dispatch(
+/**
+ * The handler for each mutation type. A mapped `Record` rather than a switch,
+ * so a new mutation type must name its handler.
+ */
+const handlers: {
+    [K in BudgetMutation['type']]: (
+        context: MutationContext<K>
+    ) => Promise<void>;
+} = {
+    updatePlan,
+    toggleCarryover,
+    movePlannedAmount,
+    transferBetweenItems,
+    addTransaction,
+    updateTransaction,
+    deleteTransaction,
+    undoDeleteTransaction,
+    restoreTransactions,
+    addIncomePlan,
+    updateIncomePlan,
+    addIncomeReceipt,
+    updateIncomeReceipt,
+    deleteIncomeReceipt,
+    deleteIncomePlan,
+    addCategory,
+    addItem,
+    renameCategory,
+    renameItem,
+    updateBillReminder,
+    setBillDueOverride,
+    archiveCategory,
+    archiveItem,
+    deleteCategory,
+    deleteItem,
+    reorderCategories,
+    reorderItems,
+    updateMonthNote,
+    copyPreviousMonth,
+    clearPlannedAmounts,
+    resetBudget
+};
+
+function dispatch(
     tx: AppDb,
     householdId: string,
     monthId: string,
     input: BudgetMutation
 ): Promise<void> {
-    const context = <T extends BudgetMutation['type']>(
-        narrowed: MutationContext<T>['input']
-    ): MutationContext<T> => ({ tx, householdId, monthId, input: narrowed });
+    const handler = handlers[input.type] as (
+        context: MutationContext<BudgetMutation['type']>
+    ) => Promise<void>;
 
-    switch (input.type) {
-        case 'updatePlan':
-            return updatePlan(context(input));
-        case 'toggleCarryover':
-            return toggleCarryover(context(input));
-        case 'movePlannedAmount':
-            return movePlannedAmount(context(input));
-        case 'transferBetweenItems':
-            return transferBetweenItems(context(input));
-        case 'addTransaction':
-            return addTransaction(context(input));
-        case 'updateTransaction':
-            return updateTransaction(context(input));
-        case 'deleteTransaction':
-            return deleteTransaction(context(input));
-        case 'undoDeleteTransaction':
-            return undoDeleteTransaction(context(input));
-        case 'restoreTransactions':
-            return restoreTransactions(context(input));
-        case 'addIncomePlan':
-            return addIncomePlan(context(input));
-        case 'updateIncomePlan':
-            return updateIncomePlan(context(input));
-        case 'addIncomeReceipt':
-            return addIncomeReceipt(context(input));
-        case 'updateIncomeReceipt':
-            return updateIncomeReceipt(context(input));
-        case 'deleteIncomeReceipt':
-            return deleteIncomeReceipt(context(input));
-        case 'deleteIncomePlan':
-            return deleteIncomePlan(context(input));
-        case 'addCategory':
-            return addCategory(context(input));
-        case 'addItem':
-            return addItem(context(input));
-        case 'renameCategory':
-            return renameCategory(context(input));
-        case 'renameItem':
-            return renameItem(context(input));
-        case 'archiveCategory':
-            return archiveCategory(context(input));
-        case 'archiveItem':
-            return archiveItem(context(input));
-        case 'deleteCategory':
-            return deleteCategory(context(input));
-        case 'deleteItem':
-            return deleteItem(context(input));
-        case 'reorderCategories':
-            return reorderCategories(context(input));
-        case 'reorderItems':
-            return reorderItems(context(input));
-        case 'updateMonthNote':
-            return updateMonthNote(context(input));
-        case 'copyPreviousMonth':
-            return copyPreviousMonth(context(input));
-        case 'clearPlannedAmounts':
-            return clearPlannedAmounts(context(input));
-        case 'resetBudget':
-            return resetBudget(context(input));
-        default: {
-            const unhandled: never = input;
-
-            throw new MutationFailure(
-                'validation',
-                `Unsupported mutation: ${(unhandled as BudgetMutation).type}`
-            );
-        }
-    }
+    return handler({ tx, householdId, monthId, input });
 }
 
 export async function applyBudgetMutation(

@@ -13,6 +13,7 @@ import {
     transactions
 } from '@/db/schema';
 import { APP_VERSION } from '@/domain/app-info';
+import { isBillLeadDays } from '@/domain/bill-reminders';
 import { APP_TIME_ZONE } from '@/domain/calendar';
 import { APP_CURRENCY } from '@/domain/money';
 import {
@@ -152,7 +153,8 @@ export async function exportHousehold(
         items: (itemsByMonth.get(month.id) ?? []).map(({ item }) => ({
             budgetItemId: item.budgetItemId,
             plannedCents: item.plannedCents.toString(),
-            carryoverEnabled: item.carryoverEnabled
+            carryoverEnabled: item.carryoverEnabled,
+            billDueDayOverride: item.billDueDayOverride
         })),
         incomePlans: (plansByMonth.get(month.id) ?? []).map(({ plan }) => ({
             id: plan.id,
@@ -215,7 +217,12 @@ export async function exportHousehold(
             name: item.name,
             sortOrder: item.sortOrder,
             archivedFromMonth: toMonthKey(item.archivedFromMonth) as
-                BackupMonth['month'] | null
+                BackupMonth['month'] | null,
+            billReminderEnabled: item.billReminderEnabled,
+            billDueDay: item.billDueDay,
+            billLeadDays: isBillLeadDays(item.billLeadDays)
+                ? item.billLeadDays
+                : 3
         })),
         months
     };

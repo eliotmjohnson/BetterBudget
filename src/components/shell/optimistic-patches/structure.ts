@@ -44,6 +44,10 @@ export function applyStructurePatch(next: MonthSnapshot, input: Input): void {
                 availableCents: cents(input.plannedCents),
                 carryInCents: cents(0),
                 carryoverEnabled: false,
+                billReminderEnabled: false,
+                billDueDay: null,
+                billLeadDays: 3,
+                billDueDayOverride: null,
                 version: 1,
                 hasLaterActivity: false,
                 permanentlyDeletable: true

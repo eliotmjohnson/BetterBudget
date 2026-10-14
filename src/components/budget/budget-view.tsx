@@ -123,10 +123,20 @@ export function BudgetView({
     }, [animationKey]);
     useEffect(() => {
         if (!requestedItemDefinitionId || selectedItem) return;
+        if (snapshot.monthId === null) return;
+        const requestedMonth = new URL(window.location.href).searchParams.get(
+            'month'
+        );
 
+        if (requestedMonth && requestedMonth !== snapshot.monthKey) return;
         window.history.replaceState(itemHistory.state(), '', itemHistory.url());
         itemHistory.notifyChange();
-    }, [requestedItemDefinitionId, selectedItem]);
+    }, [
+        requestedItemDefinitionId,
+        selectedItem,
+        snapshot.monthId,
+        snapshot.monthKey
+    ]);
     const {
         containerRef: categoryContainerRef,
         getKeyboardProps: getCategoryKeyboardProps,

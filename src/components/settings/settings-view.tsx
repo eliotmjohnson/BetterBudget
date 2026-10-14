@@ -20,6 +20,7 @@ import { useRouter } from 'next/navigation';
 import { Sheet } from '@/components/ui/sheet';
 import { SettingsAssistantSection } from './settings-assistant-section';
 import { SettingsDataSection } from './settings-data-section';
+import { SettingsNotificationsSection } from './settings-notifications-section';
 import {
     APP_BUILD_LABEL,
     APP_DESCRIPTION,
@@ -194,6 +195,7 @@ export function SettingsView({
                 enabled={assistantEnabled}
                 onEnabledChange={onAssistantEnabledChange}
             />
+            <SettingsNotificationsSection onMessage={onMessage} />
             <SettingsDataSection onMessage={onMessage} />
             <h2 className='settings-section-title'>Security</h2>
             <div className='settings-list'>

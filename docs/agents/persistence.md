@@ -34,6 +34,11 @@ Safe optimistic operations currently include:
   shows an inline Not saved message with the saved amount until the next edit or
   retry.
 - Carryover toggles.
+- Bill reminder settings (`updateBillReminder`, on the item definition and
+  checked against its definition version) and a month's due-day override
+  (`setBillDueOverride`, on the monthly item). Neither changes later months.
+  Push subscriptions are not budget mutations: `/api/push/subscriptions` upserts
+  them by endpoint, which is already idempotent.
 - Moving money between two items of the same month: `movePlannedAmount` (both
   item versions are checked, and the source's plan must cover the amount) and
   `transferBetweenItems` (one expense and one refund, each with a single split,

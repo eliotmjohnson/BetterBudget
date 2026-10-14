@@ -24,6 +24,7 @@ import {
     type Mutate
 } from '@/components/shared/budget-view-helpers';
 import { PlanInput } from './budget-item-editors';
+import { BillDueTag } from './bill-due-tag';
 import { CarryoverCoin } from './carryover-coin';
 
 export const remainingAvailableProgress = (
@@ -224,6 +225,7 @@ export function BudgetCategorySection({
                                                     }
                                                 >
                                                     {item.name}
+                                                    <BillDueTag item={item} />
                                                 </button>
                                                 <div className='amount-column amount-column--planned'>
                                                     <PlanInput

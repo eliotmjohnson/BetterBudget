@@ -1,3 +1,4 @@
+import type { BillLeadDays } from './bill-reminders';
 import type { Cents, MonthKey } from './money';
 
 export type CategoryTone = 'yellow' | 'coral' | 'blue' | 'mint' | 'lilac';
@@ -16,6 +17,14 @@ export interface BudgetItemView {
 
     /** Whether this month's ending balance flows into the next month. */
     carryoverEnabled: boolean;
+
+    /** Whether due-date push reminders are on for the item's definition. */
+    billReminderEnabled: boolean;
+    billDueDay: number | null;
+    billLeadDays: BillLeadDays;
+
+    /** This month's due day, replacing `billDueDay` for this month only. */
+    billDueDayOverride: number | null;
     version: number;
     hasLaterActivity: boolean;
     permanentlyDeletable: boolean;

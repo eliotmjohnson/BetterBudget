@@ -56,7 +56,13 @@ const nextConfig: NextConfig = {
     allowedDevOrigins: ['127.0.0.1', ...privateLanDevOrigins],
     serverExternalPackages: ['@electric-sql/pglite', 'pg'],
     async headers() {
-        return [{ source: '/:path*', headers: securityHeaders }];
+        return [
+            { source: '/:path*', headers: securityHeaders },
+            {
+                source: '/sw.js',
+                headers: [{ key: 'Cache-Control', value: 'no-cache' }]
+            }
+        ];
     }
 };
 

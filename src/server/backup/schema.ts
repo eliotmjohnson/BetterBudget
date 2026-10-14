@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { BILL_LEAD_DAYS } from '@/domain/bill-reminders';
 import { monthKeySchema } from '@/domain/money';
 import {
     categoryIconSchema,
@@ -22,17 +23,28 @@ const categorySchema = z.object({
     sortOrder: sortOrderSchema,
     archivedFromMonth: monthKeySchema.nullable()
 });
-const itemSchema = z.object({
-    id: z.string().uuid(),
-    categoryId: z.string().uuid(),
-    name: nameSchema,
-    sortOrder: sortOrderSchema,
-    archivedFromMonth: monthKeySchema.nullable()
-});
+const dueDaySchema = z.number().int().min(1).max(31);
+const itemSchema = z
+    .object({
+        id: z.string().uuid(),
+        categoryId: z.string().uuid(),
+        name: nameSchema,
+        sortOrder: sortOrderSchema,
+        archivedFromMonth: monthKeySchema.nullable(),
+        billReminderEnabled: z.boolean().default(false),
+        billDueDay: dueDaySchema.nullable().default(null),
+        billLeadDays: z
+            .union(BILL_LEAD_DAYS.map((days) => z.literal(days)))
+            .default(3)
+    })
+    .refine((item) => !item.billReminderEnabled || item.billDueDay !== null, {
+        message: 'A bill reminder needs a due day.'
+    });
 const monthlyItemSchema = z.object({
     budgetItemId: z.string().uuid(),
     plannedCents: centsSchema,
-    carryoverEnabled: z.boolean()
+    carryoverEnabled: z.boolean(),
+    billDueDayOverride: dueDaySchema.nullable().default(null)
 });
 const receiptSchema = z.object({
     id: z.string().uuid(),

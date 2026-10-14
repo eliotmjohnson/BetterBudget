@@ -1,12 +1,14 @@
 import {
     bigint,
     boolean,
+    check,
     date,
     index,
     integer,
     jsonb,
     pgEnum,
     pgTable,
+    smallint,
     text,
     timestamp,
     uniqueIndex,
@@ -184,6 +186,11 @@ export const budgetItems = pgTable(
         name: text('name').notNull(),
         sortOrder: integer('sort_order').notNull(),
         version: integer('version').notNull().default(1),
+        billReminderEnabled: boolean('bill_reminder_enabled')
+            .notNull()
+            .default(false),
+        billDueDay: smallint('bill_due_day'),
+        billLeadDays: smallint('bill_lead_days').notNull().default(3),
         archivedAt: timestamp('archived_at', { withTimezone: true }),
         archivedFromMonth: date('archived_from_month', { mode: 'string' }),
         createdAt,
@@ -193,6 +200,18 @@ export const budgetItems = pgTable(
         index('budget_items_category_order_idx').on(
             table.categoryId,
             table.sortOrder
+        ),
+        check(
+            'budget_items_bill_due_day_check',
+            sql`${table.billDueDay} between 1 and 31`
+        ),
+        check(
+            'budget_items_bill_lead_days_check',
+            sql`${table.billLeadDays} in (0, 1, 3, 7)`
+        ),
+        check(
+            'budget_items_bill_reminder_due_day_check',
+            sql`not ${table.billReminderEnabled} or ${table.billDueDay} is not null`
         )
     ]
 );
@@ -232,6 +251,7 @@ export const monthlyBudgetItems = pgTable(
             .notNull()
             .default(sql`0`),
         carryoverEnabled: boolean('carryover_enabled').notNull().default(false),
+        billDueDayOverride: smallint('bill_due_day_override'),
         version: integer('version').notNull().default(1),
         createdAt,
         updatedAt
@@ -241,7 +261,11 @@ export const monthlyBudgetItems = pgTable(
             table.monthId,
             table.budgetItemId
         ),
-        index('monthly_budget_items_budget_item_idx').on(table.budgetItemId)
+        index('monthly_budget_items_budget_item_idx').on(table.budgetItemId),
+        check(
+            'monthly_budget_items_bill_due_day_override_check',
+            sql`${table.billDueDayOverride} between 1 and 31`
+        )
     ]
 );
 
@@ -356,4 +380,64 @@ export const mutationReceipts = pgTable(
         ),
         index('mutation_receipts_created_idx').on(table.createdAt)
     ]
+);
+
+export const billReminderKind = pgEnum('bill_reminder_kind', [
+    'upcoming',
+    'overdue'
+]);
+
+export const pushSubscriptions = pgTable(
+    'push_subscriptions',
+    {
+        id: uuid('id').primaryKey().defaultRandom(),
+        householdId: uuid('household_id')
+            .notNull()
+            .references(() => households.id, { onDelete: 'cascade' }),
+        endpoint: text('endpoint').notNull().unique(),
+        p256dh: text('p256dh').notNull(),
+        auth: text('auth').notNull(),
+        userAgent: text('user_agent'),
+        lastSuccessAt: timestamp('last_success_at', { withTimezone: true }),
+        createdAt,
+        updatedAt
+    },
+    (table) => [index('push_subscriptions_household_idx').on(table.householdId)]
+);
+
+export const billReminderDeliveries = pgTable(
+    'bill_reminder_deliveries',
+    {
+        id: uuid('id').primaryKey().defaultRandom(),
+        householdId: uuid('household_id')
+            .notNull()
+            .references(() => households.id, { onDelete: 'cascade' }),
+        budgetItemId: uuid('budget_item_id')
+            .notNull()
+            .references(() => budgetItems.id, { onDelete: 'cascade' }),
+        month: date('month', { mode: 'string' }).notNull(),
+        kind: billReminderKind('kind').notNull(),
+        sentAt: timestamp('sent_at', { withTimezone: true })
+            .notNull()
+            .defaultNow()
+    },
+    (table) => [
+        uniqueIndex('bill_reminder_deliveries_item_month_kind_uidx').on(
+            table.budgetItemId,
+            table.month,
+            table.kind
+        ),
+        index('bill_reminder_deliveries_household_idx').on(table.householdId)
+    ]
+);
+
+export const pushVapidKeys = pgTable(
+    'push_vapid_keys',
+    {
+        id: smallint('id').primaryKey(),
+        publicKey: text('public_key').notNull(),
+        privateKey: text('private_key').notNull(),
+        createdAt
+    },
+    (table) => [check('push_vapid_keys_singleton_check', sql`${table.id} = 1`)]
 );

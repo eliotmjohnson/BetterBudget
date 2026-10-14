@@ -1,12 +1,31 @@
 import 'server-only';
+import { ordinalDay } from '@/domain/bill-reminders';
 import { formatCurrencyInput } from '@/domain/money';
-import type { ActivityEntry, MonthSnapshot } from '@/domain/types';
+import type {
+    ActivityEntry,
+    BudgetItemView,
+    MonthSnapshot
+} from '@/domain/types';
 
 const TRANSACTION_LIST_LIMIT = 40;
 
 export const transactionRef = (id: string) => id.slice(0, 8);
 
 const money = (value: string) => formatCurrencyInput(value);
+
+function billLabel(item: BudgetItemView): string | null {
+    if (!item.billReminderEnabled || item.billDueDay === null) return null;
+    const notice =
+        item.billLeadDays === 0
+            ? 'reminder on the due date'
+            : `reminder ${item.billLeadDays} day${item.billLeadDays === 1 ? '' : 's'} before`;
+    const override =
+        item.billDueDayOverride === null
+            ? ''
+            : `, the ${ordinalDay(item.billDueDayOverride)} this month`;
+
+    return `bill reminder on, due the ${ordinalDay(item.billDueDay)}${override}, ${notice}`;
+}
 
 export function itemNamesById(snapshot: MonthSnapshot) {
     return new Map(
@@ -52,7 +71,8 @@ export function renderOverview(snapshot: MonthSnapshot): string {
                 item.carryoverEnabled ? 'carryover on' : 'carryover off',
                 BigInt(item.carryInCents) === 0n
                     ? null
-                    : `carry-in ${money(item.carryInCents)}`
+                    : `carry-in ${money(item.carryInCents)}`,
+                billLabel(item)
             ].filter(Boolean);
 
             lines.push(

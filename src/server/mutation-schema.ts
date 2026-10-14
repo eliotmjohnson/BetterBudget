@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { BILL_LEAD_DAYS } from '@/domain/bill-reminders';
 import { MAX_ENTRY_CENTS, monthKeySchema } from '@/domain/money';
 
 const base = z.object({
@@ -29,6 +30,7 @@ const splitsSchema = z
             splits.length,
         { message: 'Choose each budget item only once.' }
     );
+const billDueDaySchema = z.number().int().min(1).max(31);
 const reassignmentSchema = z.object({
     destinationItemId: z.string().uuid(),
     movePlan: z.boolean()
@@ -203,6 +205,24 @@ export const mutationSchema = z.discriminatedUnion('type', [
         type: z.literal('renameItem'),
         itemId: z.string().uuid(),
         name: z.string().trim().min(1).max(80),
+        expectedVersion: z.number().int().positive()
+    }),
+    base
+        .extend({
+            type: z.literal('updateBillReminder'),
+            itemId: z.string().uuid(),
+            enabled: z.boolean(),
+            dueDay: billDueDaySchema.nullable(),
+            leadDays: z.union(BILL_LEAD_DAYS.map((days) => z.literal(days))),
+            expectedVersion: z.number().int().positive()
+        })
+        .refine((input) => !input.enabled || input.dueDay !== null, {
+            message: 'Choose the day the bill is due.'
+        }),
+    base.extend({
+        type: z.literal('setBillDueOverride'),
+        monthlyItemId: z.string().uuid(),
+        dueDay: billDueDaySchema.nullable(),
         expectedVersion: z.number().int().positive()
     }),
     base.extend({
