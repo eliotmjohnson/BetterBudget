@@ -15,15 +15,29 @@ export interface TransactionCriteria {
 }
 
 /**
+ * A name or search reduced to its lowercase letters and digits, without
+ * accents, so punctuation and spacing never decide a match: `kids` finds
+ * "Kid's" and `dr` finds "Dr.".
+ */
+export function searchable(text: string) {
+    return text
+        .normalize('NFKD')
+        .replace(/[^\p{L}\p{N}]/gu, '')
+        .toLocaleLowerCase();
+}
+
+/**
  * The expense and refund entries that match the Transactions search and
  * filters, in their given order. A search matches the title, item names, or
- * note, or an amount range that the total or any one split falls in.
+ * note, compared through `searchable`, or an amount range, read from the
+ * search as typed, that the total or any one split falls in.
  */
 export function filterTransactions<Entry extends ActivityEntry>(
     entries: Entry[],
     criteria: TransactionCriteria
 ): Array<Entry & TransactionEntry> {
     const query = criteria.search.trim().toLocaleLowerCase();
+    const text = searchable(query);
     const amountRange = parseAmountSearch(query);
     const inAmountRange = (value: string) => {
         const amount = BigInt(value);
@@ -53,10 +67,11 @@ export function filterTransactions<Entry extends ActivityEntry>(
             matchesType &&
             matchesItem &&
             matchesSplit &&
-            (!query ||
-                `${entry.title} ${entry.subtitle} ${entry.note ?? ''}`
-                    .toLocaleLowerCase()
-                    .includes(query) ||
+            ((!text && amountRange === null) ||
+                (text !== '' &&
+                    searchable(
+                        `${entry.title}${entry.subtitle}${entry.note ?? ''}`
+                    ).includes(text)) ||
                 inAmountRange(entry.amountCents) ||
                 (entry.allocations?.some((allocation) =>
                     inAmountRange(allocation.amountCents)

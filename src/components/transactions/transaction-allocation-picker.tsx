@@ -10,22 +10,11 @@ import {
 } from '@/components/ui/still-focus';
 import { formatCurrency, type Cents } from '@/domain/money';
 import type { BudgetCategoryView } from '@/domain/types';
+import { searchable } from './transaction-filters';
 
 const maximumAllocations = 20;
 const money = (value: Cents | string) =>
     formatCurrency(value).replace('.00', '');
-
-/**
- * A name or search reduced to its lowercase letters and digits, without
- * accents, so punctuation and spacing never decide a match: `kids` finds
- * "Kid's" and `dr` finds "Dr.".
- */
-function searchable(text: string) {
-    return text
-        .normalize('NFKD')
-        .replace(/[^\p{L}\p{N}]/gu, '')
-        .toLocaleLowerCase();
-}
 
 /**
  * The categories and items a picker search shows: a category whose name

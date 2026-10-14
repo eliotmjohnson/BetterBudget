@@ -458,7 +458,8 @@ surfaces. It contains expense and refund records only, labels refunds as
 **Income**, and does not duplicate received-income or paycheck receipts from the
 Income page.
 
-Search matches the merchant, budget-item subtitle, and note, and text that
+Search matches the merchant, budget-item subtitle, and note, ignoring case,
+accents, punctuation, and spaces (`kids` finds "Kid's"), and text that
 reads as a dollar amount also matches transactions whose total or any split
 part falls in it, at the precision typed: `12` or `$12` finds $12.00–$12.99,
 `12.5` finds $12.50–$12.59, and `12.34` is exact. The All, Expenses,
