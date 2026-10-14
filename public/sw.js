@@ -53,11 +53,8 @@ async function openTarget(target) {
 
         return;
     }
-    try {
-        await open.focus();
-    } finally {
-        open.postMessage({ type: TARGET_MESSAGE });
-    }
+    open.postMessage({ type: TARGET_MESSAGE });
+    await open.focus();
 }
 
 self.addEventListener('notificationclick', (event) => {
