@@ -257,6 +257,13 @@ edge touches immediately, preserve normal control taps, and prevent every move
 that begins inside the edge strip regardless of direction. Mount it once above
 all routes.
 
+Text fields (`input`, `textarea`) opt back into `user-select: text` in
+`tokens.css`. With the global `user-select: none` on them, iOS opened the
+magnifier for a press-and-hold on the caret at the top edge of the screen
+instead of over the field, where it stayed until the finger moved; a hold
+elsewhere in the text was unaffected because iOS places that magnifier at the
+finger.
+
 ### Field focus on touch
 
 On touch screens (`pointer: coarse`), a focused field shows focus with its own
