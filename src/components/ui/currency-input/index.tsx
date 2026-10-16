@@ -1,6 +1,7 @@
 'use client';
 
 import {
+    useCallback,
     useEffect,
     useLayoutEffect,
     useRef,
@@ -111,6 +112,14 @@ export function CurrencyInput({
         onTouchStart,
         onTouchEnd
     });
+    const stillRef = still.ref;
+    const attachInput = useCallback(
+        (input: HTMLInputElement | null) => {
+            inputRef.current = input;
+            stillRef(input);
+        },
+        [stillRef]
+    );
 
     useLayoutEffect(() => {
         if (inputRef.current)
@@ -191,7 +200,7 @@ export function CurrencyInput({
         <>
             <input
                 {...props}
-                ref={inputRef}
+                ref={attachInput}
                 className={`currency-input${className ? ` ${className}` : ''}`}
                 inputMode='numeric'
                 autoComplete='off'

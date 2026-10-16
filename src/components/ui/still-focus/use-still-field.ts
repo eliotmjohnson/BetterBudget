@@ -4,6 +4,7 @@ import {
     type RefCallback,
     type TouchEvent as ReactTouchEvent
 } from 'react';
+import { markStillField, unmarkStillField } from './adjusted-tap';
 import type { StillField } from './field';
 import { holdViewportWhileFocused } from './hold-viewport';
 import { fadeAcrossKeyboardSwap } from './keyboard-swap';
@@ -39,6 +40,10 @@ type StillFieldOptions<T extends StillField> = StillFieldHandlers<T> & {
  * the caller's handlers come back untouched. Everything is a no-op until an
  * on-screen keyboard is up, so desktop focus is unchanged.
  *
+ * The returned `ref` must reach the field: through it, a tap iOS's touch
+ * adjustment moves onto the field from just outside its box is focused still
+ * too (`markStillField`).
+ *
  * `autoFocus` replaces React's, whose plain `focus()` lets iOS scroll: the
  * returned `ref` focuses the field still as it mounts. `conceal` false never
  * hides the field behind a stand-in (no parking, no veil), for a field whose
@@ -61,9 +66,12 @@ export function useStillField<T extends StillField>({
 } {
     const ref = useCallback(
         (field: T | null) => {
-            if (field && autoFocus) focusStill(field, conceal);
+            if (!field) return;
+            if (enabled) markStillField(field, conceal);
+            else unmarkStillField(field);
+            if (autoFocus) focusStill(field, conceal);
         },
-        [autoFocus, conceal]
+        [autoFocus, conceal, enabled]
     );
 
     if (!enabled) return { ref, onFocus, onTouchStart, onTouchEnd };

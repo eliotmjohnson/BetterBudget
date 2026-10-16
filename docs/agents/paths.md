@@ -206,23 +206,24 @@ moved, renamed, or takes on a new responsibility.
   text field, textarea, and money field. `fields.tsx` holds `StillInput` and
   `StillTextarea`, and `CurrencyInput` turns it on by default; both use
   `use-still-field.ts` (`useStillField`), which composes `tap.ts` (a tap becomes
-  a no-scroll focus), `park.ts` (`focusStill`, parking the field off-screen
-  behind a stand-in while the keyboard opens), `veil.ts` (a transparent field
-  for focus iOS moves itself, such as the keyboard arrows), `pin.ts` (undoes the
-  page scroll the browser makes to reveal the caret after an edit),
-  `hold-viewport.ts` (stops a drag outside any scroll container from panning the
-  screen while the keyboard is up), `keyboard-swap.ts` (holds the border fade
-  until iOS has swapped to another keyboard), and `reveal.ts` with
-  `scroll-room.ts` (the smooth scroll of the field's `data-still-scroller`
-  container that clears the keyboard, after any transition moving it has
-  finished). `stand-in.ts` holds the shared stand-in state, and `press.ts`
-  (`focusKeepingPress`) the press handlers for a button that acts without taking
-  focus from the field, used by the operator bar, the chat's send button, and
-  the allocation picker's search clear, plus `focusKeepingTap`, its touch half,
-  for a control that keeps its own click, such as the picker's checkbox rows.
-  `src/components/ui/on-screen-keyboard.ts` is the keyboard-up test it shares
-  with `keyboard-fit/`. `docs/agents/design/budget-and-inputs.md` holds the
-  contract.
+  a no-scroll focus), `adjusted-tap.ts` (the same for a tap just outside the
+  field that iOS's touch adjustment moves onto it), `park.ts` (`focusStill`,
+  parking the field off-screen behind a stand-in while the keyboard opens),
+  `veil.ts` (a transparent field for focus iOS moves itself, such as the
+  keyboard arrows), `pin.ts` (undoes the page scroll the browser makes to reveal
+  the caret after an edit), `hold-viewport.ts` (stops a drag outside any scroll
+  container from panning the screen while the keyboard is up),
+  `keyboard-swap.ts` (holds the border fade until iOS has swapped to another
+  keyboard), and `reveal.ts` with `scroll-room.ts` (the smooth scroll of the
+  field's `data-still-scroller` container that clears the keyboard, after any
+  transition moving it has finished). `stand-in.ts` holds the shared stand-in
+  state, and `press.ts` (`focusKeepingPress`) the press handlers for a button
+  that acts without taking focus from the field, used by the operator bar, the
+  chat's send button, and the allocation picker's search clear, plus
+  `focusKeepingTap`, its touch half, for a control that keeps its own click,
+  such as the picker's checkbox rows. `src/components/ui/on-screen-keyboard.ts`
+  is the keyboard-up test it shares with `keyboard-fit/`.
+  `docs/agents/design/budget-and-inputs.md` holds the contract.
 - `src/components/ui/currency-input/` — the shared money field: `index.tsx`
   holds ATM-style cents entry and the calculator expression state,
   `expression-edit.ts` the end-of-text expression edits, `operator-bar.tsx` the

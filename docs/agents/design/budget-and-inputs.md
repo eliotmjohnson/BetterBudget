@@ -294,6 +294,20 @@ Each file beats one of iOS's reveals:
 
 - `tap.ts` beats the reveal on a tap: a tap that moved no more than 10 px is
   turned into `focusStill` with the touch's default prevented.
+- `adjusted-tap.ts` beats the reveal on a tap that lands just outside a field's
+  box, such as a few pixels below a Budget row's planned amount. Its touch
+  events go to the row, not the field, yet iOS's touch adjustment sends the
+  mouse events it synthesizes after the tap to the field, and their `mousedown`
+  focuses it natively. With the keyboard up that focus was veiled, so how fast a
+  switch between amounts looked depended on where the finger landed: the caret
+  and any digits typed stayed hidden for the veil's 300 ms. A `mousedown` within
+  500 ms of a `touchend` on a field `useStillField`'s `ref` has marked
+  (`markStillField`) is prevented, which keeps the native focus from happening
+  but still lets the click run, and the field is focused through `focusStill`
+  instead. iOS has already chosen the field, so there is no hit radius of our
+  own to tune, and a field covered by another layer is never picked. Every still
+  field must therefore get the hook's `ref`; `CurrencyInput` merges it with its
+  own.
 - `park.ts` beats the second reveal iOS makes as the keyboard finishes opening,
   which ignores `preventScroll`: the field is parked 10000 px up behind a
   stand-in until the keyboard holds its size for 150 ms (1.2 s limit).
