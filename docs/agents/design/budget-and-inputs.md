@@ -185,8 +185,13 @@ the month has deleted transactions. In the deleted view the badge turns blue and
 counts the checked rows instead, so the header button can stay a plain Restore.
 Tapping it toggles the page's own list into a deleted view rather than opening a
 sheet, so deleted transactions read exactly like the rest: the heading becomes
-Recently deleted, the tile takes the applied blue treatment with `aria-pressed`,
-a caption reads "Select transactions to put them back.", and entries group under
+Recently deleted, kept on one line at the user's request
+(`.screen-heading--fit`: no wrap, `min(28px, 7.4cqi)` of the heading row, so it
+shrinks to about 25.6 px beside Restore on the folded Duo's 346 px row and about
+25 px on an iPhone SE, and stays 28 px wider; its line height stays 28 × 1.1 px
+so the heading row keeps its height and the list below does not shift when the
+view switches), the tile takes the applied blue treatment with `aria-pressed`, a
+caption reads "Select transactions to put them back.", and entries group under
 the same date headings, newest date first. Search, the type pills, and the
 filter sheet keep applying, and an empty view says whether nothing was deleted
 or nothing matches. Each row reuses the activity row's icon, title, item names,
@@ -352,10 +357,16 @@ Each file beats one of iOS's reveals:
   pre-keyboard height, since a smooth scroll is clamped to the room there is
   when it starts, so once the inset settles the surplus beyond the furthest
   scroll target is dropped (`trimOnceSettled`), or a flick would scroll into an
-  empty stretch below the last field. The loan is added to the container's
-  stylesheet padding, read at the first loan, because `.navigation-detail-body`
-  has its own bottom padding (20 px, or 94 px beside a floating action, plus the
-  safe area) that an inline value would otherwise replace.
+  empty stretch below the last field. A content-sized sheet whose inset grows it
+  to exactly its `max-height` cannot also grow by the loan, so there the loan
+  becomes scroll room only after the reveal's smooth scroll has already stopped
+  short; the reveal therefore checks once more when the inset has settled and
+  scrolls whatever is still covered. Without it, Add budget item's planned
+  amount stayed behind the calculator bar on the folded iPhone Duo. The loan is
+  added to the container's stylesheet padding, read at the first loan, because
+  `.navigation-detail-body` has its own bottom padding (20 px, or 94 px beside a
+  floating action, plus the safe area) that an inline value would otherwise
+  replace.
 
 `stand-in.ts` holds the one stand-in shared by parking and veiling, and
 `reveal.ts` measures the stand-in rather than the hidden field while one is up.
@@ -458,7 +469,12 @@ and does not act. Keys carry `tabIndex={-1}`. The bar lives outside any Radix
 dialog, so `sheet.tsx` and `navigation-detail/index.tsx` exempt
 `isCalculatorBarTarget` from outside-pointer dismissal, and it sets
 `pointer-events: auto` for the same reason as the toast (`sheets-and-menus.md`).
-Desktop has no bar; hardware keys `+ - * / x =` drive the same expression.
+Desktop has no bar; hardware keys `+ - * / x =` drive the same expression. On a
+touch screen at least 760 px wide (an iPad, or a phone on its side) the bar's
+background still spans the width, but its contents keep to a centered 560 px
+column, padded by `(100% - 560px) / 2` or the safe-area inset, whichever is
+larger, at the user's request, so the amount and keys stay together instead of
+sitting at opposite edges.
 
 There is one bar for the whole app, mounted once in `providers.tsx`, never one
 per input. The focused `CurrencyInput` publishes its display state and handlers
@@ -651,7 +667,12 @@ title bar stays in place. On touch screens (`pointer: coarse`) Better Buddy runs
 off his edge with the same `buddy-leave` animation the chat uses and ignores
 pointers, and when the field blurs the rule stops matching, so the launcher's
 `buddy-arrive` restarts and he flies back in as after closing the chat. A mouse
-edit leaves him in place.
+edit leaves him in place. On the folded iPhone Duo, at the user's request,
+Better Buddy, the floating plus, and the side strip's gauge and search button
+stay put while a plan is edited, since none of them covers the rows there: the
+`:root[data-side-bar='right'][data-editing-plan]` rules in
+`responsive-motion.css` restate their visible-state animations, which as the
+same value does not replay them, and the vertical tab bar stays too.
 
 **Why planned amounts use still focus.** When iOS slides the page toward a
 focused field, everything about to leave the top of the screen (header, Left to

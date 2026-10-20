@@ -1,8 +1,8 @@
 # Shell and platform
 
 Read this before changing the app frame, bottom navigation, continuous corners,
-safe areas, the PWA touch guards, pull-to-refresh, page entrances, or the
-landscape phone layout.
+safe areas, the PWA touch guards, pull-to-refresh, page entrances, the landscape
+phone layout, the rotate-to-portrait prompt, or the folded iPhone Duo layout.
 
 ## Bottom navigation
 
@@ -241,7 +241,14 @@ launch value, since with a saved value the two are equal and removing it moves
 nothing, and it saves the real one. It reveals the page after 600 ms regardless
 and stops polling after 3 s. Landscape launches skip the fallback, since the top
 inset is 0 there. Hiding is limited to the first launch, because hiding on every
-launch shows a slow launch as a white pause each time. `html` carries
+launch shows a slow launch as a white pause each time. The folded iPhone Duo
+reports a top inset of 0, with its status bar down the right edge, so the probe
+also measures the side insets. A side inset counts as iOS having reported its
+insets: the script reveals the page and drops any launch value at once, and
+records `betterBudgetSideInset` instead of a height. A device with that record
+uses the first-launch hold rather than a saved height, because a height saved on
+the unfolded screen in portrait (82 px) would pad the folded screen's header
+until its side inset arrived, about 320 ms into a launch. `html` carries
 `suppressHydrationWarning` because the script writes its inline style before
 hydration.
 
@@ -439,19 +446,21 @@ tab.
 
 ### Island side
 
-A phone on its side is at least 760 px wide, so it gets the desktop layout,
-adjusted by one block at the end of `responsive-motion.css` (`min-width: 760px`,
-`max-height: 500px`, landscape, `pointer: coarse`, so desktop windows and iPads
-never match). iOS reports the same left and right inset in landscape whichever
-side the Dynamic Island is on, so the inline head script `islandSideScript`
-(`src/app/safe-area-launch.ts`) marks `html` with `data-island` (`left` at a
-screen rotation of 90°, `right` at 270° or -90°, otherwise `top`) and updates it
-on every `resize` as well as on orientation changes, because waiting for the
-orientation event alone laid the page out for a left island first and then
-visibly jerked it over; `tokens.css` turns that into `--island-inset-left` and
-`--island-inset-right`: the real inset on the island's side and 0 on the other,
-defaulting to the left before the attribute exists. Landscape rules use these
-tokens, never `env(safe-area-inset-left/right)` directly.
+A phone on its side is at least 760 px wide, so it gets the desktop layout
+(phones 402 px tall or less on their side see the rotate-to-portrait prompt
+instead, below), adjusted by one block at the end of `responsive-motion.css`
+(`min-width: 760px`, `max-height: 500px`, landscape, `pointer: coarse`, so
+desktop windows and iPads never match). iOS reports the same left and right
+inset in landscape whichever side the Dynamic Island is on, so the inline head
+script `islandSideScript` (`src/app/safe-area-launch.ts`) marks `html` with
+`data-island` (`left` at a screen rotation of 90°, `right` at 270° or -90°,
+otherwise `top`) and updates it on every `resize` as well as on orientation
+changes, because waiting for the orientation event alone laid the page out for a
+left island first and then visibly jerked it over; `tokens.css` turns that into
+`--island-inset-left` and `--island-inset-right`: the real inset on the island's
+side and 0 on the other, defaulting to the left before the attribute exists.
+Landscape rules use these tokens, never `env(safe-area-inset-left/right)`
+directly.
 
 ### Layout
 
@@ -474,3 +483,183 @@ instead of snapping. When the island is on the right, `.app-main` pads its right
 edge by `--island-inset-right` instead, so the main panel, and the Budget column
 centered in it, keeps the same width and position relative to the sidebar in
 both landscape orientations.
+
+### Short landscape screens
+
+A touch screen on its side cannot be used at all, at the user's direction, when
+it is narrower than 760 px and at most 500 px tall, such as the folded iPhone
+Duo (678 × 466) or an iPhone SE (667 × 375), too narrow for the layout above and
+too short for the portrait one; or when it is at most 402 px tall, the iPhone 18
+Pro (and 17 Pro) on its side, which the user found too short for the landscape
+layout too. Taller phones, such as the Pro Max at 440 px, keep the landscape
+layout. `RotateToPortrait` (`src/components/shell/rotate-to-portrait.tsx`,
+mounted in the root layout so it also covers sign-in) covers the whole screen
+with a "Turn your phone upright" prompt and a phone glyph that turns upright on
+a loop, at `z-index: 100`, above every sheet and menu. The query is two lists
+joined by a comma,
+`(pointer: coarse) and (min-aspect-ratio: 4/3) and (max-width: 759.98px) and (max-height: 500px)`
+and `(pointer: coarse) and (min-aspect-ratio: 4/3) and (max-height: 402px)`; an
+aspect ratio rather than `orientation` keeps an Android keyboard, which shrinks
+the layout viewport, from triggering it in portrait. The prompt pads both sides
+by the larger of the two insets, so it centers on the screen rather than in the
+space beside the folded Duo's status strip. `app-shell.css` draws the prompt
+from that media query, so it shows from the first paint with nothing underneath
+flashing, and the component repeats the query in `matchMedia` to set `inert` on
+every other child of `body` while it shows, so focus and screen readers cannot
+reach the app behind it either. Keep the two queries identical. iOS ignores
+orientation locks for Home Screen web apps, so the app cannot hold itself in
+portrait instead.
+
+## Folded iPhone Duo
+
+### Side bar
+
+Folded, the iPhone Duo's 466 × 678 pt cover screen puts its status bar, camera,
+and Dynamic Island in an 84 pt strip down the right edge rather than across the
+top, and moves native apps' tab bars into that strip. The installed app draws
+the full width under it and gets `env(safe-area-inset-right)` of 84 with a top
+inset of 0, while still reporting a rotation of 0, so `islandSideScript` cannot
+tell from the angle. It also marks `html` with `data-side-bar='right'` while the
+page is under 760 px wide and its right inset is at least 44 px and larger than
+its top inset. Today that is only the folded Duo: unfolded in landscape, the
+same strip comes with the 760 px desktop layout, which is left alone at the
+user's direction, and unfolded in portrait the status bar is back on top. The
+insets are read by a probe that is attached only while it measures, and the
+check re-runs on visual-viewport resizes, because the Duo's last resize at
+launch reaches only the visual viewport. After any resize or orientation change
+it re-reads the insets every frame for 800 ms, because iOS can fire the resize
+before it updates them: in Safari on the folded Duo (where Safari's own toolbar
+fills the strip and the page gets no right inset in portrait), rotating to
+landscape and back left landscape's right inset in place, so the page kept the
+vertical side bar over its content. Folding and unfolding switch layouts live.
+
+### Layout
+
+Under `:root[data-side-bar='right']` at the end of `responsive-motion.css`,
+`--side-bar-inset` is the right inset:
+
+- **Page.** `.app-main` pads its right edge by `--side-bar-inset`, so the
+  header, Month actions, and every page end at the strip. Before this, Month
+  actions sat under the camera.
+- **Sheets.** They stop at the strip (`right: --side-bar-inset`), as Apple's
+  sheets stop short of the camera, so a sheet's header submit stays clear of the
+  clock. The `capped-mobile` sheet (add and edit transaction) comes up to 24 px
+  below the top of the screen, over the 62 px mobile header
+  (`max-height: --viewport-height - 24px`), at the user's request: the phone
+  rule, 77 px below the top safe area, left it short on the folded Duo, which
+  has no top inset, and 10 px below the header was still not high enough.
+- **Pushed details.** The navigation detail's header, summary strip, and body
+  are absolutely positioned, so each is inset individually. The detail itself
+  still spans the strip and covers the tab bar, so its floating plus (Record
+  income, budget-item Add transaction) docks at the bottom of the strip, where
+  the tab bar would be, `--bottom-nav-offset` plus 12 px up (raised off the
+  bottom edge at the user's request), and the body drops the 94 px clearance it
+  kept for the plus. Its header action (the income source's Edit appearance)
+  renders in `.navigation-detail-strip-action` instead, 68 px above that plus as
+  a 56 px glass button: the header clips everything outside its own box
+  (`overflow: hidden` and `contain: layout`), so CSS alone could not move it,
+  and `NavigationDetail` reads `useSideBar`.
+- **Toast and sync pill.** The toast and the sync pill center in what is left of
+  the screen. The pill stays in the header at the user's direction; a vertical
+  glass tag in the strip was tried and reverted.
+- **Strip axis.** Everything in the strip centers on `--side-bar-axis`, a
+  `right` offset for a 62 pt item: the strip's center nudged left by
+  `--side-bar-nudge` (6 px), at the user's request, so the strip centers on the
+  native status bar. iOS centers the clock, Wi-Fi, and camera about 6 pt left of
+  the 84 pt strip's center (417.5 pt against 424 on the 466 pt cover, measured
+  in the Simulator); 4 px still left the tab bar 2.5 pt right of them. Narrower
+  items add half the difference.
+- **Floating plus.** The floating add button, and its Recently deleted Restore
+  form, docks in the strip 12 px above the tab bar (`--side-bar-plus-bottom`),
+  so it no longer covers page content. It still appears only once the in-page
+  Add transaction button scrolls away, and its 36 px rise now springs it up out
+  of the tab bar.
+- **Strip buttons.** `StripButton` (`strip-button.tsx`) portals a glass button
+  into the strip 68 px above the plus's spot (`--side-bar-accessory-bottom`)
+  only while `useSideBar` is true, and pops in and out like the plus. Budget's
+  is `BudgetStripGauge`, an 88 px capsule with the summary arc, Left to budget
+  (red when over), and a P·R mark; on the Duo it replaces the docked balance
+  strip, which is hidden, so a tap flips the rows between Planned and Remaining
+  as that strip's P/R switch did, and the active letter takes the switch's blue
+  or green. Scrolling back up stays with the header tap and the Budget tab,
+  since a separate P/R button would leave no room for Better Buddy. The arc's
+  SVG has `overflow: visible`, because its non-scaling round caps reach past the
+  scaled-down viewBox and were clipped at the top and ends. Transactions' is a
+  search button that focuses the search field with `focusStill` and scrolls up
+  to it, hidden in Recently deleted. Each appears only once the element it
+  stands in for is fully out of view, at the user's direction, rather than with
+  the plus: the gauge once the summary card's Left to budget amount
+  (`balanceRef`) scrolls under the header, the search button once the search
+  field does. With the docked strip hidden, the Budget page's scrolled-past
+  checks drop its 44 px cover (`useSideBar` sets it to 0), so the plus also
+  waits for Add transaction to leave view. Income's Add source plus is a
+  `FloatingAddButton` with `stripOnly`, which hides it outside the side bar.
+- **While editing a plan.** Unlike on phones, the plus, the strip buttons, and
+  Better Buddy stay in place while a planned amount is edited, at the user's
+  request, and so does the vertical tab bar. `budget-and-inputs.md` has the
+  rule.
+- **Better Buddy.** Docked right, he has one fixed place in the strip, at the
+  user's direction: on its axis, his 64 px box centered vertically in the free
+  band between the status items and the top of the 88 px gauge, the tallest
+  strip button. `--side-bar-status-height` (152 px) is the bottom of the Duo's
+  Wi-Fi icon, measured in the Simulator. The figure sits about 9 px above the
+  box's center, but centering the figure itself, or even 5 px above that, looked
+  low to the user, because his halo and floor shadow add weight below him; keep
+  the box centered. It overrides `--assistant-launcher-top`, so the drop height
+  is ignored there, and it measures to the gauge on every page so he never
+  shifts between tabs. A launcher never moved before starts there rather than
+  bottom left; a saved position is kept.
+- **Glass.** In the strip, the pluses and strip buttons use the tab bar's glass
+  (the `.bottom-nav-surface` fill, blur, sheen, and rim) with a blue icon, so
+  the strip reads as one material. The glass sits on the button itself: the plus
+  fades its own opacity as it enters and leaves, and an ancestor below full
+  opacity would become a backdrop root and blank a child's blur. A circle needs
+  no continuous corners, since WebKit clips the blur to `border-radius`.
+- **Tab bar.** The bottom navigation becomes a vertical capsule docked at the
+  bottom of the strip, on the strip axis, like the Duo's native tab bars: 62 pt
+  wide, four 56 pt tabs, `--bottom-nav-offset` from the bottom. Tabs show icons
+  only, with their labels visually hidden but still read, as the cover's own
+  strip buttons do. The lens moves by `--bottom-nav-index` on the Y axis and
+  stretches vertically (`bottom-nav-lens-stretch-vertical`). The bar enters by
+  sliding in from the right, through `--bottom-nav-hidden-x` (0 elsewhere)
+  beside `--bottom-nav-hidden-offset`. `--bottom-nav-height` drops to
+  `--bottom-nav-offset`, since nothing sits across the bottom any more, which
+  pulls in content padding, scroll padding, the toast, and Better Buddy's bottom
+  reserve. A drag's edge auto-scroll measures from the list's own bottom instead
+  of the bar's top.
+
+### Launch image
+
+`src/app/ios-startup-viewports.json` lists both Duo screens, the 466 × 678 pt
+cover and the 669 × 951 pt inner screen, each at 3×, so the Duo gets the same
+icon-and-wordmark launch image as other iPhones; before 6.14.0 it matched no
+startup image and launched black, then white. iOS copies the matching image into
+the web clip (`startup.png` and `startup-landscape.png`) when the app is added
+to the Home Screen and never fetches it again, so an install made before the
+images existed keeps launching without one until it is removed and added again.
+It stores one pair only, from the screen the app was added on, and draws it on
+the other screen too. Each screen's image is laid out for that screen, so an
+install made folded shows the usual 168 pt logo folded and about 240 pt
+unfolded. A shared-proportion layout (one logo size scaled across both screens)
+was tried and reverted: the user preferred the full-size logo folded.
+
+On the unfolded screen iOS draws the portrait image (`startup.png`) in both
+orientations and never the landscape one, so in unfolded landscape, the Duo's
+default unfolded pose, it is stretched about 2× wide. This was checked by
+unfolding a cloned Simulator in DeviceHub and capturing launches on the inner
+display. It is the long-standing iPad bug ([WebKit 241799][webkit-241799], moved
+to Apple as rdar://56103114; open since iOS 13 and still present in the iPadOS
+26 beta), which the Duo's inner screen shares. Because one stored file serves
+every unfolded orientation, landscape cannot get a different or blank image; the
+user chose to keep the logo rather than a plain white splash on the Duo.
+
+[webkit-241799]: https://bugs.webkit.org/show_bug.cgi?id=241799
+
+Better Buddy and the hold menu already offset themselves by
+`env(safe-area-inset-right)`. The calculator bar does too elsewhere, but here
+its keys run the full width, under the strip, at the user's request: the bar
+sits just above the keyboard, where the strip holds nothing, so its right
+padding drops back to 6 px. Folded in landscape is reachable in the Simulator
+only through DeviceHub's rotate button: `simctl` and XCUITest rotation report
+success without turning the cover screen, and DeviceHub's rotations can leave
+the interface sideways until the device is rebooted.

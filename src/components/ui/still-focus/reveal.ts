@@ -1,6 +1,7 @@
 import type { StillField } from './field';
 import {
     isKeyboardFitMotion,
+    keyboardFitSettled,
     pendingSheetRise,
     settledClientHeight
 } from '@/components/ui/keyboard-fit';
@@ -134,7 +135,13 @@ function movingAncestors(element: HTMLElement) {
  * focus, and a sheet only makes room for it in that next frame, so a reveal
  * measured in the event found the field deep behind the keyboard and padded
  * the sheet's body by that much at once, a one-frame jump that the sheet's
- * own inset then added to. Stops listening when the field blurs.
+ * own inset then added to. After its first scroll it checks once more when
+ * the sheet's inset has settled: a content-sized sheet that its inset grows
+ * to exactly its `max-height` cannot grow by the scroll-room loan as well, so
+ * the loan turns into scroll room only after the smooth scroll, clamped to
+ * the room there was when it started, has already stopped short. That left
+ * Add budget item's planned amount behind the calculator bar on the folded
+ * iPhone Duo. Stops listening when the field blurs.
  */
 export function revealAboveKeyboard(
     field: StillField,
@@ -145,6 +152,7 @@ export function revealAboveKeyboard(
 
     if (!viewport || !scroller) return;
     let waiting = false;
+    let rechecked = false;
     const reveal = () => {
         if (waiting) return;
         const moving = movingAncestors(scroller);
@@ -187,6 +195,12 @@ export function revealAboveKeyboard(
             if (scroll <= 0) return;
             lendScrollRoom(scroller, scroll);
             scroller.scrollBy({ top: scroll, behavior: 'smooth' });
+            if (!rechecked) {
+                rechecked = true;
+                void keyboardFitSettled(scroller).then(() => {
+                    if (document.activeElement === field) schedule();
+                });
+            }
 
             return;
         }

@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import type { IncomePlanView, MonthSnapshot } from '@/domain/types';
 import { CategoryIcon } from '@/components/shared/category-icon';
+import { FloatingAddButton } from '@/components/shared/floating-add-button';
 import { createDetailHistory } from '@/components/shared/detail-history';
 import {
     fitAmountStyle,
@@ -12,6 +13,7 @@ import {
     type Mutate
 } from '@/components/shared/budget-view-helpers';
 import { useContinuousCorners } from '@/components/ui/continuous-corners';
+import { useScrolledPast } from '@/components/ui/use-scrolled-past';
 import { AddIncomeSource, RecordIncome } from './income-forms';
 import { IncomeSourceDetails } from './income-source-details';
 
@@ -38,6 +40,12 @@ export function IncomeView({
     const [incomeRestoreFocusVisible, setIncomeRestoreFocusVisible] =
         useState(true);
     const [adding, setAdding] = useState(false);
+    const addSourceRef = useRef<HTMLButtonElement>(null);
+    const addSourcePassed = useScrolledPast(
+        addSourceRef,
+        0,
+        snapshot.incomePlans.length > 0
+    );
     const [summaryCornersRef] = useContinuousCorners<HTMLDivElement>();
     const [recordingPlanId, setRecordingPlanId] = useState<string | null>(null);
     const selectedPlan = requestedPlanId
@@ -106,6 +114,7 @@ export function IncomeView({
                 </div>
                 {snapshot.incomePlans.length > 0 ? (
                     <button
+                        ref={addSourceRef}
                         className='primary-button compact-action'
                         type='button'
                         onClick={() => setAdding(true)}
@@ -235,6 +244,12 @@ export function IncomeView({
                     })}
                 </div>
             )}
+            <FloatingAddButton
+                visible={addSourcePassed}
+                label='Add income source'
+                stripOnly
+                onAdd={() => setAdding(true)}
+            />
             <AddIncomeSource
                 open={adding}
                 onOpenChange={setAdding}

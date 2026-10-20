@@ -10,6 +10,7 @@ import {
 } from 'react';
 import { flushSync } from 'react-dom';
 import type { MonthKey } from '@/domain/money';
+import { isSideBar } from '@/components/ui/side-bar';
 import { AssistantSheet } from './assistant-sheet';
 import { BetterBuddyFigure, resyncFloorShadow } from './better-buddy-figure';
 import { BuddyProtestBubble, useBuddyProtest } from './buddy-protest';
@@ -36,12 +37,17 @@ const SWALLOW_CLICK_MS = 600;
 const ARRIVAL_DELAY_MS = 600;
 let memoryPosition: string | null = null;
 
+/** Docked in the side strip on the folded iPhone Duo, else bottom left. */
+function defaultPosition() {
+    return isSideBar() ? `right:${DEFAULT_FRACTION}` : DEFAULT_POSITION;
+}
+
 function readPosition(): string {
     if (memoryPosition) return memoryPosition;
     try {
-        return window.localStorage.getItem(STORAGE_KEY) ?? DEFAULT_POSITION;
+        return window.localStorage.getItem(STORAGE_KEY) ?? defaultPosition();
     } catch {
-        return DEFAULT_POSITION;
+        return defaultPosition();
     }
 }
 

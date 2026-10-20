@@ -353,9 +353,11 @@ export function moveDrag<T>(
 
     if (container) {
         const rect = container.getBoundingClientRect();
-        const bottomNav = container.matches('.app-content')
-            ? document.querySelector<HTMLElement>('.bottom-nav')
-            : null;
+        const bottomNav =
+            container.matches('.app-content') &&
+            !document.documentElement.hasAttribute('data-side-bar')
+                ? document.querySelector<HTMLElement>('.bottom-nav')
+                : null;
         const bottomNavTop =
             bottomNav && getComputedStyle(bottomNav).display !== 'none'
                 ? bottomNav.getBoundingClientRect().top

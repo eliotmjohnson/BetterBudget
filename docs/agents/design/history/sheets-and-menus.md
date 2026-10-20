@@ -171,3 +171,14 @@ been slid up. Before `data-exit='action'`, the settling clone and fading blur
 drew over the sheet Edit opens. When the overlay outlasted the clone, the row
 was revealed under a faint residual blur while the clone above the overlay was
 sharp, which read as a slight shift.
+
+## Centered modal and the keyboard
+
+In the iOS 27.1 Simulator on 2026-10-18 (iPhone Duo unfolded in landscape, 951 ×
+669), Add transaction's centered modal stayed put when Amount's keyboard opened.
+The number pad and calculator bar covered its lower half (Date, Budget
+allocation, Add split), and the keyboard-fit inset never ran, because it only
+applies under 760 px. iPads had the same gap. `useKeyboardLift` replaced it with
+a modal that moves up and caps its height above the keyboard. It was checked in
+the same Simulator with the number pad, and with Merchant's text keyboard, which
+iPadOS split.

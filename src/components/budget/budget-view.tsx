@@ -11,6 +11,7 @@ import {
 } from 'react';
 import { AppSwitch } from '@/components/ui/app-switch';
 import { useScrolledPast } from '@/components/ui/use-scrolled-past';
+import { useSideBar } from '@/components/ui/side-bar';
 import { useSortableList } from '@/components/ui/sortable-list';
 import { monthLabel, shiftMonth } from '@/domain/money';
 import type { BudgetAmountView } from '@/domain/budget-preferences';
@@ -27,6 +28,7 @@ import type {
     Mutate,
     MutateConfirmed
 } from '@/components/shared/budget-view-helpers';
+import { BudgetStripGauge } from './budget-strip-gauge';
 import {
     BudgetBalanceStrip,
     budgetBalanceStripHeight
@@ -75,16 +77,19 @@ export function BudgetView({
     const itemTriggerRef = useRef<HTMLElement | null>(null);
     const addTransactionRef = useRef<HTMLButtonElement>(null);
     const amountSwitchRef = useRef<HTMLDivElement>(null);
+    const balanceRef = useRef<HTMLElement>(null);
+    const balanceStripHeight = useSideBar() ? 0 : budgetBalanceStripHeight;
     const addTransactionPassed = useScrolledPast(
         addTransactionRef,
-        budgetBalanceStripHeight,
+        balanceStripHeight,
         snapshot.categories.length > 0
     );
     const amountSwitchPassed = useScrolledPast(
         amountSwitchRef,
-        budgetBalanceStripHeight,
+        balanceStripHeight,
         snapshot.categories.length > 0
     );
+    const balancePassed = useScrolledPast(balanceRef);
     const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
     const [transactionOpen, setTransactionOpen] = useState(false);
     const [moveMoney, setMoveMoney] = useState<{
@@ -198,8 +203,17 @@ export function BudgetView({
                 switchVisible={amountSwitchPassed}
                 onAmountViewChange={onAmountViewChange}
             />
+            <BudgetStripGauge
+                snapshot={snapshot}
+                visible={balancePassed}
+                amountView={amountView}
+                onAmountViewChange={onAmountViewChange}
+            />
             <div className='budget-main'>
-                <BudgetSummaryCard snapshot={snapshot} />
+                <BudgetSummaryCard
+                    snapshot={snapshot}
+                    balanceRef={balanceRef}
+                />
                 {snapshot.categories.length === 0 ? (
                     <div className='budget-empty-month'>
                         <div

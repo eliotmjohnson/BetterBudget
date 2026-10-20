@@ -17,6 +17,7 @@ import {
     DeletedTransactionsToggle,
     useDeletedTransactionRestore
 } from './recently-deleted';
+import { SearchStripButton } from './search-strip-button';
 import {
     filterTransactions,
     type SplitFilter,
@@ -124,6 +125,8 @@ export function TransactionsView({
     const [adding, setAdding] = useState(false);
     const addButtonRef = useRef<HTMLButtonElement>(null);
     const addButtonPassed = useScrolledPast(addButtonRef);
+    const searchBoxRef = useRef<HTMLDivElement>(null);
+    const searchPassed = useScrolledPast(searchBoxRef);
     const [selected, setSelected] = useState<TransactionActivityEntry | null>(
         null
     );
@@ -218,7 +221,9 @@ export function TransactionsView({
             <div className='screen-heading-row'>
                 <div>
                     <p className='eyebrow'>{snapshot.label}</p>
-                    <h1 className='screen-heading'>
+                    <h1
+                        className={`screen-heading${showingDeleted ? ' screen-heading--fit' : ''}`}
+                    >
                         {showingDeleted ? 'Recently deleted' : 'Transactions'}
                     </h1>
                 </div>
@@ -254,7 +259,7 @@ export function TransactionsView({
                 </button>
             </div>
             <div className='activity-toolbar'>
-                <div className='search-box'>
+                <div ref={searchBoxRef} className='search-box'>
                     <Search
                         className='search-box-icon'
                         size={18}
@@ -360,6 +365,10 @@ export function TransactionsView({
             )}
             {deletedRestore.destinationSheet}
             {holdMenu.menu}
+            <SearchStripButton
+                visible={searchPassed && !showingDeleted}
+                searchBoxRef={searchBoxRef}
+            />
             <FloatingAddButton
                 visible={
                     addButtonPassed &&

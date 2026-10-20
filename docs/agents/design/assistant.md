@@ -15,7 +15,9 @@ and rendered in the app frame rather than inside `.app-content`, whose entrance
 animation transforms its children. Until someone moves him he starts docked left
 at the lowest height the clamp allows, just above the bottom navigation: on the
 right he covered the amounts column, the swipe-revealed delete button, and his
-own Settings switch. On desktop a left-docked launcher clears the 190 px
+own Settings switch. On the folded iPhone Duo he starts in the side strip
+instead, and his right dock is the strip (see the folded iPhone Duo in
+`shell-and-platform.md`). On desktop a left-docked launcher clears the 190 px
 sidebar, and from 1100 px the budget layout widens to at most 1200 px but always
 leaves 50 px of gutter on each side (`min(1200px, 100% - 100px)` in
 `responsive-motion.css`) so the docked launcher never covers item names; narrow
@@ -214,19 +216,20 @@ The chat itself uses the standard raised sheet titled Better Buddy, with no
 visible close button, like every sheet (drag, overlay, and Escape dismiss it),
 making room for the keyboard exactly as every other sheet does
 (`useKeyboardFit`, below), **New chat** as the header action once a conversation
-exists, a greeting and suggestions in its empty state, new messages animating in
-(the person's from the bottom right, Better Buddy's replies and the typing
-indicator from the bottom left, each a short rise, fade, and scale on a slight
-spring overshoot, using the individual `translate` and `scale` properties);
-messages already present when the sheet opens are recorded at mount by
-`TranscriptMessages` and never replay; reopening at the latest message (a stable
-ref callback on the end marker sets the sheet body's `scrollTop` when the sheet
-mounts, instantly rather than smoothly), and the composer stuck to the bottom of
-the sheet body. A new message or the typing indicator showing or hiding is
-handled by `MessageGlide` (`message-glide.tsx`), the message list: it puts the
-body on its very end at once (its `scrollHeight`, not the end marker into view,
-which left the newest message under the stuck composer), then slides the
-messages from where they sat to where that leaves them, over 440 ms on the
+exists, a greeting and suggestions in its empty state (always stacked one per
+line, each pill only as wide as its text, at every width), new messages
+animating in (the person's from the bottom right, Better Buddy's replies and the
+typing indicator from the bottom left, each a short rise, fade, and scale on a
+slight spring overshoot, using the individual `translate` and `scale`
+properties); messages already present when the sheet opens are recorded at mount
+by `TranscriptMessages` and never replay; reopening at the latest message (a
+stable ref callback on the end marker sets the sheet body's `scrollTop` when the
+sheet mounts, instantly rather than smoothly), and the composer stuck to the
+bottom of the sheet body. A new message or the typing indicator showing or
+hiding is handled by `MessageGlide` (`message-glide.tsx`), the message list: it
+puts the body on its very end at once (its `scrollHeight`, not the end marker
+into view, which left the newest message under the stuck composer), then slides
+the messages from where they sat to where that leaves them, over 440 ms on the
 keyboard's `cubic-bezier(0.2, 1, 0.45, 1)` (a `transform` Web Animation on the
 list, from the measured offset to none), so they rise the same way whether the
 conversation fits, grows the sheet, or scrolls (history: Message arrival). When

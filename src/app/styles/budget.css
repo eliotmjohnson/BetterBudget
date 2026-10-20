@@ -927,6 +927,7 @@ body > .sortable-drag-overlay * {
 }
 .bottom-nav {
     --bottom-nav-hidden-offset: calc(100% + var(--bottom-nav-offset) + 48px);
+    --bottom-nav-hidden-x: 0px;
     --bottom-nav-shadow:
         0 0 0 0.5px rgb(28 39 58 / 10%), 0 10px 32px rgb(28 39 58 / 16%),
         0 2px 8px rgb(28 39 58 / 8%);
@@ -947,7 +948,11 @@ body > .sortable-drag-overlay * {
     isolation: isolate;
 }
 .bottom-nav:not([data-ready]) {
-    transform: translate3d(0, var(--bottom-nav-hidden-offset), 0);
+    transform: translate3d(
+        var(--bottom-nav-hidden-x),
+        var(--bottom-nav-hidden-offset),
+        0
+    );
 }
 .bottom-nav[data-ready] {
     animation: bottom-nav-enter 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.08s
@@ -955,7 +960,7 @@ body > .sortable-drag-overlay * {
 }
 :root[data-editing-plan] .bottom-nav {
     visibility: hidden;
-    translate: 0 var(--bottom-nav-hidden-offset);
+    translate: var(--bottom-nav-hidden-x) var(--bottom-nav-hidden-offset);
     transition:
         translate 0.34s cubic-bezier(0.32, 0.72, 0, 1) 0.15s,
         visibility 0s linear 0.49s;

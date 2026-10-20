@@ -96,6 +96,9 @@ moved, renamed, or takes on a new responsibility.
 - `src/components/shell/pull-to-refresh.tsx` — the per-tab pull-to-refresh
   indicator, refresh lifecycle, and status announcement; `pull-gesture.ts`
   observes the native elastic overscroll and holds the pull state machine.
+- `src/components/shell/rotate-to-portrait.tsx` — the full-screen prompt to turn
+  the phone upright that blocks short landscape screens, mounted in the root
+  layout.
 - `src/components/shell/app-client.tsx` — authenticated interactive shell;
   `app-shell.tsx`, `budget-route.tsx`, `month-picker.tsx`, and
   `month-actions-sheet.tsx` are the surrounding chrome.
@@ -108,10 +111,10 @@ moved, renamed, or takes on a new responsibility.
   state that `budget-structure-sheets.tsx` renders, and
   `budget-balance-strip.tsx` the mobile Left-to-budget strip that docks under
   the header once the card's amount scrolls away and, once the toolbar toggle
-  scrolls away too, a P/R Planned/Available switch, and `carryover-coin.tsx`
-  draws the logo's dollar coin (paths exported from
-  `src/components/brand-mark.tsx`) that caps the progress bar of an item whose
-  carryover is on.
+  scrolls away too, a P/R Planned/Available switch, `budget-strip-gauge.tsx` its
+  stand-in in the folded iPhone Duo's side strip, and `carryover-coin.tsx` draws
+  the logo's dollar coin (paths exported from `src/components/brand-mark.tsx`)
+  that caps the progress bar of an item whose carryover is on.
 - `src/components/budget/move-money-sheet.tsx` — the Move money sheet the Budget
   row's swipe Move action opens: a planned-amount move (`movePlannedAmount`, in
   `budget-mutations/plans.ts`) or a paired expense/income transfer
@@ -141,18 +144,21 @@ moved, renamed, or takes on a new responsibility.
   that both the transaction list and the deleted view use, and `searchable`, the
   text normalizer the allocation picker's search shares; `recently-deleted.tsx`
   is the Recently deleted tile, the checkable deleted list, the selection and
-  restore hook, and the Restore to sheet.
+  restore hook, and the Restore to sheet. `search-strip-button.tsx` is the
+  folded iPhone Duo's strip shortcut to search.
 - `src/components/shared/detail-history.ts` — the shared URL-plus-history-state
   contract behind every pushed detail view; Budget and Income both build one
   with `createDetailHistory`. `delete-definition-sheet.tsx` is the Budget-page
   and organizer delete flow that moves a definition's activity and plan to
   another item. `floating-add-button.tsx` is the mobile floating plus the Budget
   and Transactions pages spring in once their own add button scrolls away, which
-  `restoreCount` turns into the Recently deleted view's floating Restore.
-  `use-versioned-draft.ts` keeps inline amount edits and their `expectedVersion`
-  stable across background refetches. `category-icon.tsx`,
-  `category-details-fields.tsx`, `transaction-icon.tsx`, and
-  `budget-view-helpers.ts` are the other cross-view primitives.
+  `restoreCount` turns into the Recently deleted view's floating Restore, and
+  `stripOnly` limits to the folded iPhone Duo's side strip (Income's Add source
+  plus). `strip-button.tsx` is the strip's other glass buttons, rendered only
+  while the side bar is there. `use-versioned-draft.ts` keeps inline amount
+  edits and their `expectedVersion` stable across background refetches.
+  `category-icon.tsx`, `category-details-fields.tsx`, `transaction-icon.tsx`,
+  and `budget-view-helpers.ts` are the other cross-view primitives.
 - `src/components/assistant/` — `assistant-launcher.tsx` is the draggable
   floating button, rendered through `AppShell`'s `floating` slot so it sits
   outside the animated page content, `launcher-throw.ts` its release-velocity
@@ -243,7 +249,9 @@ moved, renamed, or takes on a new responsibility.
   keyboard, so nothing shows through its translucent glass, and `pending.ts`
   tells still focus how much further a growing sheet will rise and how tall its
   body will settle, so a field is revealed alongside the keyboard and lent
-  scroll room glides back to the right end.
+  scroll room glides back to the right end. `lift.ts` (`useKeyboardLift`)
+  instead moves a centered modal, 760 px and wider on a touch screen, up into
+  the space above the keyboard and caps its height there.
   `docs/agents/design/sheets-and-menus.md` holds both contracts.
 - `src/components/ui/hold-menu/` — the iOS-style touch-and-hold context menu.
   `index.tsx` is the `useHoldMenu` hook (open state, trigger props, held-finger
@@ -265,7 +273,9 @@ moved, renamed, or takes on a new responsibility.
   reflow, and edge auto-scroll; `preview.ts` the lifted drag copy.
 - `src/app/safe-area-launch.ts` — the inline head scripts in `layout.tsx`: the
   launch backup for a late `env(safe-area-inset-top)` (saved height, or a
-  first-launch hold) and the landscape Dynamic Island side (`data-island`).
+  first-launch hold), the landscape Dynamic Island side (`data-island`), and the
+  folded iPhone Duo's side status bar (`data-side-bar`), which
+  `src/components/ui/side-bar.ts` (`useSideBar`) exposes to components.
   `docs/agents/design/shell-and-platform.md` holds the contract.
 - `src/app/globals.css` — the Tailwind import and the ordered `@import` list
   only.

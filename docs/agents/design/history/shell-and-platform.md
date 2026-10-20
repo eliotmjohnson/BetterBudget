@@ -53,3 +53,36 @@ status bar and island never reached the page, so the header's top padding cannot
 catch them either. Getting the system gesture would therefore require the
 document itself to be the only scroll view on every tab, replacing
 `.app-content` as the scroll surface.
+
+## Folded iPhone Duo
+
+Measured on 2026-10-18 in the iOS 27.1 Simulator (iPhone Duo, Xcode 27.1), using
+a throwaway probe page installed to the Home Screen. The fold was driven through
+DeviceHub's pose buttons, the only fold control. Installed-app viewports and
+insets:
+
+| Pose                | Size (CSS px) | Insets                     | Rotation |
+| ------------------- | ------------- | -------------------------- | -------- |
+| Folded, portrait    | 466 × 678     | right 84, bottom 34, top 0 | 0        |
+| Unfolded, landscape | 951 × 669     | right 84, bottom 34, top 0 | 270      |
+| Unfolded, portrait  | 669 × 951     | top 82, bottom 34          | 0        |
+| Partly open (book)  | 951 × 669     | right 84, bottom 34        | 270      |
+
+- **Safari tabs.** Safari keeps the strip for its own chrome and gives a tab 382
+  × 580 with no insets, so only the installed app needs handling.
+- **Launch.** On the folded screen the insets read 0 for about 320 ms, and the
+  width flips between 466 and 382 a few times before settling. The last change
+  arrives only as a visual-viewport resize.
+- **Unfolding.** It passes through 466 × 212 and 466 × 299, and briefly reads a
+  top inset of 82, before settling at 951 wide about 450 ms later.
+- **Stale values.** `screen.width` and `screen.height` keep reporting the folded
+  screen's 466 × 678 after unfolding, so device-size launch images cannot target
+  the unfolded screen.
+- **No fold information.** WebKit exposes no viewport segments and no device
+  posture.
+
+Before the side bar, the installed app ignored the 84 pt right inset in
+portrait. Month actions sat under the camera, a sheet's header submit sat under
+the clock, and every category's menu button, the Transactions add, filter, and
+Recently deleted buttons, and the bottom navigation's Settings tab ran into the
+strip.

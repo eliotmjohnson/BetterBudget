@@ -1,6 +1,11 @@
 'use client';
 
-import { useLayoutEffect, useRef, type CSSProperties } from 'react';
+import {
+    useLayoutEffect,
+    useRef,
+    type CSSProperties,
+    type RefObject
+} from 'react';
 import type { MonthSnapshot } from '@/domain/types';
 import {
     fitAmountStyle,
@@ -42,7 +47,13 @@ export function summaryArcProgress(snapshot: MonthSnapshot) {
     };
 }
 
-export function BudgetSummaryCard({ snapshot }: { snapshot: MonthSnapshot }) {
+export function BudgetSummaryCard({
+    snapshot,
+    balanceRef
+}: {
+    snapshot: MonthSnapshot;
+    balanceRef?: RefObject<HTMLElement | null>;
+}) {
     const summaryArcProgressRef = useRef<SVGPathElement>(null);
     const [cornersRef] = useContinuousCorners<HTMLDivElement>();
     const {
@@ -139,6 +150,7 @@ export function BudgetSummaryCard({ snapshot }: { snapshot: MonthSnapshot }) {
                 <div className='summary-focus'>
                     <span className='summary-label'>{budgetBalanceLabel}</span>
                     <strong
+                        ref={balanceRef}
                         className={`summary-amount${isOverBudget ? ' budget-balance-over' : ''}`}
                         data-budget-balance-anchor
                     >

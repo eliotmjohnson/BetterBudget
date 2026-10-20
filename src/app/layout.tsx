@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
 import { Providers } from '@/components/providers';
+import { RotateToPortrait } from '@/components/shell/rotate-to-portrait';
 import { APP_DESCRIPTION, APP_NAME } from '@/domain/app-info';
 import { iosStartupImages } from './ios-startup-images';
 import { islandSideScript, safeAreaLaunchScript } from './safe-area-launch';
@@ -68,6 +69,7 @@ export default function RootLayout({
             </head>
             <body>
                 <Providers>{children}</Providers>
+                <RotateToPortrait />
             </body>
         </html>
     );

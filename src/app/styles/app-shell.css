@@ -402,6 +402,14 @@ textarea:focus-visible {
 .screen-heading-row .screen-heading {
     margin-bottom: 0;
 }
+.screen-heading-row:has(.screen-heading--fit) {
+    container-type: inline-size;
+}
+.screen-heading--fit {
+    font-size: min(28px, 7.4cqi);
+    line-height: calc(28px * 1.1);
+    white-space: nowrap;
+}
 .eyebrow {
     margin: 0 0 4px;
     color: var(--muted);
@@ -499,5 +507,72 @@ textarea:focus-visible {
             1.01,
             1
         );
+    }
+}
+.rotate-to-portrait {
+    display: none;
+}
+@media (pointer: coarse) and (min-aspect-ratio: 4/3) and (max-width: 759.98px) and (max-height: 500px),
+    (pointer: coarse) and (min-aspect-ratio: 4/3) and (max-height: 402px) {
+    .rotate-to-portrait {
+        position: fixed;
+        z-index: 100;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        padding-block: max(
+            24px,
+            env(safe-area-inset-top),
+            env(safe-area-inset-bottom)
+        );
+        padding-inline: max(
+            32px,
+            env(safe-area-inset-left),
+            env(safe-area-inset-right)
+        );
+        background: #fff;
+        color: var(--ink);
+        text-align: center;
+    }
+    .rotate-to-portrait h1 {
+        margin: 0;
+        font-size: 24px;
+        font-weight: 800;
+        letter-spacing: -0.03em;
+        line-height: 1.15;
+    }
+    .rotate-to-portrait p {
+        max-width: 340px;
+        margin: 0;
+        color: var(--muted);
+        font-size: 16px;
+        line-height: 1.4;
+    }
+    .rotate-to-portrait-icon {
+        width: 72px;
+        height: 72px;
+        display: grid;
+        place-items: center;
+        margin-bottom: 6px;
+        border-radius: 50%;
+        background: rgb(23 105 224 / 10%);
+        color: var(--blue);
+    }
+    .rotate-to-portrait-icon svg {
+        animation: rotate-to-portrait-turn 2.4s cubic-bezier(0.65, 0, 0.35, 1)
+            infinite;
+    }
+}
+@keyframes rotate-to-portrait-turn {
+    0%,
+    20% {
+        rotate: -90deg;
+    }
+    50%,
+    100% {
+        rotate: 0deg;
     }
 }

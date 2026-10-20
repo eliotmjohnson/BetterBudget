@@ -102,7 +102,8 @@ function clearFit(sheet: HTMLElement) {
  * (`followKeyboard`), for a sheet whose focused field rides on the keyboard,
  * such as the Better Buddy composer stuck to the bottom of its body: growing
  * first and shortening the body afterwards left the composer behind the
- * keyboard until the growth had finished.
+ * keyboard until the growth had finished. A centered modal, 760 px and wider,
+ * is moved up above the keyboard by `useKeyboardLift` instead.
  */
 export function useKeyboardFit(
     sheetRef: RefObject<HTMLElement | null>,
@@ -269,6 +270,7 @@ export function useKeyboardFit(
     }, [active, follow, sheetRef]);
 }
 
+export { useKeyboardLift } from './lift';
 export {
     inSetHeightSheet,
     isKeyboardFitMotion,

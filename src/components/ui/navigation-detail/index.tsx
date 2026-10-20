@@ -24,6 +24,7 @@ import {
     type EdgeDragState
 } from './edge-drag';
 import { scrollToTopOnHeaderTap } from '@/components/ui/scroll-to-top';
+import { useSideBar } from '@/components/ui/side-bar';
 import { setupHeaderCover } from './header-cover';
 import { clearSummaryMotion, setupSummaryMotion } from './summary-motion';
 import {
@@ -87,6 +88,7 @@ export function NavigationDetail({
     titleContent?: ReactNode;
 }) {
     const bodyRef = useRef<HTMLDivElement>(null);
+    const sideBar = useSideBar();
     const contentRef = useRef<HTMLDivElement>(null);
     const [contentReady, setContentReady] = useState(false);
     const dragRef = useRef<EdgeDragState | null>(null);
@@ -400,7 +402,7 @@ export function NavigationDetail({
                         >
                             {titleContent ?? title}
                         </Dialog.Title>
-                        {headerAction ? (
+                        {headerAction && !sideBar ? (
                             <div className='navigation-detail-header-action'>
                                 {headerAction}
                             </div>
@@ -430,6 +432,11 @@ export function NavigationDetail({
                     >
                         {children}
                     </div>
+                    {headerAction && sideBar ? (
+                        <div className='navigation-detail-strip-action'>
+                            {headerAction}
+                        </div>
+                    ) : null}
                     {floatingAction ? (
                         <div className='navigation-detail-floating-action'>
                             {floatingAction}
