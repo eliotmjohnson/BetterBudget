@@ -267,7 +267,9 @@ moved, renamed, or takes on a new responsibility.
   `providers.tsx`, owns the button selector list), and `geometry.ts` holds the
   superellipse corner, capsule-end, and sliver-clip math. The global
   `corner-shape` rule and its circle/pill opt-out list live in
-  `src/app/styles/tokens.css`.
+  `src/app/styles/tokens.css`. `src/components/ui/glass-rim.tsx` is the glass
+  capsule's rim stroked along that outline, shared by the tab bar and the folded
+  iPhone Duo's strip gauge.
 - `src/components/ui/sortable-list/` — `index.tsx` holds long-press activation,
   keyboard reordering, and the hook surface; `drag.ts` the pointer drag, list
   reflow, and edge auto-scroll; `preview.ts` the lifted drag copy.

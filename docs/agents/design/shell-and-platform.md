@@ -586,13 +586,21 @@ Under `:root[data-side-bar='right']` at the end of `responsive-motion.css`,
 - **Strip buttons.** `StripButton` (`strip-button.tsx`) portals a glass button
   into the strip 60 px above the plus's spot (`--side-bar-accessory-bottom`)
   only while `useSideBar` is true, and pops in and out like the plus. Budget's
-  is `BudgetStripGauge`, an 88 px capsule with the summary arc, Left to budget
-  (red when over), and a P·R mark; on the Duo it replaces the docked balance
-  strip, which is hidden, so a tap flips the rows between Planned and Remaining
-  as that strip's P/R switch did, and the active letter takes the switch's blue
-  or green. Scrolling back up stays with the header tap and the Budget tab,
-  since a separate P/R button would leave no room for Better Buddy. The arc's
-  SVG has `overflow: visible`, because its non-scaling round caps reach past the
+  is `BudgetStripGauge`, an 88 px capsule as wide as the tab bar (62 px) with
+  the summary arc, Left to budget (red when over), and a P·R mark (a small dot
+  between the letters, each fading between gray and its color over 0.45 s like
+  the docked switch's labels). It sits directly above the tab bar, and on Budget
+  the plus moves up above it (a `:has()` rule on the gauge). Its ends are the
+  tab bar's continuous capsule ends: `StripButton`'s tall shape layers the tab
+  bar's own `.bottom-nav-shadow` and `.bottom-nav-surface`, masked to the
+  measured outline with `GlassRim` (`src/components/ui/glass-rim.tsx`, shared
+  with the tab bar) stroking the rim, instead of the round buttons' glass on the
+  button itself; on the Duo it replaces the docked balance strip, which is
+  hidden, so a tap flips the rows between Planned and Remaining as that strip's
+  P/R switch did, and the active letter takes the switch's blue or green.
+  Scrolling back up stays with the header tap and the Budget tab, since a
+  separate P/R button would leave no room for Better Buddy. The arc's SVG has
+  `overflow: visible`, because its non-scaling round caps reach past the
   scaled-down viewBox and were clipped at the top and ends. Transactions' is a
   search button that focuses the search field with `focusStill` and scrolls up
   to it, hidden in Recently deleted. Each appears only once the element it
@@ -609,21 +617,21 @@ Under `:root[data-side-bar='right']` at the end of `responsive-motion.css`,
   rule.
 - **Better Buddy.** Docked right, he has one fixed place in the strip, at the
   user's direction: on its axis, his 64 px box centered vertically in the free
-  band between the status items and the top of the 88 px gauge, the tallest
-  strip button. `--side-bar-status-height` (152 px) is the bottom of the Duo's
-  Wi-Fi icon, measured in the Simulator. The figure sits about 9 px above the
-  box's center, but centering the figure itself, or even 5 px above that, looked
-  low to the user, because his halo and floor shadow add weight below him; keep
-  the box centered. It overrides `--assistant-launcher-top`, so the drop height
-  is ignored there, and it measures to the gauge on every page so he never
-  shifts between tabs. A launcher never moved before starts there rather than
-  bottom left; a saved position is kept.
+  band between the status items and the top of the highest strip item, the plus
+  above the gauge on Budget. `--side-bar-status-height` (152 px) is the bottom
+  of the Duo's Wi-Fi icon, measured in the Simulator. The figure sits about 9 px
+  above the box's center, but centering the figure itself, or even 5 px above
+  that, looked low to the user, because his halo and floor shadow add weight
+  below him; keep the box centered. It overrides `--assistant-launcher-top`, so
+  the drop height is ignored there, and it measures to the gauge on every page
+  so he never shifts between tabs. A launcher never moved before starts there
+  rather than bottom left; a saved position is kept.
 - **Button size.** Strip buttons are 48 px glass circles (`--side-bar-button`),
   stacked 12 px apart, the first 22 px below the Wi-Fi icon, matching what iOS
   draws in the strip for native apps: Safari's strip buttons measured 48 pt
   across, the first starting about 23 pt below the status items, about 12 pt
   apart, in the Simulator. They were 56 px until the user found them large. The
-  gauge is 48 px wide too.
+  gauge is the exception, as wide as the tab bar.
 - **Glass.** In the strip, the pluses and strip buttons use the tab bar's glass
   (the `.bottom-nav-surface` fill, blur, sheen, and rim) with a blue icon, so
   the strip reads as one material. The glass sits on the button itself: the plus

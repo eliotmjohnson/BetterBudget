@@ -1225,6 +1225,13 @@
     transition: transform 160ms ease;
 }
 :root[data-side-bar='right'] .side-strip-button[data-shape='tall'] {
+    --bottom-nav-shadow:
+        0 0 0 0.5px rgb(28 39 58 / 10%), 0 10px 32px rgb(28 39 58 / 16%),
+        0 2px 8px rgb(28 39 58 / 8%);
+    isolation: isolate;
+    border: 0;
+    background: transparent;
+    color: var(--blue);
     right: var(--side-bar-axis);
     bottom: var(--side-bar-plus-bottom);
     width: var(--bottom-nav-bar-height);
@@ -1323,7 +1330,7 @@
     :is(
         .floating-add-button,
         .navigation-detail-add-transaction,
-        .side-strip-button,
+        .side-strip-button:not([data-shape='tall']),
         .navigation-detail-strip-action .icon-button,
         .navigation-detail-strip-back
     ) {
@@ -1350,7 +1357,7 @@
     :is(
         .floating-add-button,
         .navigation-detail-add-transaction,
-        .side-strip-button,
+        .side-strip-button:not([data-shape='tall']),
         .navigation-detail-strip-action .icon-button,
         .navigation-detail-strip-back
     )::before,
@@ -1358,7 +1365,7 @@
     :is(
         .floating-add-button,
         .navigation-detail-add-transaction,
-        .side-strip-button,
+        .side-strip-button:not([data-shape='tall']),
         .navigation-detail-strip-action .icon-button,
         .navigation-detail-strip-back
     )::after {
@@ -1373,7 +1380,7 @@
     :is(
         .floating-add-button,
         .navigation-detail-add-transaction,
-        .side-strip-button,
+        .side-strip-button:not([data-shape='tall']),
         .navigation-detail-strip-action .icon-button,
         .navigation-detail-strip-back
     )::before {
@@ -1393,7 +1400,7 @@
     :is(
         .floating-add-button,
         .navigation-detail-add-transaction,
-        .side-strip-button,
+        .side-strip-button:not([data-shape='tall']),
         .navigation-detail-strip-action .icon-button,
         .navigation-detail-strip-back
     )::after {
@@ -1413,7 +1420,7 @@
     :is(
         .floating-add-button,
         .navigation-detail-add-transaction,
-        .side-strip-button,
+        .side-strip-button:not([data-shape='tall']),
         .navigation-detail-strip-action .icon-button,
         .navigation-detail-strip-back
     ):active {
@@ -1426,7 +1433,7 @@
         :is(
             .floating-add-button,
             .navigation-detail-add-transaction,
-            .side-strip-button,
+            .side-strip-button:not([data-shape='tall']),
             .navigation-detail-strip-action .icon-button,
             .navigation-detail-strip-back
         ) {

@@ -19,6 +19,7 @@ import {
     type ReactNode
 } from 'react';
 import { BrandMark } from '@/components/brand-mark';
+import { GlassRim } from '@/components/ui/glass-rim';
 import {
     ContinuousStroke,
     continuousMask,
@@ -272,47 +273,7 @@ function BottomNav({
                 className='bottom-nav-surface'
                 style={surfaceShape ? continuousMask(surfaceShape) : undefined}
             >
-                {surfaceShape ? (
-                    <ContinuousStroke
-                        shape={surfaceShape}
-                        width={1}
-                        gradient={(id) => (
-                            <linearGradient id={id} x1='0' y1='0' x2='1' y2='1'>
-                                <stop
-                                    offset='0'
-                                    stopColor='#fff'
-                                    stopOpacity='0.95'
-                                />
-                                <stop
-                                    offset='0.38'
-                                    stopColor='#fff'
-                                    stopOpacity='0.22'
-                                />
-                                <stop
-                                    offset='0.62'
-                                    stopColor='#fff'
-                                    stopOpacity='0.08'
-                                />
-                                <stop
-                                    offset='1'
-                                    stopColor='#fff'
-                                    stopOpacity='0.7'
-                                />
-                            </linearGradient>
-                        )}
-                    />
-                ) : null}
-                {surfaceShape ? (
-                    <ContinuousStroke
-                        shape={surfaceShape}
-                        width={0.5}
-                        gradient={(id) => (
-                            <linearGradient id={id}>
-                                <stop stopColor='rgb(28 39 58 / 6%)' />
-                            </linearGradient>
-                        )}
-                    />
-                ) : null}
+                {surfaceShape ? <GlassRim shape={surfaceShape} /> : null}
             </span>
             <span className='bottom-nav-lens' aria-hidden='true'>
                 <span
