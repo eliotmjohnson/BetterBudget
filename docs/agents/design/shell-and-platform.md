@@ -555,14 +555,14 @@ Under `:root[data-side-bar='right']` at the end of `responsive-motion.css`,
   the tab bar would be, `--bottom-nav-offset` plus 12 px up (raised off the
   bottom edge at the user's request), and the body drops the 94 px clearance it
   kept for the plus. Its header action (the income source's Edit appearance)
-  renders in `.navigation-detail-strip-action` instead, 68 px above that plus as
-  a 56 px glass button: the header clips everything outside its own box
+  renders in `.navigation-detail-strip-action` instead, 60 px above that plus as
+  a 48 px glass button: the header clips everything outside its own box
   (`overflow: hidden` and `contain: layout`), so CSS alone could not move it,
   and `NavigationDetail` reads `useSideBar`.
 - **Detail back button.** Following iOS 27.1's vertical bars, where the back
   button is the first item under the status bar, the pushed detail draws its
-  back button as a 56 px glass button at the top of the strip
-  (`.navigation-detail-strip-back`, `--side-bar-status-height` plus 8 px down),
+  back button as a 48 px glass button at the top of the strip
+  (`.navigation-detail-strip-back`, `--side-bar-status-height` plus 22 px down),
   above the header action and the plus, at the user's request. The header's own
   chevron is `visibility: hidden` rather than removed: the title collapse and
   docked summary measure it (`title-motion.ts`, `summary-motion.ts`) for the
@@ -584,7 +584,7 @@ Under `:root[data-side-bar='right']` at the end of `responsive-motion.css`,
   Add transaction button scrolls away, and its 36 px rise now springs it up out
   of the tab bar.
 - **Strip buttons.** `StripButton` (`strip-button.tsx`) portals a glass button
-  into the strip 68 px above the plus's spot (`--side-bar-accessory-bottom`)
+  into the strip 60 px above the plus's spot (`--side-bar-accessory-bottom`)
   only while `useSideBar` is true, and pops in and out like the plus. Budget's
   is `BudgetStripGauge`, an 88 px capsule with the summary arc, Left to budget
   (red when over), and a P·R mark; on the Duo it replaces the docked balance
@@ -618,6 +618,12 @@ Under `:root[data-side-bar='right']` at the end of `responsive-motion.css`,
   is ignored there, and it measures to the gauge on every page so he never
   shifts between tabs. A launcher never moved before starts there rather than
   bottom left; a saved position is kept.
+- **Button size.** Strip buttons are 48 px glass circles (`--side-bar-button`),
+  stacked 12 px apart, the first 22 px below the Wi-Fi icon, matching what iOS
+  draws in the strip for native apps: Safari's strip buttons measured 48 pt
+  across, the first starting about 23 pt below the status items, about 12 pt
+  apart, in the Simulator. They were 56 px until the user found them large. The
+  gauge is 48 px wide too.
 - **Glass.** In the strip, the pluses and strip buttons use the tab bar's glass
   (the `.bottom-nav-surface` fill, blur, sheen, and rim) with a blue icon, so
   the strip reads as one material. The glass sits on the button itself: the plus

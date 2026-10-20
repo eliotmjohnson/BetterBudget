@@ -1101,7 +1101,14 @@
         var(--bottom-nav-offset) + 4 * var(--bottom-nav-tab-height) + 2 *
             var(--bottom-nav-padding) + 12px
     );
-    --side-bar-accessory-bottom: calc(var(--side-bar-plus-bottom) + 68px);
+    --side-bar-button: 48px;
+    --side-bar-button-right: calc(
+        var(--side-bar-axis) +
+            (var(--bottom-nav-bar-height) - var(--side-bar-button)) / 2
+    );
+    --side-bar-accessory-bottom: calc(
+        var(--side-bar-plus-bottom) + var(--side-bar-button) + 12px
+    );
     --bottom-nav-height: var(--bottom-nav-offset);
 }
 :root[data-side-bar='right'] .app-main {
@@ -1114,7 +1121,7 @@
     width: auto;
 }
 :root[data-side-bar='right'] .navigation-detail-floating-action {
-    right: calc(var(--side-bar-axis) + 3px);
+    right: var(--side-bar-button-right);
     bottom: calc(var(--bottom-nav-offset) + 12px);
 }
 :root[data-side-bar='right'] .navigation-detail-back {
@@ -1123,10 +1130,10 @@
 :root[data-side-bar='right'] .navigation-detail-strip-back {
     position: absolute;
     z-index: 4;
-    top: calc(var(--side-bar-status-height) + 8px);
-    right: calc(var(--side-bar-axis) + 3px);
-    width: 56px;
-    height: 56px;
+    top: calc(var(--side-bar-status-height) + 22px);
+    right: var(--side-bar-button-right);
+    width: var(--side-bar-button);
+    height: var(--side-bar-button);
     display: grid;
     place-items: center;
     padding: 0 2px 0 0;
@@ -1145,12 +1152,14 @@
 :root[data-side-bar='right'] .navigation-detail-strip-action {
     position: absolute;
     z-index: 2;
-    right: calc(var(--side-bar-axis) + 3px);
-    bottom: calc(var(--bottom-nav-offset) + 80px);
+    right: var(--side-bar-button-right);
+    bottom: calc(
+        var(--bottom-nav-offset) + 12px + var(--side-bar-button) + 12px
+    );
 }
 :root[data-side-bar='right'] .navigation-detail-strip-action .icon-button {
-    width: 56px;
-    height: 56px;
+    width: var(--side-bar-button);
+    height: var(--side-bar-button);
 }
 :root[data-side-bar='right']
     .navigation-detail-content--with-floating-action
@@ -1181,8 +1190,14 @@
     scroll-padding-top: var(--pull-band-height);
 }
 :root[data-side-bar='right'] .floating-add-button {
-    right: calc(var(--side-bar-axis) + 3px);
+    right: var(--side-bar-button-right);
     bottom: var(--side-bar-plus-bottom);
+    width: var(--side-bar-button);
+    height: var(--side-bar-button);
+}
+:root[data-side-bar='right'] .navigation-detail-add-transaction {
+    width: var(--side-bar-button);
+    height: var(--side-bar-button);
 }
 .floating-add-button[data-strip-only] {
     display: none;
@@ -1193,10 +1208,10 @@
 :root[data-side-bar='right'] .side-strip-button {
     position: fixed;
     z-index: 35;
-    right: calc(var(--side-bar-axis) + 3px);
+    right: var(--side-bar-button-right);
     bottom: var(--side-bar-accessory-bottom);
-    width: 56px;
-    height: 56px;
+    width: var(--side-bar-button);
+    height: var(--side-bar-button);
     display: grid;
     place-items: center;
     padding: 0;
@@ -1247,7 +1262,7 @@
     overflow: visible;
 }
 .budget-strip-gauge-amount {
-    max-width: 52px;
+    max-width: 44px;
     overflow: hidden;
     color: var(--blue);
     font-size: 11px;
