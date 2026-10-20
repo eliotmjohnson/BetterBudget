@@ -342,6 +342,16 @@ export function NavigationDetail({
                         className='navigation-detail-handle'
                         aria-hidden='true'
                     />
+                    {sideBar ? (
+                        <button
+                            className='navigation-detail-strip-back'
+                            type='button'
+                            aria-label={`Back to ${backLabel}`}
+                            onClick={() => onOpenChange(false)}
+                        >
+                            <ChevronLeft size={28} strokeWidth={2.2} />
+                        </button>
+                    ) : null}
                     <header
                         ref={headerRef}
                         className='navigation-detail-header'

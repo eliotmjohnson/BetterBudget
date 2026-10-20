@@ -1117,6 +1117,31 @@
     right: calc(var(--side-bar-axis) + 3px);
     bottom: calc(var(--bottom-nav-offset) + 12px);
 }
+:root[data-side-bar='right'] .navigation-detail-back {
+    visibility: hidden;
+}
+:root[data-side-bar='right'] .navigation-detail-strip-back {
+    position: absolute;
+    z-index: 4;
+    top: calc(var(--side-bar-status-height) + 8px);
+    right: calc(var(--side-bar-axis) + 3px);
+    width: 56px;
+    height: 56px;
+    display: grid;
+    place-items: center;
+    padding: 0 2px 0 0;
+    border-radius: 50%;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 160ms ease;
+}
+:root[data-side-bar='right'] .navigation-detail-strip-back:active {
+    transform: scale(0.94);
+}
+:root[data-side-bar='right'] .navigation-detail-strip-back:focus-visible {
+    outline: 3px solid rgb(23 105 224 / 28%);
+    outline-offset: 3px;
+}
 :root[data-side-bar='right'] .navigation-detail-strip-action {
     position: absolute;
     z-index: 2;
@@ -1267,7 +1292,8 @@
         .floating-add-button,
         .navigation-detail-add-transaction,
         .side-strip-button,
-        .navigation-detail-strip-action .icon-button
+        .navigation-detail-strip-action .icon-button,
+        .navigation-detail-strip-back
     ) {
     border: 0;
     background: linear-gradient(
@@ -1293,14 +1319,16 @@
         .floating-add-button,
         .navigation-detail-add-transaction,
         .side-strip-button,
-        .navigation-detail-strip-action .icon-button
+        .navigation-detail-strip-action .icon-button,
+        .navigation-detail-strip-back
     )::before,
 :root[data-side-bar='right']
     :is(
         .floating-add-button,
         .navigation-detail-add-transaction,
         .side-strip-button,
-        .navigation-detail-strip-action .icon-button
+        .navigation-detail-strip-action .icon-button,
+        .navigation-detail-strip-back
     )::after {
     content: '';
     position: absolute;
@@ -1314,7 +1342,8 @@
         .floating-add-button,
         .navigation-detail-add-transaction,
         .side-strip-button,
-        .navigation-detail-strip-action .icon-button
+        .navigation-detail-strip-action .icon-button,
+        .navigation-detail-strip-back
     )::before {
     background:
         radial-gradient(
@@ -1333,7 +1362,8 @@
         .floating-add-button,
         .navigation-detail-add-transaction,
         .side-strip-button,
-        .navigation-detail-strip-action .icon-button
+        .navigation-detail-strip-action .icon-button,
+        .navigation-detail-strip-back
     )::after {
     padding: 1px;
     background: linear-gradient(
@@ -1352,7 +1382,8 @@
         .floating-add-button,
         .navigation-detail-add-transaction,
         .side-strip-button,
-        .navigation-detail-strip-action .icon-button
+        .navigation-detail-strip-action .icon-button,
+        .navigation-detail-strip-back
     ):active {
     background: rgb(23 105 224 / 10%);
 }
@@ -1364,7 +1395,8 @@
             .floating-add-button,
             .navigation-detail-add-transaction,
             .side-strip-button,
-            .navigation-detail-strip-action .icon-button
+            .navigation-detail-strip-action .icon-button,
+            .navigation-detail-strip-back
         ) {
         background: rgb(247 249 252 / 96%);
     }

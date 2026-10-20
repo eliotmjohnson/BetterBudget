@@ -91,6 +91,7 @@ html[data-safe-area-pending] ::after {
 .navigation-detail-add-transaction,
 .floating-add-button,
 .side-strip-button,
+.navigation-detail-strip-back,
 .line-item-remaining::after,
 .desktop-bar-fill,
 .sheet-handle,

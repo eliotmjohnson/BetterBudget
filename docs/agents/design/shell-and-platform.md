@@ -559,6 +559,15 @@ Under `:root[data-side-bar='right']` at the end of `responsive-motion.css`,
   a 56 px glass button: the header clips everything outside its own box
   (`overflow: hidden` and `contain: layout`), so CSS alone could not move it,
   and `NavigationDetail` reads `useSideBar`.
+- **Detail back button.** Following iOS 27.1's vertical bars, where the back
+  button is the first item under the status bar, the pushed detail draws its
+  back button as a 56 px glass button at the top of the strip
+  (`.navigation-detail-strip-back`, `--side-bar-status-height` plus 8 px down),
+  above the header action and the plus, at the user's request. The header's own
+  chevron is `visibility: hidden` rather than removed: the title collapse and
+  docked summary measure it (`title-motion.ts`, `summary-motion.ts`) for the
+  compact header's height, and hidden it keeps its box while leaving taps,
+  focus, and VoiceOver to the strip button. Edge-swipe back is unchanged.
 - **Toast and sync pill.** The toast and the sync pill center in what is left of
   the screen. The pill stays in the header at the user's direction; a vertical
   glass tag in the strip was tried and reverted.
