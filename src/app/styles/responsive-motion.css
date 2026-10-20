@@ -1195,6 +1195,10 @@
     width: var(--side-bar-button);
     height: var(--side-bar-button);
 }
+:root[data-side-bar='right']:has(.side-strip-button[data-shape='tall'])
+    .floating-add-button {
+    bottom: calc(var(--side-bar-plus-bottom) + 88px + 12px);
+}
 :root[data-side-bar='right'] .navigation-detail-add-transaction {
     width: var(--side-bar-button);
     height: var(--side-bar-button);
@@ -1221,6 +1225,9 @@
     transition: transform 160ms ease;
 }
 :root[data-side-bar='right'] .side-strip-button[data-shape='tall'] {
+    right: var(--side-bar-axis);
+    bottom: var(--side-bar-plus-bottom);
+    width: var(--bottom-nav-bar-height);
     height: 88px;
     align-content: center;
     gap: 5px;
@@ -1262,7 +1269,7 @@
     overflow: visible;
 }
 .budget-strip-gauge-amount {
-    max-width: 44px;
+    max-width: 54px;
     overflow: hidden;
     color: var(--blue);
     font-size: 11px;
@@ -1278,12 +1285,22 @@
 }
 .budget-strip-gauge-view {
     display: flex;
+    align-items: center;
     justify-content: center;
-    gap: 5px;
+    gap: 4px;
     color: #8b929c;
     font-size: 10px;
     font-weight: 760;
     line-height: 1;
+}
+.budget-strip-gauge-view > span {
+    transition: color 0.45s cubic-bezier(0.4, 1, 0.4, 1);
+}
+.budget-strip-gauge-dot {
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: #c3c8d0;
 }
 .budget-strip-gauge-view[data-view='planned'] .planned {
     color: var(--blue);

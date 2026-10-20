@@ -13,7 +13,8 @@ import {
  * The folded iPhone Duo's stand-in for the docked balance strip: the summary
  * arc and Left to budget in a glass capsule in the side strip. A tap flips the
  * rows between Planned and Remaining, as the strip's P/R switch does, and the
- * P·R mark under the amount shows which is on.
+ * P·R mark under the amount shows which is on. It sits directly above the tab
+ * bar, at its width, with the floating plus above it.
  */
 export function BudgetStripGauge({
     snapshot,
@@ -77,6 +78,7 @@ export function BudgetStripGauge({
                 aria-hidden='true'
             >
                 <span className='planned'>P</span>
+                <span className='budget-strip-gauge-dot' />
                 <span className='available'>R</span>
             </span>
         </StripButton>
