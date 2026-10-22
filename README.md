@@ -706,6 +706,7 @@ Important behavior:
 - The command refuses to attach a different owner after the shared household already has one.
 - Keep `AUTH_BYPASS=false` and `ALLOW_INSECURE_LOCAL_AUTH=false` in any real deployment.
 - Every authenticated request resolves the owner membership on the server; client-provided household identifiers are never authorization.
+- Sessions last 30 days and slide forward with use. Server Components cannot set cookies, so server-side session reads pass `disableRefresh` and never extend a session; instead `useSessionRefresh` (`src/components/shell/use-session-refresh.ts`) calls Better Auth's `/api/auth/get-session` on launch and on return to the foreground, at most once an hour per device. Better Auth extends the database row and the cookie together at most once a day. Without that client call, the database would keep extending a session whose cookie still expires 30 days after sign-in.
 
 ### Production owner bootstrap container
 

@@ -99,6 +99,9 @@ moved, renamed, or takes on a new responsibility.
 - `src/components/shell/app-client.tsx` — authenticated interactive shell;
   `app-shell.tsx`, `budget-route.tsx`, `month-picker.tsx`, and
   `month-actions-sheet.tsx` are the surrounding chrome.
+- `src/components/shell/use-session-refresh.ts` — the only place a sign-in
+  session is extended; `src/server/access.ts` reads sessions with
+  `disableRefresh` because a Server Component's cookie write is discarded.
 - `src/components/budget/budget-view.tsx` — Budget page layout, URL-backed
   line-item details, item-scoped add-transaction flow.
   `budget-category-section.tsx` renders a category and its items,
