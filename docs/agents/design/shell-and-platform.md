@@ -241,7 +241,21 @@ launch value, since with a saved value the two are equal and removing it moves
 nothing, and it saves the real one. It reveals the page after 600 ms regardless
 and stops polling after 3 s. Landscape launches skip the fallback, since the top
 inset is 0 there. Hiding is limited to the first launch, because hiding on every
-launch shows a slow launch as a white pause each time. `html` carries
+launch shows a slow launch as a white pause each time. The folded iPhone Duo's
+466 × 678 pt cover screen puts its status bar in an 84 pt strip down the right
+edge and reports a top inset of 0, so the script also treats a side status bar
+as iOS having reported its insets: it reveals the page and drops any launch
+value at once, and records `betterBudgetSideInset` instead of a height. A device
+with that record uses the first-launch hold rather than a saved height, because
+a height saved on the unfolded screen in portrait (82 px) would otherwise pad
+the folded screen's header. On iOS 27.1 (and reportedly 27.3 beta 2) the
+installed app draws under the strip and gets a right inset of 84, so the probe
+measures the side insets. On iOS 27.2 and 27.2.1 the page is 382 pt beside the
+strip with every inset 0 except the bottom, so the script also counts a
+phone-sized page (screen under 760 px) at least 44 px narrower than
+`screen.width` as a side status bar, ignoring an `innerWidth` of 0. Without
+that, a folded launch on 27.2 padded its header by the saved unfolded height for
+the full 3 s, or, with nothing saved, hid the page for 600 ms. `html` carries
 `suppressHydrationWarning` because the script writes its inline style before
 hydration.
 

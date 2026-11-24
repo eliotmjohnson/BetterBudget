@@ -417,6 +417,8 @@ Open `http://<mac-ip-address>:3000` on the phone. For example, an address of `19
 
 At development-server startup, `next.config.ts` automatically allows the computer's active IPv4 network addresses to access Next.js development assets. Restart `npm run dev:mobile` after changing Wi-Fi networks or receiving a different local address. Client-generated UUIDs also include a fallback for plain-HTTP LAN development, where browsers may withhold secure-context crypto APIs.
 
+`next.config.ts` also sets `experimental.reactDebugChannel` to `false`. With Next.js's default, every launch of the installed iOS app against `next dev` loaded the page and then reloaded it about 2 s later: the dev-only debug channel reads the standalone launch's navigation timing as a Safari tab-duplication restore and calls `location.reload()`. The setting only affects the development server; production never reloads.
+
 Use this only on a trusted network. Real Better Auth sessions also require `BETTER_AUTH_URL` to exactly match the LAN origin; the default `AUTH_BYPASS=true` workflow does not.
 
 The Claude desktop app's browser pane starts the app from `.claude/launch.json`, whose `dev` entry runs `npm run db:reset && npm run dev:mobile`. Every launch from there therefore discards `.data/pglite` and starts from a freshly migrated, reseeded database; a server that is already running is reused rather than reset. Start `npm run dev:mobile` yourself to keep local data between runs.

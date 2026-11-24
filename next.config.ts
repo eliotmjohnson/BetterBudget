@@ -47,6 +47,7 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
     output: 'standalone',
     reactStrictMode: true,
+    experimental: { reactDebugChannel: false },
     poweredByHeader: false,
     env: {
         NEXT_PUBLIC_APP_VERSION: packageMetadata.version,
