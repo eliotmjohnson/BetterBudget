@@ -290,8 +290,14 @@ the hold lasts up to 1.5 s instead of 600 ms. If the page never narrows within
 the 3 s poll, the record is removed, so an iOS that stops narrowing it (27.1
 behavior, reportedly 27.3) costs one 1.5 s hold and then launches as before.
 Keying on the screen width keeps the unfolded screen (669 pt) and other iPhones
-on the normal path. `html` carries `suppressHydrationWarning` because the script
-writes its inline style before hydration.
+on the normal path. Until the record exists, a side status bar that shows up
+only as an inset reveals the page as before, but the script keeps polling,
+without hiding anything, until the page narrows or 3 s pass, so it still learns
+the narrower page. 6.13.10 stopped at that inset, and on the folded Duo iOS
+reports the inset at full width before it narrows the page, so the record was
+never written and every launch still snapped. `html` carries
+`suppressHydrationWarning` because the script writes its inline style before
+hydration.
 
 ## Touch guards, scroll surface, and month slide
 
