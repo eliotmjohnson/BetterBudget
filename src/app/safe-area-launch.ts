@@ -8,51 +8,61 @@
  * clears both and saves the value; a side status bar instead clears both at
  * once and records that this device has one. A side status bar is a side inset
  * or, from iOS 27.2, a phone-sized page at least 44 px narrower than its
- * screen, because iOS then keeps the strip outside the page with no inset.
+ * screen, because iOS then keeps the strip outside the page with no inset. It
+ * saves the screen width that narrower page was seen on, and a later launch on
+ * that screen stays hidden until the page narrows, for up to 1.5 s, because iOS
+ * first lays it out at the screen's full width. If the page never narrows
+ * there, it forgets the width.
  */
 export const safeAreaLaunchScript = `(() => {
     if (navigator.standalone !== true || !matchMedia('(orientation: portrait)').matches) return;
     const key = 'betterBudgetSafeAreaTop';
     const sideKey = 'betterBudgetSideInset';
+    const fenceKey = 'betterBudgetFencedScreen';
     const root = document.documentElement;
     const probe = document.createElement('div');
     const store = (name, value) => { try { localStorage.setItem(name, String(value)); } catch {} };
+    const load = (name) => { try { return localStorage.getItem(name); } catch { return null; } };
     const read = () => {
         const box = probe.getBoundingClientRect();
         const fenced = innerWidth > 0 && screen.width < 760 ? screen.width - innerWidth : 0;
 
-        return { top: box.height, side: fenced >= 44 ? fenced : box.width };
+        return { top: box.height, side: fenced >= 44 ? fenced : box.width, fenced: fenced >= 44 };
+    };
+    const awaitFence = Number(load(fenceKey)) === screen.width;
+    const settled = (state) => awaitFence ? state.fenced : state.top > 0 || state.side > 0;
+    const save = (state) => {
+        if (state.top > 0) store(key, state.top);
+        else if (state.side > 0) store(sideKey, 1);
+        if (state.fenced) store(fenceKey, screen.width);
+        else if (awaitFence) { try { localStorage.removeItem(fenceKey); } catch {} }
     };
 
     probe.style.cssText = 'position:fixed;top:0;width:max(env(safe-area-inset-left),env(safe-area-inset-right));height:env(safe-area-inset-top);visibility:hidden;pointer-events:none';
     root.append(probe);
     const initial = read();
 
-    if (initial.top > 0 || initial.side > 0) {
+    if (settled(initial)) {
         probe.remove();
-        return initial.top > 0 ? store(key, initial.top) : store(sideKey, 1);
+        return save(initial);
     }
-    let saved = 0;
-    let sided = false;
+    const saved = Number(load(key)) || 0;
+    const sided = load(sideKey) === '1';
+    const hold = awaitFence ? 1500 : 600;
 
-    try {
-        saved = Number(localStorage.getItem(key)) || 0;
-        sided = localStorage.getItem(sideKey) === '1';
-    } catch {}
-    if (saved > 0 && !sided) root.style.setProperty('--safe-area-top-launch', saved + 'px');
+    if (saved > 0 && !sided && !awaitFence) root.style.setProperty('--safe-area-top-launch', saved + 'px');
     else root.setAttribute('data-safe-area-pending', '');
     const startedAt = performance.now();
     const check = () => {
-        const { top, side } = read();
-        const reported = top > 0 || side > 0;
+        const state = read();
+        const reported = settled(state);
         const elapsed = performance.now() - startedAt;
 
-        if (reported || elapsed >= 600) root.removeAttribute('data-safe-area-pending');
+        if (reported || elapsed >= hold) root.removeAttribute('data-safe-area-pending');
         if (!reported && elapsed < 3000) return requestAnimationFrame(check);
         probe.remove();
         root.style.removeProperty('--safe-area-top-launch');
-        if (top > 0) store(key, top);
-        else if (side > 0) store(sideKey, 1);
+        save(state);
     };
 
     requestAnimationFrame(check);

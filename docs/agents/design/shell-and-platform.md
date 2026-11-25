@@ -277,9 +277,21 @@ strip with every inset 0 except the bottom, so the script also counts a
 phone-sized page (screen under 760 px) at least 44 px narrower than
 `screen.width` as a side status bar, ignoring an `innerWidth` of 0. Without
 that, a folded launch on 27.2 padded its header by the saved unfolded height for
-the full 3 s, or, with nothing saved, hid the page for 600 ms. `html` carries
-`suppressHydrationWarning` because the script writes its inline style before
-hydration.
+the full 3 s, or, with nothing saved, hid the page for 600 ms. On a 27.2 cold
+launch iOS also lays the page out at the full 466 pt first and narrows it to 382
+pt a moment later; a production recording showed one frame of the page at 466 pt
+(month title centered on the whole screen, the month-actions button under the
+strip) before it snapped narrower, because the 600 ms hold had already ended, or
+a side inset reported at full width had counted as settled. So when the script
+sees the narrower page it saves `screen.width` as `betterBudgetFencedScreen`,
+and a later launch on a screen of that width waits for the narrower page
+specifically: an inset alone does not reveal it, no launch value is applied, and
+the hold lasts up to 1.5 s instead of 600 ms. If the page never narrows within
+the 3 s poll, the record is removed, so an iOS that stops narrowing it (27.1
+behavior, reportedly 27.3) costs one 1.5 s hold and then launches as before.
+Keying on the screen width keeps the unfolded screen (669 pt) and other iPhones
+on the normal path. `html` carries `suppressHydrationWarning` because the script
+writes its inline style before hydration.
 
 ## Touch guards, scroll surface, and month slide
 
