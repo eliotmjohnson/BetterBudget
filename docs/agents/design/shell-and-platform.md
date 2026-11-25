@@ -1,8 +1,8 @@
 # Shell and platform
 
 Read this before changing the app frame, bottom navigation, continuous corners,
-safe areas, the PWA touch guards, pull-to-refresh, page entrances, or the
-landscape phone layout.
+safe areas, the PWA touch guards, pull-to-refresh, page entrances, the landscape
+phone layout, the rotate-to-portrait prompt, or the iPhone Duo launch images.
 
 ## Bottom navigation
 
@@ -493,19 +493,21 @@ tab.
 
 ### Island side
 
-A phone on its side is at least 760 px wide, so it gets the desktop layout,
-adjusted by one block at the end of `responsive-motion.css` (`min-width: 760px`,
-`max-height: 500px`, landscape, `pointer: coarse`, so desktop windows and iPads
-never match). iOS reports the same left and right inset in landscape whichever
-side the Dynamic Island is on, so the inline head script `islandSideScript`
-(`src/app/safe-area-launch.ts`) marks `html` with `data-island` (`left` at a
-screen rotation of 90°, `right` at 270° or -90°, otherwise `top`) and updates it
-on every `resize` as well as on orientation changes, because waiting for the
-orientation event alone laid the page out for a left island first and then
-visibly jerked it over; `tokens.css` turns that into `--island-inset-left` and
-`--island-inset-right`: the real inset on the island's side and 0 on the other,
-defaulting to the left before the attribute exists. Landscape rules use these
-tokens, never `env(safe-area-inset-left/right)` directly.
+A phone on its side is at least 760 px wide, so it gets the desktop layout
+(phones 402 px tall or less on their side see the rotate-to-portrait prompt
+instead, below), adjusted by one block at the end of `responsive-motion.css`
+(`min-width: 760px`, `max-height: 500px`, landscape, `pointer: coarse`, so
+desktop windows and iPads never match). iOS reports the same left and right
+inset in landscape whichever side the Dynamic Island is on, so the inline head
+script `islandSideScript` (`src/app/safe-area-launch.ts`) marks `html` with
+`data-island` (`left` at a screen rotation of 90°, `right` at 270° or -90°,
+otherwise `top`) and updates it on every `resize` as well as on orientation
+changes, because waiting for the orientation event alone laid the page out for a
+left island first and then visibly jerked it over; `tokens.css` turns that into
+`--island-inset-left` and `--island-inset-right`: the real inset on the island's
+side and 0 on the other, defaulting to the left before the attribute exists.
+Landscape rules use these tokens, never `env(safe-area-inset-left/right)`
+directly.
 
 ### Layout
 
@@ -528,3 +530,58 @@ instead of snapping. When the island is on the right, `.app-main` pads its right
 edge by `--island-inset-right` instead, so the main panel, and the Budget column
 centered in it, keeps the same width and position relative to the sidebar in
 both landscape orientations.
+
+### Short landscape screens
+
+A touch screen on its side cannot be used at all, at the user's direction, when
+it is narrower than 760 px and at most 500 px tall, such as the folded iPhone
+Duo (678 × 466) or an iPhone SE (667 × 375), too narrow for the layout above and
+too short for the portrait one; or when it is at most 402 px tall, the iPhone 18
+Pro (and 17 Pro) on its side, which the user found too short for the landscape
+layout too. Taller phones, such as the Pro Max at 440 px, keep the landscape
+layout. `RotateToPortrait` (`src/components/shell/rotate-to-portrait.tsx`,
+mounted in the root layout so it also covers sign-in) covers the whole screen
+with a "Turn your phone upright" prompt and a phone glyph that turns upright on
+a loop, at `z-index: 100`, above every sheet and menu. The query is two lists
+joined by a comma,
+`(pointer: coarse) and (min-aspect-ratio: 4/3) and (max-width: 759.98px) and (max-height: 500px)`
+and `(pointer: coarse) and (min-aspect-ratio: 4/3) and (max-height: 402px)`; an
+aspect ratio rather than `orientation` keeps an Android keyboard, which shrinks
+the layout viewport, from triggering it in portrait. The prompt pads both sides
+by the larger of the two insets, so it centers on the screen rather than in the
+space beside the folded Duo's status strip. `app-shell.css` draws the prompt
+from that media query, so it shows from the first paint with nothing underneath
+flashing, and the component repeats the query in `matchMedia` to set `inert` on
+every other child of `body` while it shows, so focus and screen readers cannot
+reach the app behind it either. Keep the two queries identical. iOS ignores
+orientation locks for Home Screen web apps, so the app cannot hold itself in
+portrait instead.
+
+## Launch images
+
+### iPhone Duo
+
+`src/app/ios-startup-viewports.json` lists both Duo screens, the 466 × 678 pt
+cover and the 669 × 951 pt inner screen, each at 3×, so the Duo gets the same
+icon-and-wordmark launch image as other iPhones; before 6.14.0 it matched no
+startup image and launched black, then white. iOS copies the matching image into
+the web clip (`startup.png` and `startup-landscape.png`) when the app is added
+to the Home Screen and never fetches it again, so an install made before the
+images existed keeps launching without one until it is removed and added again.
+It stores one pair only, from the screen the app was added on, and draws it on
+the other screen too. Each screen's image is laid out for that screen, so an
+install made folded shows the usual 168 pt logo folded and about 240 pt
+unfolded. A shared-proportion layout (one logo size scaled across both screens)
+was tried and reverted: the user preferred the full-size logo folded.
+
+On the unfolded screen iOS draws the portrait image (`startup.png`) in both
+orientations and never the landscape one, so in unfolded landscape, the Duo's
+default unfolded pose, it is stretched about 2× wide. This was checked by
+unfolding a cloned Simulator in DeviceHub and capturing launches on the inner
+display. It is the long-standing iPad bug ([WebKit 241799][webkit-241799], moved
+to Apple as rdar://56103114; open since iOS 13 and still present in the iPadOS
+26 beta), which the Duo's inner screen shares. Because one stored file serves
+every unfolded orientation, landscape cannot get a different or blank image; the
+user chose to keep the logo rather than a plain white splash on the Duo.
+
+[webkit-241799]: https://bugs.webkit.org/show_bug.cgi?id=241799

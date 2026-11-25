@@ -185,8 +185,13 @@ the month has deleted transactions. In the deleted view the badge turns blue and
 counts the checked rows instead, so the header button can stay a plain Restore.
 Tapping it toggles the page's own list into a deleted view rather than opening a
 sheet, so deleted transactions read exactly like the rest: the heading becomes
-Recently deleted, the tile takes the applied blue treatment with `aria-pressed`,
-a caption reads "Select transactions to put them back.", and entries group under
+Recently deleted, kept on one line at the user's request
+(`.screen-heading--fit`: no wrap, `min(28px, 7.4cqi)` of the heading row, so it
+shrinks to about 25.6 px beside Restore on the folded Duo's 346 px row and about
+25 px on an iPhone SE, and stays 28 px wider; its line height stays 28 × 1.1 px
+so the heading row keeps its height and the list below does not shift when the
+view switches), the tile takes the applied blue treatment with `aria-pressed`, a
+caption reads "Select transactions to put them back.", and entries group under
 the same date headings, newest date first. Search, the type pills, and the
 filter sheet keep applying, and an empty view says whether nothing was deleted
 or nothing matches. Each row reuses the activity row's icon, title, item names,

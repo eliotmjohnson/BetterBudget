@@ -218,7 +218,9 @@ export function TransactionsView({
             <div className='screen-heading-row'>
                 <div>
                     <p className='eyebrow'>{snapshot.label}</p>
-                    <h1 className='screen-heading'>
+                    <h1
+                        className={`screen-heading${showingDeleted ? ' screen-heading--fit' : ''}`}
+                    >
                         {showingDeleted ? 'Recently deleted' : 'Transactions'}
                     </h1>
                 </div>

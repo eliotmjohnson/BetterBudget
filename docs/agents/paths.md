@@ -96,6 +96,9 @@ moved, renamed, or takes on a new responsibility.
 - `src/components/shell/pull-to-refresh.tsx` — the per-tab pull-to-refresh
   indicator, refresh lifecycle, and status announcement; `pull-gesture.ts`
   observes the native elastic overscroll and holds the pull state machine.
+- `src/components/shell/rotate-to-portrait.tsx` — the full-screen prompt to turn
+  the phone upright that blocks short landscape screens, mounted in the root
+  layout.
 - `src/components/shell/app-client.tsx` — authenticated interactive shell;
   `app-shell.tsx`, `budget-route.tsx`, `month-picker.tsx`, and
   `month-actions-sheet.tsx` are the surrounding chrome.

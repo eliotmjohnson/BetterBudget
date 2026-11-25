@@ -214,19 +214,20 @@ The chat itself uses the standard raised sheet titled Better Buddy, with no
 visible close button, like every sheet (drag, overlay, and Escape dismiss it),
 making room for the keyboard exactly as every other sheet does
 (`useKeyboardFit`, below), **New chat** as the header action once a conversation
-exists, a greeting and suggestions in its empty state, new messages animating in
-(the person's from the bottom right, Better Buddy's replies and the typing
-indicator from the bottom left, each a short rise, fade, and scale on a slight
-spring overshoot, using the individual `translate` and `scale` properties);
-messages already present when the sheet opens are recorded at mount by
-`TranscriptMessages` and never replay; reopening at the latest message (a stable
-ref callback on the end marker sets the sheet body's `scrollTop` when the sheet
-mounts, instantly rather than smoothly), and the composer stuck to the bottom of
-the sheet body. A new message or the typing indicator showing or hiding is
-handled by `MessageGlide` (`message-glide.tsx`), the message list: it puts the
-body on its very end at once (its `scrollHeight`, not the end marker into view,
-which left the newest message under the stuck composer), then slides the
-messages from where they sat to where that leaves them, over 440 ms on the
+exists, a greeting and suggestions in its empty state (always stacked one per
+line, each pill only as wide as its text, at every width), new messages
+animating in (the person's from the bottom right, Better Buddy's replies and the
+typing indicator from the bottom left, each a short rise, fade, and scale on a
+slight spring overshoot, using the individual `translate` and `scale`
+properties); messages already present when the sheet opens are recorded at mount
+by `TranscriptMessages` and never replay; reopening at the latest message (a
+stable ref callback on the end marker sets the sheet body's `scrollTop` when the
+sheet mounts, instantly rather than smoothly), and the composer stuck to the
+bottom of the sheet body. A new message or the typing indicator showing or
+hiding is handled by `MessageGlide` (`message-glide.tsx`), the message list: it
+puts the body on its very end at once (its `scrollHeight`, not the end marker
+into view, which left the newest message under the stuck composer), then slides
+the messages from where they sat to where that leaves them, over 440 ms on the
 keyboard's `cubic-bezier(0.2, 1, 0.45, 1)` (a `transform` Web Animation on the
 list, from the measured offset to none), so they rise the same way whether the
 conversation fits, grows the sheet, or scrolls (history: Message arrival). When
