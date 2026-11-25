@@ -214,6 +214,28 @@ which jumps to the status bar's height whenever iOS briefly shrinks `100dvh` as
 the keyboard opens, and do not write `100dvh` on a new full-height element; use
 `--viewport-height`.
 
+### Short `100lvh` on launch
+
+On an occasional launch of the folded iPhone Duo (iOS 27.2.1), `100lvh` itself
+resolved 25 pt short of the 678 pt cover screen while fixed elements still
+spanned the full height: the bottom navigation sat in its usual place, but the
+root, and with it the scrolling content, ended in a hard line at 653 pt just
+under the navigation. The installed app's token is therefore
+`max(100lvh, var(--viewport-height-floor, 0px))`, and the inline head script
+`viewportFloorScript` (`src/app/safe-area-launch.ts`, installed iOS app only)
+measures a fixed `top: 0; bottom: 0` probe against a `100lvh` probe. When the
+fixed one is at least 1 px taller it sets `--viewport-height-floor` on `html` to
+that height, and otherwise removes it, so a correct launch carries no floor. The
+floor is the tallest fixed span seen while the page width holds, so the keyboard
+never lowers it, and resets when the width changes (rotation, folding,
+unfolding). It measures every frame for 3 s after the page starts or returns to
+view (`pageshow`, `visibilitychange`), and on every resize. The floor can only
+raise the token, never lower it below `100lvh`. Do not instead make `body` or
+`.app-frame` `position: fixed` to reach the bottom: the Radix scroll lock forces
+`body` back to `position: relative` whenever a sheet opens, and a fixed frame
+becomes a stacking context, so the hold menu's drop to `z-index: 29` would paint
+over the bottom navigation.
+
 ### Late inset on launch
 
 On an occasional cold launch iOS reports `env(safe-area-inset-top)` as 0 for the

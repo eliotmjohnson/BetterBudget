@@ -59,6 +59,63 @@ export const safeAreaLaunchScript = `(() => {
 })();`;
 
 /**
+ * Inline head script for the installed iOS app that keeps `--viewport-height`
+ * from falling short of the screen. On some launches iOS resolves `100lvh`
+ * below the height a fixed element spans, so the root and every surface sized
+ * from the token end above the bottom edge. It measures both and, when the
+ * fixed span is taller, sets `--viewport-height-floor` on `html` to it. The
+ * floor only rises while the page width holds, so the keyboard never lowers
+ * it, and resets when the width changes on rotation or folding. It measures
+ * every frame for 3 s after the page starts or returns to view, and on resize.
+ */
+export const viewportFloorScript = `(() => {
+    if (navigator.standalone !== true) return;
+    const root = document.documentElement;
+    const probe = (height) => {
+        const box = document.createElement('div');
+
+        box.style.cssText = 'position:fixed;top:0;width:0;visibility:hidden;pointer-events:none;' + height;
+        root.append(box);
+        const measured = box.getBoundingClientRect().height;
+
+        box.remove();
+        return measured;
+    };
+    let width = 0;
+    let floor = 0;
+    let until = 0;
+    const measure = () => {
+        const reach = probe('bottom:0');
+        const large = probe('height:100lvh');
+
+        if (innerWidth !== width) {
+            width = innerWidth;
+            floor = 0;
+        }
+        floor = Math.max(floor, reach);
+        if (floor - large >= 1) root.style.setProperty('--viewport-height-floor', floor + 'px');
+        else root.style.removeProperty('--viewport-height-floor');
+    };
+    const poll = () => {
+        measure();
+        if (performance.now() < until) requestAnimationFrame(poll);
+    };
+    const watch = () => {
+        const idle = performance.now() >= until;
+
+        until = performance.now() + 3000;
+        if (idle) poll();
+    };
+
+    watch();
+    addEventListener('resize', measure);
+    addEventListener('pageshow', watch);
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') watch();
+    });
+})();`;
+
+/**
  * Inline head script that marks `html` with `data-island` (`left`, `right`, or
  * `top`) from the screen's rotation, and keeps it current on every resize and
  * orientation change. iOS reports equal
