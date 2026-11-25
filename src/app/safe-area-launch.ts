@@ -14,7 +14,12 @@
  * first lays it out at the screen's full width. If the page never narrows
  * there, it forgets the width. A side status bar seen only as an inset reveals
  * the page but keeps the script watching for the narrower page, because iOS
- * reports the inset at full width before it narrows the page.
+ * reports the inset at full width before it narrows the page. While a record
+ * exists, `data-fence-launch` on `html` for the first 3 s lets `tokens.css`
+ * hide the page in any frame it is laid out at the Duo cover's full 466 px, so
+ * the full-width frame never shows whatever order iOS reports things in; a
+ * resize to the narrower page at any time writes the record, and a launch that
+ * ends still at 466 px without narrowing drops it.
  */
 export const safeAreaLaunchScript = `(() => {
     if (navigator.standalone !== true || !matchMedia('(orientation: portrait)').matches) return;
@@ -32,6 +37,15 @@ export const safeAreaLaunchScript = `(() => {
         return { top: box.height, side: fenced >= 44 ? fenced : box.width, fenced: fenced >= 44 };
     };
     const awaitFence = Number(load(fenceKey)) === screen.width;
+    const fullCover = matchMedia('(device-width: 466px) and (width: 466px)');
+
+    if (load(fenceKey)) {
+        root.setAttribute('data-fence-launch', '');
+        setTimeout(() => root.removeAttribute('data-fence-launch'), 3000);
+    }
+    addEventListener('resize', () => {
+        if (read().fenced) store(fenceKey, screen.width);
+    });
     const settled = (state) => awaitFence ? state.fenced : state.top > 0 || state.side > 0;
     const complete = (state) => settled(state) && !(state.side > 0 && !state.fenced && !awaitFence);
     let fencedSeen = false;
@@ -42,7 +56,7 @@ export const safeAreaLaunchScript = `(() => {
         if (state.top > 0) store(key, state.top);
         else if (state.side > 0) store(sideKey, 1);
         if (fencedSeen) store(fenceKey, screen.width);
-        else if (awaitFence) { try { localStorage.removeItem(fenceKey); } catch {} }
+        else if (awaitFence || fullCover.matches) { try { localStorage.removeItem(fenceKey); } catch {} }
     };
 
     probe.style.cssText = 'position:fixed;top:0;width:max(env(safe-area-inset-left),env(safe-area-inset-right));height:env(safe-area-inset-top);visibility:hidden;pointer-events:none';

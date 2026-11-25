@@ -295,7 +295,20 @@ only as an inset reveals the page as before, but the script keeps polling,
 without hiding anything, until the page narrows or 3 s pass, so it still learns
 the narrower page. 6.13.10 stopped at that inset, and on the folded Duo iOS
 reports the inset at full width before it narrows the page, so the record was
-never written and every launch still snapped. `html` carries
+never written and every launch still snapped. 6.13.11 still snapped too, so the
+order iOS reports things in during those first frames is not known well enough
+for a script to time a reveal. While the record exists, the script therefore
+also sets `data-fence-launch` on `html` for the first 3 s, and `tokens.css`
+hides `body` (and pauses its animations) in any frame that matches
+`(display-mode: standalone) and (orientation: portrait) and (device-width: 466px) and (width: 466px)`:
+the Duo cover laid out at its full width. A media query is evaluated in the same
+frame as the layout it describes, so the full-width frame is never painted,
+whether it comes before, after, or between narrower ones. The 466 px is the Duo
+cover's `screen.width`; keep the CSS query and the script's `fullCover` query in
+step. A `resize` to the narrower page at any time writes the record, and a
+launch that ends at the cover's full width without narrowing removes it, so an
+iOS that keeps the page at 466 px (27.1, reportedly 27.3) costs one launch
+hidden for up to 3 s. No other screen matches the query. `html` carries
 `suppressHydrationWarning` because the script writes its inline style before
 hydration.
 

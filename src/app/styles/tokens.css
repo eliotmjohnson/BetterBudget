@@ -61,6 +61,16 @@ html[data-safe-area-pending] ::before,
 html[data-safe-area-pending] ::after {
     animation-play-state: paused !important;
 }
+@media (display-mode: standalone) and (orientation: portrait) and (device-width: 466px) and (width: 466px) {
+    html[data-fence-launch] body {
+        visibility: hidden;
+    }
+    html[data-fence-launch] *,
+    html[data-fence-launch] ::before,
+    html[data-fence-launch] ::after {
+        animation-play-state: paused !important;
+    }
+}
 
 @supports (corner-shape: round) {
     *,
