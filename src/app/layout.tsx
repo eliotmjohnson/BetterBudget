@@ -4,7 +4,11 @@ import { Providers } from '@/components/providers';
 import { RotateToPortrait } from '@/components/shell/rotate-to-portrait';
 import { APP_DESCRIPTION, APP_NAME } from '@/domain/app-info';
 import { iosStartupImages } from './ios-startup-images';
-import { islandSideScript, safeAreaLaunchScript } from './safe-area-launch';
+import {
+    islandSideScript,
+    safeAreaLaunchScript,
+    viewportFloorScript
+} from './safe-area-launch';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -65,6 +69,9 @@ export default function RootLayout({
                 />
                 <script
                     dangerouslySetInnerHTML={{ __html: islandSideScript }}
+                />
+                <script
+                    dangerouslySetInnerHTML={{ __html: viewportFloorScript }}
                 />
             </head>
             <body>

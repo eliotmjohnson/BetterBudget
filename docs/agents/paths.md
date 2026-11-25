@@ -102,6 +102,9 @@ moved, renamed, or takes on a new responsibility.
 - `src/components/shell/app-client.tsx` — authenticated interactive shell;
   `app-shell.tsx`, `budget-route.tsx`, `month-picker.tsx`, and
   `month-actions-sheet.tsx` are the surrounding chrome.
+- `src/components/shell/use-session-refresh.ts` — the only place a sign-in
+  session is extended; `src/server/access.ts` reads sessions with
+  `disableRefresh` because a Server Component's cookie write is discarded.
 - `src/components/budget/budget-view.tsx` — Budget page layout, URL-backed
   line-item details, item-scoped add-transaction flow.
   `budget-category-section.tsx` renders a category and its items,
@@ -275,9 +278,10 @@ moved, renamed, or takes on a new responsibility.
   reflow, and edge auto-scroll; `preview.ts` the lifted drag copy.
 - `src/app/safe-area-launch.ts` — the inline head scripts in `layout.tsx`: the
   launch backup for a late `env(safe-area-inset-top)` (saved height, or a
-  first-launch hold), the landscape Dynamic Island side (`data-island`), and the
-  folded iPhone Duo's side status bar (`data-side-bar`), which
-  `src/components/ui/side-bar.ts` (`useSideBar`) exposes to components.
+  first-launch hold), the landscape Dynamic Island side (`data-island`), the
+  folded iPhone Duo's side status bar (`data-side-bar`, which
+  `src/components/ui/side-bar.ts` (`useSideBar`) exposes to components), and the
+  `--viewport-height-floor` backup for a short `100lvh`.
   `docs/agents/design/shell-and-platform.md` holds the contract.
 - `src/app/globals.css` — the Tailwind import and the ordered `@import` list
   only.

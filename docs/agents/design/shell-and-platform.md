@@ -214,6 +214,28 @@ which jumps to the status bar's height whenever iOS briefly shrinks `100dvh` as
 the keyboard opens, and do not write `100dvh` on a new full-height element; use
 `--viewport-height`.
 
+### Short `100lvh` on launch
+
+On an occasional launch of the folded iPhone Duo (iOS 27.2.1), `100lvh` itself
+resolved 25 pt short of the 678 pt cover screen while fixed elements still
+spanned the full height: the bottom navigation sat in its usual place, but the
+root, and with it the scrolling content, ended in a hard line at 653 pt just
+under the navigation. The installed app's token is therefore
+`max(100lvh, var(--viewport-height-floor, 0px))`, and the inline head script
+`viewportFloorScript` (`src/app/safe-area-launch.ts`, installed iOS app only)
+measures a fixed `top: 0; bottom: 0` probe against a `100lvh` probe. When the
+fixed one is at least 1 px taller it sets `--viewport-height-floor` on `html` to
+that height, and otherwise removes it, so a correct launch carries no floor. The
+floor is the tallest fixed span seen while the page width holds, so the keyboard
+never lowers it, and resets when the width changes (rotation, folding,
+unfolding). It measures every frame for 3 s after the page starts or returns to
+view (`pageshow`, `visibilitychange`), and on every resize. The floor can only
+raise the token, never lower it below `100lvh`. Do not instead make `body` or
+`.app-frame` `position: fixed` to reach the bottom: the Radix scroll lock forces
+`body` back to `position: relative` whenever a sheet opens, and a fixed frame
+becomes a stacking context, so the hold menu's drop to `z-index: 29` would paint
+over the bottom navigation.
+
 ### Late inset on launch
 
 On an occasional cold launch iOS reports `env(safe-area-inset-top)` as 0 for the
@@ -241,14 +263,21 @@ launch value, since with a saved value the two are equal and removing it moves
 nothing, and it saves the real one. It reveals the page after 600 ms regardless
 and stops polling after 3 s. Landscape launches skip the fallback, since the top
 inset is 0 there. Hiding is limited to the first launch, because hiding on every
-launch shows a slow launch as a white pause each time. The folded iPhone Duo
-reports a top inset of 0, with its status bar down the right edge, so the probe
-also measures the side insets. A side inset counts as iOS having reported its
-insets: the script reveals the page and drops any launch value at once, and
-records `betterBudgetSideInset` instead of a height. A device with that record
-uses the first-launch hold rather than a saved height, because a height saved on
-the unfolded screen in portrait (82 px) would pad the folded screen's header
-until its side inset arrived, about 320 ms into a launch. `html` carries
+launch shows a slow launch as a white pause each time. The folded iPhone Duo's
+466 × 678 pt cover screen puts its status bar in an 84 pt strip down the right
+edge and reports a top inset of 0, so the script also treats a side status bar
+as iOS having reported its insets: it reveals the page and drops any launch
+value at once, and records `betterBudgetSideInset` instead of a height. A device
+with that record uses the first-launch hold rather than a saved height, because
+a height saved on the unfolded screen in portrait (82 px) would otherwise pad
+the folded screen's header. On iOS 27.1 (and reportedly 27.3 beta 2) the
+installed app draws under the strip and gets a right inset of 84, so the probe
+measures the side insets. On iOS 27.2 and 27.2.1 the page is 382 pt beside the
+strip with every inset 0 except the bottom, so the script also counts a
+phone-sized page (screen under 760 px) at least 44 px narrower than
+`screen.width` as a side status bar, ignoring an `innerWidth` of 0. Without
+that, a folded launch on 27.2 padded its header by the saved unfolded height for
+the full 3 s, or, with nothing saved, hid the page for 600 ms. `html` carries
 `suppressHydrationWarning` because the script writes its inline style before
 hydration.
 

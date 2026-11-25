@@ -50,7 +50,7 @@
 
 @media (display-mode: standalone) {
     :root {
-        --viewport-height: 100lvh;
+        --viewport-height: max(100lvh, var(--viewport-height-floor, 0px));
     }
 }
 html[data-safe-area-pending] body {

@@ -15,7 +15,10 @@ export async function getAccess(): Promise<{
         return { householdId: DEFAULT_HOUSEHOLD_ID, userName: 'Our Household' };
     const authHeaders = await headers();
     const auth = await getAuth();
-    const current = await auth.api.getSession({ headers: authHeaders });
+    const current = await auth.api.getSession({
+        headers: authHeaders,
+        query: { disableRefresh: true }
+    });
 
     if (!current?.user) return null;
 
