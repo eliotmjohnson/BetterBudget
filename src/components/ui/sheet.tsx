@@ -3,7 +3,7 @@
 import * as Dialog from '@radix-ui/react-dialog';
 import { useContinuousCorners } from './continuous-corners';
 import { isCalculatorBarTarget } from './currency-input/operator-bar';
-import { useKeyboardFit, useKeyboardLift } from './keyboard-fit';
+import { useKeyboardFit } from './keyboard-fit';
 import { focusStill, isStillField } from './still-focus';
 import { isToastTarget } from './toast-provider';
 import {
@@ -178,7 +178,6 @@ export function Sheet({
     const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useKeyboardFit(contentRef, open, followKeyboard);
-    useKeyboardLift(contentRef, open);
 
     useEffect(
         () => () => {

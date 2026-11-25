@@ -129,43 +129,7 @@ disable saving while the date falls outside the month.
 Every sheet makes room for the on-screen keyboard without moving
 (`useKeyboardFit` in `src/components/ui/keyboard-fit/`, which every sheet uses).
 Their fields use still focus (`budget-and-inputs.md`), which holds the page
-still, so iOS no longer carries a sheet up by scrolling the page. Everything
-below describes phone sheets, under 760 px.
-
-**Centered modals.** From 760 px on a touch screen (an iPad, or the unfolded
-iPhone Duo in landscape), a sheet is a centered modal, and `useKeyboardLift`
-(`keyboard-fit/lift.ts`) moves it up instead, as an iPad form sheet does:
-without it the keyboard covered the modal's lower half. While one of its fields
-has focus and the keyboard is up, the keyboard's top edge in layout-viewport
-pixels is set as `--sheet-keyboard-top`, and
-`.sheet-content[data-keyboard-lift]` moves the modal up only as far as it must
-to end 16 px above that edge, never past the top margin a full-height modal
-rests at (`4dvh`, or the top safe area plus 16 px), and caps its `max-height` at
-what is left, so its body scrolls. For that the hook also sets where the modal's
-top rested (`--sheet-rest-top`) and the height its content would take uncapped
-(`--sheet-natural-height`), and CSS places the center (`top`, with the usual
-`translate(-50%, -50%)`) half that final height below the chosen top edge. A
-modal that already clears the keyboard does not move. Centering it in the space
-above the keyboard instead pulled the tall Add transaction modal up 11 px from
-its resting 27 px for no gain. `top` and `max-height` follow the keyboard on its
-`raise`, `adjust`, and `lower` motions. Lowering waits one more frame: on the
-unfolded Duo, iOS fires the visual-viewport resize only once the keyboard is
-nearly gone, and the frame that applies it takes about 110 ms to render, so a
-lower started inside it (or earlier, at `focusout`, when iOS paints nothing at
-all) was half done by its first visible frame and looked to snap back. Lifting
-also finishes a still-running entrance (`modal-in`) at its last frame: iOS
-resolves that animation's `translate(-50%, -50%)` against the modal's height
-once, as it starts, so a modal whose field is focused as it opens, such as Add
-transaction's Amount, was drawn about 130 px too high, header off the top of the
-screen, until the entrance ended and it snapped down. The same entrance's
-`scale(0.985)` once made the still-focus stand-in about 1.5 % narrower than its
-field, so `exactBox` in `still-focus/stand-in.ts` divides an ancestor's scale
-back out. A still-focus reveal waits for that motion to finish before measuring,
-since it is not a keyboard-fit inset motion. The calculator bar overlaps the
-modal's bottom 56 px, as it overlaps a phone sheet's body, and the reveal clears
-it the same way. No shield is needed, because the modal ends above the keyboard.
-The hook is called from `sheet.tsx` next to `useKeyboardFit`, which is at the
-function line limit.
+still, so iOS no longer carries a sheet up by scrolling the page.
 
 The allocation picker fits it too, though its only text field is the search in
 its fixed header: left unfitted, its list ran on behind the keyboard and its

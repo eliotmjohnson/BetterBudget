@@ -1,7 +1,6 @@
 import type { StillField } from './field';
 
 const HEIGHT_TOLERANCE_PX = 0.5;
-const SCALE_TOLERANCE = 0.005;
 
 export const FOCUSED_LOOK = [
     'background-color',
@@ -32,19 +31,11 @@ export function shownField(field: StillField): HTMLElement {
  * properties round to whole pixels, so a field at a fractional position, such
  * as the centered Income expected amount under its label, got a stand-in up
  * to half a pixel off, which showed as the value nudging down and back up as
- * the stand-in came and went. An ancestor's running `scale`, such as a
- * centered modal's entrance, shrinks the measured box, so it is divided back
- * out: a field focused as its modal opened got a stand-in about 1.5 % narrower
- * than itself, which showed as the field's right edge pulling in and springing
- * back once the stand-in was released. The `offsetWidth` ratio only counts as
- * a scale beyond `SCALE_TOLERANCE`, the most its whole-pixel rounding can
- * account for.
+ * the stand-in came and went.
  */
 function exactBox(field: StillField) {
     const box = field.getBoundingClientRect();
     const parent = field.offsetParent;
-    const ratio = field.offsetWidth > 0 ? box.width / field.offsetWidth : 1;
-    const scale = Math.abs(ratio - 1) > SCALE_TOLERANCE ? ratio : 1;
 
     if (!(parent instanceof HTMLElement))
         return {
@@ -56,16 +47,10 @@ function exactBox(field: StillField) {
     const origin = parent.getBoundingClientRect();
 
     return {
-        left:
-            (box.left - origin.left) / scale -
-            parent.clientLeft +
-            parent.scrollLeft,
-        top:
-            (box.top - origin.top) / scale -
-            parent.clientTop +
-            parent.scrollTop,
-        width: box.width / scale,
-        height: box.height / scale
+        left: box.left - origin.left - parent.clientLeft + parent.scrollLeft,
+        top: box.top - origin.top - parent.clientTop + parent.scrollTop,
+        width: box.width,
+        height: box.height
     };
 }
 

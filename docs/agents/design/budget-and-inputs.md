@@ -469,12 +469,7 @@ and does not act. Keys carry `tabIndex={-1}`. The bar lives outside any Radix
 dialog, so `sheet.tsx` and `navigation-detail/index.tsx` exempt
 `isCalculatorBarTarget` from outside-pointer dismissal, and it sets
 `pointer-events: auto` for the same reason as the toast (`sheets-and-menus.md`).
-Desktop has no bar; hardware keys `+ - * / x =` drive the same expression. On a
-touch screen at least 760 px wide (an iPad, or a phone on its side) the bar's
-background still spans the width, but its contents keep to a centered 560 px
-column, padded by `(100% - 560px) / 2` or the safe-area inset, whichever is
-larger, at the user's request, so the amount and keys stay together instead of
-sitting at opposite edges.
+Desktop has no bar; hardware keys `+ - * / x =` drive the same expression.
 
 There is one bar for the whole app, mounted once in `providers.tsx`, never one
 per input. The focused `CurrencyInput` publishes its display state and handlers

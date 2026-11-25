@@ -522,26 +522,6 @@
         --sheet-radius-top: 26px;
         transform: translate(-50%, -50%);
     }
-    .sheet-content[data-keyboard-lift] {
-        --sheet-lift-top: min(
-            var(--sheet-rest-top),
-            max(
-                var(--sheet-keyboard-top) - 16px - var(--sheet-natural-height),
-                var(--safe-area-top) + 16px,
-                4dvh
-            )
-        );
-        --sheet-lift-height: min(
-            92dvh,
-            850px,
-            var(--sheet-keyboard-top) - 16px - var(--sheet-lift-top)
-        );
-        top: calc(
-            var(--sheet-lift-top) +
-                min(var(--sheet-natural-height), var(--sheet-lift-height)) / 2
-        );
-        max-height: var(--sheet-lift-height);
-    }
     .sheet-drag-region--active {
         cursor: default;
         touch-action: auto;
@@ -598,17 +578,6 @@
     }
     .sync-indicator {
         top: 18px;
-    }
-}
-
-@media (min-width: 760px) and (pointer: coarse) {
-    .calculator-bar {
-        padding-inline: max(
-                8px,
-                env(safe-area-inset-left),
-                calc((100% - 560px) / 2)
-            )
-            max(6px, env(safe-area-inset-right), calc((100% - 560px) / 2));
     }
 }
 

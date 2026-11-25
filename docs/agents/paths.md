@@ -252,9 +252,7 @@ moved, renamed, or takes on a new responsibility.
   keyboard, so nothing shows through its translucent glass, and `pending.ts`
   tells still focus how much further a growing sheet will rise and how tall its
   body will settle, so a field is revealed alongside the keyboard and lent
-  scroll room glides back to the right end. `lift.ts` (`useKeyboardLift`)
-  instead moves a centered modal, 760 px and wider on a touch screen, up into
-  the space above the keyboard and caps its height there.
+  scroll room glides back to the right end.
   `docs/agents/design/sheets-and-menus.md` holds both contracts.
 - `src/components/ui/hold-menu/` — the iOS-style touch-and-hold context menu.
   `index.tsx` is the `useHoldMenu` hook (open state, trigger props, held-finger
