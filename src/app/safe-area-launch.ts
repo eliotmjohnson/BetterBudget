@@ -12,7 +12,9 @@
  * saves the screen width that narrower page was seen on, and a later launch on
  * that screen stays hidden until the page narrows, for up to 1.5 s, because iOS
  * first lays it out at the screen's full width. If the page never narrows
- * there, it forgets the width.
+ * there, it forgets the width. A side status bar seen only as an inset reveals
+ * the page but keeps the script watching for the narrower page, because iOS
+ * reports the inset at full width before it narrows the page.
  */
 export const safeAreaLaunchScript = `(() => {
     if (navigator.standalone !== true || !matchMedia('(orientation: portrait)').matches) return;
@@ -31,10 +33,15 @@ export const safeAreaLaunchScript = `(() => {
     };
     const awaitFence = Number(load(fenceKey)) === screen.width;
     const settled = (state) => awaitFence ? state.fenced : state.top > 0 || state.side > 0;
-    const save = (state) => {
+    const complete = (state) => settled(state) && !(state.side > 0 && !state.fenced && !awaitFence);
+    let fencedSeen = false;
+    const finish = (state) => {
+        probe.remove();
+        root.removeAttribute('data-safe-area-pending');
+        root.style.removeProperty('--safe-area-top-launch');
         if (state.top > 0) store(key, state.top);
         else if (state.side > 0) store(sideKey, 1);
-        if (state.fenced) store(fenceKey, screen.width);
+        if (fencedSeen) store(fenceKey, screen.width);
         else if (awaitFence) { try { localStorage.removeItem(fenceKey); } catch {} }
     };
 
@@ -42,27 +49,30 @@ export const safeAreaLaunchScript = `(() => {
     root.append(probe);
     const initial = read();
 
-    if (settled(initial)) {
-        probe.remove();
-        return save(initial);
-    }
-    const saved = Number(load(key)) || 0;
-    const sided = load(sideKey) === '1';
-    const hold = awaitFence ? 1500 : 600;
+    fencedSeen = initial.fenced;
+    if (complete(initial)) return finish(initial);
+    let shown = settled(initial);
 
-    if (saved > 0 && !sided && !awaitFence) root.style.setProperty('--safe-area-top-launch', saved + 'px');
-    else root.setAttribute('data-safe-area-pending', '');
+    if (!shown) {
+        const saved = Number(load(key)) || 0;
+        const sided = load(sideKey) === '1';
+
+        if (saved > 0 && !sided && !awaitFence) root.style.setProperty('--safe-area-top-launch', saved + 'px');
+        else root.setAttribute('data-safe-area-pending', '');
+    }
+    const hold = awaitFence ? 1500 : 600;
     const startedAt = performance.now();
     const check = () => {
         const state = read();
-        const reported = settled(state);
         const elapsed = performance.now() - startedAt;
 
-        if (reported || elapsed >= hold) root.removeAttribute('data-safe-area-pending');
-        if (!reported && elapsed < 3000) return requestAnimationFrame(check);
-        probe.remove();
-        root.style.removeProperty('--safe-area-top-launch');
-        save(state);
+        fencedSeen = fencedSeen || state.fenced;
+        if (!shown && (settled(state) || elapsed >= hold)) {
+            shown = true;
+            root.removeAttribute('data-safe-area-pending');
+        }
+        if (!complete(state) && elapsed < 3000) return requestAnimationFrame(check);
+        finish(state);
     };
 
     requestAnimationFrame(check);
